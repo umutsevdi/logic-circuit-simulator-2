@@ -1,0 +1,82 @@
+# Doxyfile 1.9.6
+# Project name
+PROJECT_NAME           = Logic Circuit Simulator
+PROJECT_NUMBER         = 2.0
+PROJECT_BRIEF          = "A free and open-source Logic Circuit Simulator."
+OUTPUT_DIRECTORY       = build/
+
+# Input directories
+INPUT                  = src/
+BRIEF_MEMBER_DESC      = YES
+REPEAT_BRIEF           = YES
+JAVADOC_AUTOBRIEF      = YES
+CPP_AUTOBRIEF          = YES
+JAVADOC_BANNER         = YES
+BUILTIN_STL_SUPPORT    = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_METHODS  = YES
+EXTRACT_PRIVATE        = YES
+# Patterns to ignore
+EXCLUDE_PATTERNS      = 
+
+ABBREVIATE_BRIEF       = "The $name class" \
+                         "The $name struct" \
+                         "The $name widget" \
+                         "The $name file" \
+                         is \
+                         provides \
+                         specifies \
+                         contains \
+                         represents \
+                         a \
+                         an \
+                         the
+
+# Recursively search for files in the input directory
+RECURSIVE              = YES
+
+# Generate HTML output
+GENERATE_HTML          = YES
+#GENERATE_MAN           = YES
+HTML_OUTPUT            = docs/
+
+# Enable or disable various output formats
+GENERATE_LATEX         = NO
+GENERATE_RTF           = NO
+GENERATE_XML           = NO
+
+# Set up the index file for the HTML documentation
+GENERATE_TREEVIEW      = YES
+
+# Enable the extraction of documentation from the source code
+EXTRACT_ALL            = YES
+
+# Set the file patterns
+FILE_PATTERNS          = *.h \
+                         *.hpp \
+
+# Use the full path in the generated documentation
+FULL_PATH_NAMES        = NO
+# Show additional information in the generated documentation
+SHOW_INCLUDE_FILES     = YES
+
+# Whether to generate a call graph
+CALL_GRAPH             = YES
+
+# Enable the dot tool for generating graphs
+HAVE_DOT               = NO
+DOT_GRAPH_MAX_NODES    = 50
+DOT_TRANSPARENT        = NO
+DOT_MULTI_TARGETS      = NO
+
+OPTIMIZE_OUTPUT_FOR_C  = NO
+
+GENERATE_TREEVIEW      = YES # optional. Also works without treeview
+FULL_SIDEBAR           = NO
+DISABLE_INDEX          = NO
+HTML_EXTRA_STYLESHEET  = external/doxygen-awesome-css/doxygen-awesome.css \
+                         .style.css
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = YES

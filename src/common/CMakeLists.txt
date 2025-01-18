@@ -1,0 +1,5 @@
+file(GLOB COMMON_RES common.cpp)
+include_directories(.)
+include_directories(../../external/tfd)
+add_library(common ${COMMON_RES})
+target_link_libraries(common tfd)
