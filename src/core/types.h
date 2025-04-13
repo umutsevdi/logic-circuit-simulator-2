@@ -10,8 +10,10 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "yaml-cpp/emitter.h"
+#include "common/common.h"
 #include <cstdint>
+#include <string>
+#include <vector>
 namespace lcs {
 
 /** id type for socket, sock_t = 0 means disconnected */
@@ -48,7 +50,6 @@ struct node {
     uint32_t id : 24;
     node_t type : 8;
     friend std::ostream& operator<<(std::ostream& os, const node& r);
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const node& v);
     bool operator<(const node& n) const { return this->id < n.id; }
 };
 
@@ -106,10 +107,22 @@ gate_t str_to_gate(const std::string&);
 struct point_t {
     int x;
     int y;
+};
 
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const point_t& v);
+struct Metadata {
+    Metadata(std::string _name, std::string _description, std::string _author,
+        int _version = VERSION)
+        : name { _name }
+        , description { _description }
+        , author { _author }
+        , version { _version } { };
+    Metadata() { };
 
-    inline bool is_zero() const { return x == 0 && y == 0; }
+    std::string name;
+    std::string description;
+    std::string author;
+    int version;
+    std::vector<std::string> dependencies;
 };
 
 } // namespace lcs

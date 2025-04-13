@@ -12,52 +12,11 @@
 
 #include "common/common.h"
 #include "types.h"
-#include <cstdint>
 #include <map>
-#include <memory>
 #include <vector>
-#include <yaml-cpp/yaml.h>
 
 namespace lcs {
 class Scene;
-
-namespace parser {
-
-    enum error_t {
-        OK,
-        INVALID_NODE,
-        INVALID_SCENE,
-        PARSE_ERROR,
-        NODE_NOT_FOUND,
-        REL_CONNECT_ERROR,
-        INVALID_CONTEXT,
-
-        WRITE_FMT
-    };
-
-    class LcsEmitter final : public YAML::Emitter {
-    public:
-        LcsEmitter();
-        ~LcsEmitter() = default;
-    };
-
-    /**
-     * Parse a YAML file to construct a scene.
-     *
-     * @param yaml - to parse
-     * @param err - if there are any errors it will be written to
-     * @returns a scene
-     */
-    std::unique_ptr<Scene> read_scene(const YAML::Node& yaml, error_t& err);
-    /**
-     * Convert a scene to YAML.
-     *
-     * @param s - to read from
-     * @param yaml - to write to
-     * @returns non-zero on error
-     */
-    error_t write_scene(Scene& s, LcsEmitter& yaml);
-} // namespace parser
 
 class BaseNode {
 public:
@@ -69,11 +28,6 @@ public:
     BaseNode& operator=(const BaseNode&) = default;
     virtual ~BaseNode()                  = default;
     BaseNode* get_base() { return dynamic_cast<BaseNode*>(this); };
-    const BaseNode* get_cbase() const
-    {
-        return dynamic_cast<const BaseNode*>(this);
-    };
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const BaseNode& v);
 
     /**
      * Updates the internal data and send out signals to all connected nodes.
@@ -85,24 +39,13 @@ public:
     virtual state_t get() = 0;
 
     inline node get_node() const { return id; }
-    inline point_t get_position() const { return point; }
-    inline direction_t get_rotation() const { return dir; }
 
-    inline void set_rotation(direction_t d) { dir = d; }
-    inline void set_position(point_t p) { point = p; }
-
-    inline bool is_zero() const
-    {
-        return dir == direction_t::RIGHT && point.is_zero();
-    }
+    node id;
+    direction_t dir;
+    point_t point;
 
 protected:
     Scene* scene;
-    node id;
-
-private:
-    direction_t dir;
-    point_t point;
 };
 
 /**
@@ -115,9 +58,9 @@ private:
 struct Rel {
     explicit Rel(relid _id, node _from_node, node _to_node, sockid _from_sock,
         sockid _to_sock);
+    Rel() { }
     ~Rel() = default;
     friend std::ostream& operator<<(std::ostream& os, const Rel& r);
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const Rel& v);
 
     relid id;
     node from_node;
@@ -141,7 +84,6 @@ public:
     ~Gate()                      = default;
 
     friend std::ostream& operator<<(std::ostream& os, const Gate& g);
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const Gate& v);
 
     void signal() override;
     bool is_connected() const override;
@@ -175,7 +117,6 @@ public:
     Component& operator=(const Component&) = default;
     ~Component()                           = default;
     friend std::ostream& operator<<(std::ostream& os, const Component& g);
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const Component& v);
 
     void signal() override;
     bool is_connected() const override;
@@ -204,7 +145,6 @@ public:
     Input& operator=(const Input&) = default;
     ~Input()                       = default;
     friend std::ostream& operator<<(std::ostream& os, const Input& g);
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const Input& v);
 
     void signal() override;
     bool is_connected() const override;
@@ -219,10 +159,7 @@ public:
     void toggle();
 
     std::vector<relid> output;
-
     bool value;
-
-private:
 };
 
 /** An output node that displays the result */
@@ -235,15 +172,12 @@ public:
     Output& operator=(const Output&) = default;
     ~Output()                        = default;
     friend std::ostream& operator<<(std::ostream& os, const Output& g);
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, const Output& v);
 
     void signal() override;
     bool is_connected() const override;
     state_t get() override;
 
     relid input;
-
-private:
     state_t value;
 };
 
@@ -256,7 +190,6 @@ public:
     Scene& operator=(const Scene&) = default;
     ~Scene()                       = default;
     friend std::ostream& operator<<(std::ostream& os, const Scene&);
-    friend YAML::Emitter& operator<<(YAML::Emitter& out, Scene& v);
 
     template <class T, class... Args> node add_node(Args&&... args)
     {
@@ -366,11 +299,6 @@ public:
 
     void set_position(node, point_t);
 
-    parser::error_t parse_scene(const YAML::Node& node);
-
-    void dump(void);
-
-private:
     bool connect_with_id(relid& id, node to_node, sockid to_sock,
         node from_node, sockid from_sock = 0) noexcept;
 
@@ -385,11 +313,7 @@ private:
     node last_node[node_t::NODE_S];
     relid last_rel;
 
-    std::string name;
-    std::string description;
-    std::string author;
-    int version = VERSION;
-    std::vector<std::string> dependencies;
+    Metadata meta;
 };
 
 } // namespace lcs

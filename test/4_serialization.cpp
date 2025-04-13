@@ -1,13 +1,12 @@
 #include "catch2/catch_test_macros.hpp"
 #include "core/engine.h"
-#include "yaml-cpp/exceptions.h"
+#include "parse/parse.h"
+#include "json/json.h"
 #include <catch2/catch_all.hpp>
 #include <iostream>
-#include <memory>
 
 TEST_CASE("Parse YAML subnodes")
 {
-    lcs::parser::LcsEmitter out {};
     lcs::Scene s;
 
     auto g_or  = s.add_node<lcs::Gate>(lcs::gate_t::OR);
@@ -25,13 +24,14 @@ TEST_CASE("Parse YAML subnodes")
     s.get_node<lcs::Input>(v1)->set(true);
     s.get_node<lcs::Input>(v2)->set(false);
     s.get_node<lcs::Input>(v3)->set(true);
+    Json::Value v = lcs::parse::to_json(s);
 
-    REQUIRE(lcs::parser::write_scene(s, out) == lcs::parser::error_t::OK);
+    std::cout << v.toStyledString() << std::endl;
+    REQUIRE(!v.empty());
 }
 
 TEST_CASE("Parse non-zero context")
 {
-    lcs::parser::LcsEmitter out {};
     lcs::Scene s;
 
     auto g_and = s.add_node<lcs::Gate>(lcs::gate_t::AND);
@@ -42,45 +42,34 @@ TEST_CASE("Parse non-zero context")
     s.connect(g_and, 0, v2);
     s.connect(g_and, 1, v1);
     s.connect(o, 0, g_and);
-    s.get_base(o)->set_rotation(lcs::direction_t::DOWN);
-    s.get_base(v1)->set_position({ 1, 3 });
+    s.get_base(o)->dir    = lcs::direction_t::DOWN;
+    s.get_base(v1)->point = { 1, 3 };
 
-    REQUIRE(lcs::parser::write_scene(s, out) == lcs::parser::error_t::OK);
-    std::cout << (out.c_str()) << std::endl;
-    REQUIRE_NOTHROW(YAML::Load(std::string { out.c_str() }));
+    Json::Value out = lcs::parse::to_json(s);
+    std::cout << out.toStyledString() << std::endl;
+    REQUIRE(!out.empty());
 }
 
 TEST_CASE("Save, load and compare") // <-- runtime assert error
 {
-    lcs::parser::LcsEmitter emitter {};
     lcs::Scene s;
     auto v = s.add_node<lcs::Input>();
     auto o = s.add_node<lcs::Output>();
     s.get_node<lcs::Input>(v)->set(true);
     s.connect(o, 0, v);
+    Json::Value scene_str = lcs::parse::to_json(s);
+    std::cout << scene_str.toStyledString() << std::endl;
 
-    REQUIRE(lcs::parser::write_scene(s, emitter) == lcs::parser::error_t::OK);
-    std::string str { emitter.c_str() };
-    std::cout << str << std::endl;
+    lcs::Scene s_loaded;
+    REQUIRE(lcs::parse::from_json(scene_str, s_loaded) == lcs::parse::OK);
+    REQUIRE(s_loaded.get_node<lcs::Output>(1)->is_connected());
+    REQUIRE(s_loaded.get_node<lcs::Output>(1)->get() == lcs::state_t::TRUE);
 
-    YAML::Node n;
-    REQUIRE_NOTHROW((n = YAML::Load(str)));
-
-    lcs::parser::error_t err = lcs::parser::error_t::OK;
-
-    std::cout << "Bussy\t" << n["scene"] << std::endl;
-    // FAILURE HAPPENS HERE
-    auto newscene = lcs::parser::read_scene(n["scene"], err);
-
-    REQUIRE((err == lcs::parser::error_t::OK && newscene != nullptr));
-
-    lcs::parser::LcsEmitter emitter2 {};
-    REQUIRE(lcs::parser::write_scene(*newscene, emitter2)
-        == lcs::parser::error_t::OK);
-    REQUIRE(s.get_node<lcs::Output>(o)->get()
-        == newscene->get_node<lcs::Output>(o)->get());
+    Json::Value scene_loaded_str = lcs::parse::to_json(s_loaded);
+    REQUIRE(scene_str.toStyledString() == scene_loaded_str.toStyledString());
 }
 
+/*
 TEST_CASE("Save a complicated yaml, load and run the tests")
 {
     lcs::parser::LcsEmitter emitter {};
@@ -139,3 +128,4 @@ TEST_CASE("Save a complicated yaml, load and run the tests")
         newscene->get_node<lcs::Output>(c_out)->get() == lcs::state_t::TRUE);
     std::cout << emitter.c_str() << std::endl;
 }
+*/

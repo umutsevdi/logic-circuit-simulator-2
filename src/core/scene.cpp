@@ -1,6 +1,7 @@
 #include "common/common.h"
 #include "core/types.h"
 #include "engine.h"
+#include <algorithm>
 #include <iterator>
 #include <utility>
 
@@ -13,7 +14,7 @@ Scene::Scene(const std::string& _name)
         node { 0, node_t::INPUT },
         node { 0, node_t::OUTPUT },
     }, last_rel{0}
-    , name {_name}
+    , meta {_name,"",""}
 {
 }
 
@@ -209,7 +210,7 @@ void Scene::disconnect(relid id)
     rel.erase(id);
 }
 
-void Scene::set_position(node n, point_t p) { get_base(n)->set_position(p); }
+void Scene::set_position(node n, point_t p) { get_base(n)->point = p; }
 
 void Scene::invoke_signal(const std::vector<relid>& output, state_t value)
 {
@@ -239,26 +240,6 @@ NRef<BaseNode> Scene::get_base(node id)
     default: break;
     }
     return nullptr;
-}
-
-void Scene::dump(void)
-{
-    L_INFO(<< "GATES");
-    for (const auto& g : gates) {
-        L_INFO(<< g.second);
-    }
-    L_INFO(<< "INPUTS");
-    for (const auto& g : inputs) {
-        L_INFO(<< g.second);
-    }
-    L_INFO(<< "OUTPUTS");
-    for (const auto& g : outputs) {
-        L_INFO(<< g.second);
-    }
-    L_INFO(<< "REL");
-    for (const auto& g : rel) {
-        L_INFO(<< g.second);
-    }
 }
 
 } // namespace lcs

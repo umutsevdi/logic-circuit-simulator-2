@@ -7,7 +7,7 @@ src/
 -I
 external/tfd/
 -I
-external/yaml-cpp/include/
+external/jsoncpp/include/
 -I
 external/catch2/src/
 -I/usr/include/gtkmm-4.0

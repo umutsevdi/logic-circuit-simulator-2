@@ -90,10 +90,10 @@ void Output::signal()
 *****************************************************************************/
 
 BaseNode::BaseNode(Scene* _scene, node _id, direction_t _dir, point_t _p)
-    : scene { _scene }
-    , id { _id }
+    : id { _id }
     , dir { _dir }
     , point { _p }
+    , scene { _scene }
 {
 }
 
