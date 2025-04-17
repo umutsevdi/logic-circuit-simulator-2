@@ -1,6 +1,6 @@
 #include "catch2/catch_test_macros.hpp"
-#include "common/common.h"
-#include "core/engine.h"
+#include "common.h"
+#include "core.h"
 #include <catch2/catch_all.hpp>
 
 using namespace lcs;

@@ -1,5 +1,5 @@
 #include "catch2/catch_test_macros.hpp"
-#include "core/engine.h"
+#include "core.h"
 #include <catch2/catch_all.hpp>
 
 using namespace lcs;

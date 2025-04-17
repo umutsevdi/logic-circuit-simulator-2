@@ -1,5 +1,4 @@
-#include "engine.h"
-#include "core/types.h"
+#include "core.h"
 
 namespace lcs {
 
@@ -30,7 +29,8 @@ std::ostream& operator<<(std::ostream& os, const Rel& r)
 
 Input::Input(Scene* _scene, node _id)
     : BaseNode { _scene, { _id.id, node_t::INPUT } }
-    , value { false } { };
+    , value { false }
+    , type { false } { };
 
 std::ostream& operator<<(std::ostream& os, const Input& g)
 {
@@ -42,6 +42,14 @@ std::ostream& operator<<(std::ostream& os, const Input& g)
 void Input::set(bool v)
 {
     value = v;
+    type  = false;
+    signal();
+}
+
+void Input::set_freq(uint32_t v)
+{
+    freq = v;
+    type = true;
     signal();
 }
 
@@ -81,7 +89,6 @@ bool Output::is_connected() const { return input != 0; };
 
 void Output::signal()
 {
-    L_INFO(<< input);
     value = input ? scene->get_rel(input)->value : state_t::DISABLED;
 }
 
@@ -155,8 +162,10 @@ node_t str_to_node(const std::string& n)
         return node_t::INPUT;
     } else if (n == "OUTPUT") {
         return node_t::OUTPUT;
-    } else if (n == "DISPLAY") {
-        return node_t::DISPLAY;
+    } else if (n == "COMPIN") {
+        return node_t::COMPONENT_INPUT;
+    } else if (n == "COMPOUT") {
+        return node_t::COMPONENT_OUTPUT;
     }
     return node_t::NODE_S;
 }

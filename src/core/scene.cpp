@@ -1,20 +1,18 @@
-#include "common/common.h"
-#include "core/types.h"
-#include "engine.h"
+#include "core.h"
 #include <algorithm>
-#include <iterator>
 #include <utility>
 
 namespace lcs {
 
-Scene::Scene(const std::string& _name)
+Scene::Scene(const std::string& _name, const std::string& _author , const std::string& _description)
     : last_node {
         node { 0, node_t::GATE },
         node { 0, node_t::COMPONENT },
         node { 0, node_t::INPUT },
         node { 0, node_t::OUTPUT },
     }, last_rel{0}
-    , meta {_name,"",""}
+    , meta {_name,_author,_description}
+
 {
 }
 
@@ -23,7 +21,7 @@ void Scene::remove_node(node id)
     if (id.id == 0) { lcs_assert(id.id != 0); }
     switch (id.type) {
     case node_t::GATE: {
-        lcs_assert(id.id < gates.size());
+        lcs_assert(id.id <= last_node[node_t::GATE].id);
         auto g = gates.find(id);
         lcs_assert(g != gates.end());
         for (auto r : g->second.output) {
@@ -32,11 +30,11 @@ void Scene::remove_node(node id)
         for (auto r : g->second.inputs) {
             if (r != 0) { disconnect(r); }
         }
-        gates.erase(std::next(gates.begin(), id.id));
+        gates.erase(gates.find(id));
         break;
     }
     case node_t::COMPONENT: {
-        lcs_assert(id.id < components.size());
+        lcs_assert(id.id <= last_node[node_t::COMPONENT].id);
         auto c = components.find(id);
         lcs_assert(c != components.end());
         for (auto s : c->second.outputs) {
@@ -47,24 +45,25 @@ void Scene::remove_node(node id)
         for (auto r : c->second.inputs) {
             if (r != 0) { disconnect(r); }
         }
-        components.erase(std::next(components.begin(), id.id));
+        components.erase(components.find(id));
         break;
     }
     case node_t::INPUT: {
-        lcs_assert(id.id < inputs.size());
+        lcs_assert(id.id <= last_node[node_t::INPUT].id);
         auto i = inputs.find(id);
         lcs_assert(i != inputs.end());
         for (auto r : i->second.output) {
             if (r != 0) { disconnect(r); }
         }
-        inputs.erase(std::next(inputs.begin(), id.id));
+        inputs.erase(inputs.find(id));
         break;
     }
     case node_t::OUTPUT: {
+        lcs_assert(id.id <= last_node[node_t::OUTPUT].id);
         auto o = outputs.find(id);
         lcs_assert(o != outputs.end());
         if (o->second.input != 0) { disconnect(o->second.input); }
-        outputs.erase(std::next(outputs.begin(), id.id));
+        outputs.erase(outputs.find(id));
         break;
     }
     default: break;
@@ -73,10 +72,11 @@ void Scene::remove_node(node id)
 
 NRef<Rel> Scene::get_rel(relid idx)
 {
-    L_ERROR(<< (idx == 0) << (idx > last_rel) << " " << last_rel);
-    if (idx == 0 || idx > last_rel) { return ERROR("Invalid relid", nullptr); }
+    if (idx == 0 || idx > last_rel) {
+        return S_ERROR("Invalid relid", nullptr);
+    }
     auto n = rel.find(idx);
-    return n != rel.end() ? &n->second : (ERROR("Rel not found", nullptr));
+    return n != rel.end() ? &n->second : (S_ERROR("Rel not found", nullptr));
 }
 
 bool Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
@@ -87,7 +87,7 @@ bool Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
         id = last_rel;
     }
     if (from_node.type == node_t::OUTPUT) {
-        return ERROR("from_node can not be OUTPUT", false);
+        return S_ERROR("from_node can not be OUTPUT", false);
     } else if (from_node.type == node_t::COMPONENT
         && from_sock >= get_node<Component>(from_node)->outputs.size()) {
         lcs_assert("pff" && 0);
@@ -121,9 +121,9 @@ bool Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
         }
         break;
     }
-    default: return ERROR("Attempted to connect to INPUT.", false); ;
+    default: return S_ERROR("Attempted to connect to INPUT.", false); ;
     }
-    if (!is_connected) { return ERROR("Already connected", false); }
+    if (!is_connected) { return S_ERROR("Already connected", false); }
     rel.emplace(id, Rel { id, from_node, to_node, from_sock, to_sock });
 
     switch (from_node.type) {
@@ -139,7 +139,7 @@ bool Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
         get_node<Input>(from_node)->output.push_back(id);
         get_node<Input>(from_node)->signal();
         break;
-    default: return ERROR("Attempted to signal from OUTPUT", false);
+    default: return S_ERROR("Attempted to signal from OUTPUT", false);
     }
     return true;
 }

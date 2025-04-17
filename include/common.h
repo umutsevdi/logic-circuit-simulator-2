@@ -34,8 +34,8 @@ int __expect_with_message(std::function<bool(void)> expr, const char* function,
 #define L_INFO(...) LOG_PRE("INFO ") __VA_ARGS__ << std::endl
 #define L_WARN(...) LOG_PRE("WARN ") __VA_ARGS__ << std::endl
 #define L_ERROR(...) LOG_PRE("ERROR") __VA_ARGS__ << std::endl
-#define ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
-#define S_ERROR(msg) (L_ERROR(#msg)), msg
+#define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
+#define ERROR(msg) (L_ERROR(#msg)), msg
 #define lcs_assert(expr)                                                       \
     {                                                                          \
         if (__expect_with_message([&]() mutable -> bool { return expr; },      \
@@ -78,6 +78,12 @@ public:
     bool operator!=(void* t) const { return v != t; };
     T* operator->() { return v; }
     T* raw() const { return v; }
+
+    friend std::ostream& operator<<(std::ostream& os, const NRef<T>& g)
+    {
+        if (g.v != nullptr) { os << (*g.v); }
+        return os;
+    }
 
 private:
     T* v;

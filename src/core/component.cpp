@@ -1,7 +1,9 @@
-#include "engine.h"
+#include "core.h"
 #include <iostream>
 
 namespace lcs {
+
+
 
 Component::Component(Scene* _s, node _id, const std::string& _path)
     : BaseNode { _s, node { _id.id, node_t::COMPONENT } }
@@ -32,5 +34,6 @@ std::ostream& operator<<(std::ostream& os, const Component& g)
     os << " }";
     return os;
 }
+
 
 } // namespace lcs

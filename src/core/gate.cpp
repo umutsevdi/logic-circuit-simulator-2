@@ -1,4 +1,4 @@
-#include "engine.h"
+#include "core.h"
 #include <algorithm>
 
 namespace lcs {
@@ -47,7 +47,6 @@ state_t Gate::get()
     v.reserve(inputs.size());
     bool is_disabled = false;
     for (relid in : inputs) {
-        L_INFO(<<in);
         auto rel = scene->get_rel(in);
         lcs_assert(rel != nullptr);
         if (rel->value == state_t::DISABLED) {
@@ -62,23 +61,25 @@ state_t Gate::get()
 
 void Gate::signal() { scene->invoke_signal(output, get()); }
 
-void Gate::increment()
+bool Gate::increment()
 {
-    if (type == gate_t::NOT) { return; }
+    if (type == gate_t::NOT) { return false; }
     max_in++;
     inputs.reserve(max_in);
     inputs.push_back(0);
     signal();
+    return true;
 }
 
-void Gate::decrement()
+bool Gate::decrement()
 {
-    if (type == gate_t::NOT || max_in == 2) { return; }
+    if (type == gate_t::NOT || max_in == 2) { return false; }
     if (inputs[inputs.size() - 1] != 0) {
         scene->disconnect(inputs[inputs.size() - 1]);
     }
     inputs.pop_back();
     signal();
+    return true;
 }
 
 std::ostream& operator<<(std::ostream& os, const Gate& g)

@@ -3,7 +3,7 @@
 -Wall
 -Wextra
 -I
-src/
+include/
 -I
 external/tfd/
 -I

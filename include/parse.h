@@ -10,7 +10,7 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "core/engine.h"
+#include "core.h"
 #include <json/json.h>
 
 namespace lcs {
@@ -19,6 +19,7 @@ namespace parse {
     enum error_t {
         OK,
         INVALID_NODE,
+        INVALID_GATE,
         INVALID_SCENE,
         PARSE_ERROR,
         NODE_NOT_FOUND,
@@ -28,16 +29,20 @@ namespace parse {
         WRITE_FMT
     };
 
-    Json::Value to_json(const node& v);
-    Json::Value to_json(const point_t& v);
-    Json::Value to_json(const Rel& v);
-    Json::Value to_json(const Gate& v);
-    Json::Value to_json(const Input& v);
-    Json::Value to_json(const Output& v);
-    Json::Value to_json(const Metadata& v);
+    /**
+     * Serializes a scene to JSON.
+     * @param s - scene to clone
+     * @returns JSON::Value
+     */
     Json::Value to_json(Scene& s);
 
-    error_t from_json(const Json::Value&, Scene&);
+    /**
+     * Reads from a JSON document and generates a scene
+     * @param doc - to read from
+     * @param s - to save into
+     * @returns error on failure
+     */
+    error_t from_json(const Json::Value& doc, Scene& s);
 
 } // namespace parse
 } // namespace lcs

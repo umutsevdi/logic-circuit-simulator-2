@@ -10,12 +10,134 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "common/common.h"
-#include "types.h"
+#include "common.h"
+#include <cstdint>
 #include <map>
+#include <string>
 #include <vector>
 
 namespace lcs {
+
+/** id type for socket, sock_t = 0 means disconnected */
+typedef uint16_t sockid;
+
+/** Relationship identifier */
+typedef uint32_t relid;
+
+enum node_t : uint8_t {
+    GATE,
+    COMPONENT,
+    INPUT,
+    OUTPUT,
+    COMPONENT_INPUT,
+    COMPONENT_OUTPUT,
+
+    NODE_S
+};
+
+constexpr const char* node_to_str(node_t s)
+{
+    switch (s) {
+    case node_t::GATE: return "GATE";
+    case node_t::COMPONENT: return "COMPONENT";
+    case node_t::INPUT: return "INPUT";
+    case node_t::OUTPUT: return "OUTPUT";
+    case node_t::COMPONENT_INPUT: return "COMPIN";
+    case node_t::COMPONENT_OUTPUT: return "COMPOUT";
+    default: return "UNKNOWN";
+    }
+}
+
+node_t str_to_node(const std::string&);
+
+/**
+ * Node is a handler that represents the index.
+ * id is a non-zero identifier. Together with the type, represents a unique
+ * node.
+ * */
+struct node {
+    node(uint32_t _id = 0, node_t _type = GATE);
+    node(node&&)                 = default;
+    node(const node&)            = default;
+    node& operator=(node&&)      = default;
+    node& operator=(const node&) = default;
+    /** unique identifier within the same type */
+    uint32_t id : 24;
+    node_t type : 8;
+    friend std::ostream& operator<<(std::ostream& os, const node& r);
+    bool operator<(const node& n) const { return this->id < n.id; }
+};
+
+enum state_t {
+    /** Socket evaluated to false. */
+    FALSE,
+    /** Socket evaluated to true. */
+    TRUE,
+    /** The socket provides no valuable information
+     * due to the disconnection of at least one prior socket.
+     */
+    DISABLED,
+};
+constexpr const char* state_t_str(state_t s)
+{
+    return (s) == state_t::DISABLED ? "DISABLED"
+        : (s) == state_t::TRUE      ? "TRUE"
+                                    : "FALSE";
+}
+state_t str_to_state(const std::string&);
+
+enum direction_t { RIGHT, DOWN, LEFT, UP };
+constexpr const char* direction_to_str(direction_t s)
+{
+    return s == RIGHT ? "r" : s == DOWN ? "d" : s == LEFT ? "l" : "d";
+}
+direction_t str_to_dir(const std::string&);
+
+enum gate_t {
+    NOT,
+    AND,
+    OR,
+    XOR,
+    NAND,
+    NOR,
+    XNOR,
+
+    GATE_S
+};
+constexpr const char* gate_to_str(gate_t g)
+{
+    return g == NOT ? "NOT"
+        : g == AND  ? "AND"
+        : g == OR   ? "OR"
+        : g == XOR  ? "XOR"
+        : g == NAND ? "NAND"
+        : g == NOR  ? "NOR"
+        : g == XNOR ? "XNOR"
+                    : "NaN";
+}
+gate_t str_to_gate(const std::string&);
+
+struct point_t {
+    int x;
+    int y;
+};
+
+struct Metadata {
+    Metadata(std::string _name, std::string _description, std::string _author,
+        int _version = VERSION)
+        : name { _name }
+        , description { _description }
+        , author { _author }
+        , version { _version } { };
+    Metadata() { };
+
+    std::string name;
+    std::string description;
+    std::string author;
+    int version;
+    std::vector<std::string> dependencies;
+};
+
 class Scene;
 
 class BaseNode {
@@ -95,9 +217,9 @@ public:
     std::vector<relid> output;
 
     /** Adds a new input socket */
-    void increment();
+    bool increment();
     /** Removes an input socket */
-    void decrement();
+    bool decrement();
 
     gate_t type;
     sockid max_in;
@@ -136,7 +258,7 @@ private:
 /**
  * An input node where it's value can be arbitrarily
  * changed. */
-class Input final : public BaseNode {
+class Input : public BaseNode {
 public:
     Input(Scene* _scene, node _id);
     Input(const Input&)            = default;
@@ -155,11 +277,16 @@ public:
      * @param value - to set
      **/
     void set(bool value);
+    void set_freq(uint32_t freq);
     /** Inverts the value and notifies connected nodes. */
     void toggle();
 
     std::vector<relid> output;
-    bool value;
+    union {
+        bool value;
+        uint32_t freq;
+    };
+    bool type;
 };
 
 /** An output node that displays the result */
@@ -183,7 +310,8 @@ public:
 
 class Scene {
 public:
-    Scene(const std::string& name = "");
+    Scene(const std::string& name = "", const std::string& author = "",
+        const std::string& description = "");
     Scene(Scene&&)                 = default;
     Scene(const Scene&)            = default;
     Scene& operator=(Scene&&)      = default;
@@ -304,7 +432,6 @@ public:
 
     // [id][period] map for timer inputs
     std::map<node, int> timer_sub_vec;
-
     std::map<node, Gate> gates;
     std::map<node, Component> components;
     std::map<node, Input> inputs;
@@ -315,5 +442,35 @@ public:
 
     Metadata meta;
 };
+
+class ComponentScene : public Scene {
+public:
+    ComponentScene(const std::string& name = "", const std::string& author = "",
+        const std::string& description = "");
+    ComponentScene(ComponentScene&&)                 = default;
+    ComponentScene(const ComponentScene&)            = default;
+    ComponentScene& operator=(ComponentScene&&)      = default;
+    ComponentScene& operator=(const ComponentScene&) = default;
+    ~ComponentScene();
+
+    int in_size;
+    int out_size;
+
+    void set(int idx, bool);
+    bool get(int idx) const;
+    uint64_t run(uint64_t);
+};
+
+/** Class to node_t conversion */
+template <typename T> constexpr node_t to_node_type()
+{
+    if constexpr (std::is_same<T, Gate>::value) { return node_t::GATE; }
+    if constexpr (std::is_same<T, Component>::value) {
+        return node_t::COMPONENT;
+    }
+    if constexpr (std::is_same<T, Input>::value) { return node_t::INPUT; }
+    if constexpr (std::is_same<T, Output>::value) { return node_t::OUTPUT; }
+    return node_t::NODE_S;
+}
 
 } // namespace lcs

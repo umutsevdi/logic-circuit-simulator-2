@@ -50,7 +50,7 @@ include(cmake/Gtkmm.cmake)
 include(cmake/Tfd.cmake)
 include(cmake/Json.cmake)
 
-include_directories(src)
+include_directories(include)
 
 add_subdirectory(src/common)
 add_subdirectory(src/core)
