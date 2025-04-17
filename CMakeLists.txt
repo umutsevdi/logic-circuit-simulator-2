@@ -19,16 +19,18 @@ endif()
 project(${PRJ} C CXX)
 
 # OPTIONS
-option(__ENABLE_DOXYGEN "Generate Doxygen documentation" YES)
-option(__BUILD_TESTS "Build and run tests" YES)
+option(LCS_ENABLE_DOXYGEN "Generate Doxygen documentation" YES)
+option(LCS_BUILD_TESTS "Build and run tests" YES)
+option(LCS_GUI "Build with user interface" YES)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "Started CMake for ${PROJECT_NAME} v${PROJECT_VERSION}...\n")
-message("Build Tests: ${__BUILD_TESTS}")
-message("Doxygen: ${__ENABLE_DOXYGEN}")
+message("Build Tests: ${LCS_BUILD_TESTS}")
+message("Doxygen: ${LCS_ENABLE_DOXYGEN}")
+message("GUI: ${LCS_GUI}")
 
 set(__CORE core common parse jsoncpp_static)
 set(__DEPENDS ui $__CORE)
@@ -41,21 +43,26 @@ else()
     add_compile_options(-O3)
 endif()
 
-file(GLOB SOURCES src/main.cpp)
-add_executable(${PROJECT_NAME} ${SOURCES})
+if(LCS_GUI)
+    file(GLOB SOURCES src/main.cpp)
+    add_executable(${PROJECT_NAME} ${SOURCES})
+endif()
 
-include(cmake/Doxygen.cmake)
-include(cmake/Tests.cmake)
 include(cmake/Gtkmm.cmake)
 include(cmake/Tfd.cmake)
 include(cmake/Json.cmake)
+include(cmake/Tests.cmake)
+include(cmake/Doxygen.cmake)
 
 include_directories(include)
 
 add_subdirectory(src/common)
 add_subdirectory(src/core)
+if(LCS_GUI)
 add_subdirectory(src/ui)
+endif()
 add_subdirectory(src/parse)
 
-target_link_libraries(${PRJ} ${__DEPENDS})
-
+if(LCS_GUI)
+    target_link_libraries(${PRJ} ${__DEPENDS})
+endif()

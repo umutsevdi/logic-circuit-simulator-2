@@ -1,9 +1,9 @@
-if(CMAKE_BUILD_TYPE STREQUAL "Release" AND __ENABLE_DOXYGEN)
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND LCS_ENABLE_DOXYGEN)
     find_package(Doxygen)
     if(DOXYGEN_FOUND)
         set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile)
         set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/docs)
-        message("${DOX} ${DOXYFILE_IN} ${DOXYFILE_OUT}")
+        message("${DOX} ${DOXYFILE_IN} ${DOXYFILE_OUT} Doxfile at: ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile")
         file(MAKE_DIRECTORY ${DOXYGEN_OUT})
         # Configure Doxygen output directory
         set(DOXYGEN_GENERATE_HTML YES)
@@ -14,6 +14,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND __ENABLE_DOXYGEN)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMENT "Generating API documentation with Doxygen"
             VERBATIM)
-        add_dependencies(${PROJECT_NAME} doc)
+        if(LCS_GUI)
+            add_dependencies(${PROJECT_NAME} doc)
+        else()
+            add_dependencies(${PROJECT_NAME} doc)
+        endif()
     endif()
 endif()

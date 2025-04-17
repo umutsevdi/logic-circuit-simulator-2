@@ -46,8 +46,9 @@ int __expect_with_message(std::function<bool(void)> expr, const char* function,
 #define L_INFO(...)
 #define L_WARN(...) LOG_PRE("WARN ") __VA_ARGS__ << std::endl
 #define L_ERROR(...) LOG_PRE("ERROR") __VA_ARGS__ << std::endl
-#define ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
-#define S_ERROR(msg) (L_ERROR(#msg)), msg
+#define L_ERROR(...) LOG_PRE("ERROR") __VA_ARGS__ << std::endl
+#define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
+#define ERROR(msg) (L_ERROR(#msg)), msg
 #define lcs_assert(expr)                                                       \
     {                                                                          \
         __expect_with_message([&]() mutable -> bool { return expr; },          \

@@ -6,7 +6,7 @@ PROJECT_BRIEF          = "A free and open-source Logic Circuit Simulator."
 OUTPUT_DIRECTORY       = build/
 
 # Input directories
-INPUT                  = src/
+INPUT                  = include/
 BRIEF_MEMBER_DESC      = YES
 REPEAT_BRIEF           = YES
 JAVADOC_AUTOBRIEF      = YES
