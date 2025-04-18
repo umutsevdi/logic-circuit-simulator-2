@@ -17,6 +17,19 @@ Scene::Scene(const std::string& _name, const std::string& _author , const std::s
 {
 }
 
+Scene::Scene(ComponentContext ctx, const std::string& _name, const std::string& _author , const std::string& _description)
+    : last_node {
+        node { 0, node_t::GATE },
+        node { 0, node_t::COMPONENT },
+        node { 0, node_t::INPUT },
+        node { 0, node_t::OUTPUT },
+    }, last_rel{0}
+    , meta {_name,_author,_description}
+    , component_context{ctx}
+
+{
+}
+
 void Scene::remove_node(node id)
 {
     if (id.id == 0) { lcs_assert(id.id != 0); }
@@ -127,10 +140,11 @@ error_t Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
     case node_t::COMPONENT_OUTPUT: {
         if (auto compout = component_context->outputs.find(to_node.id);
             compout != component_context->outputs.end()) {
-            if (compout->second == 0) {
+            if (compout->second != 0) {
                 return ERROR(error_t::ALREADY_CONNECTED);
             }
             compout->second = id;
+            is_connected    = true;
         }
         break;
     }
@@ -204,7 +218,7 @@ error_t Scene::disconnect(relid id)
             auto& v = inputitr->second;
             v.erase(std::remove_if(v.begin(), v.end(), remove_fn));
         } else {
-            return ERROR(error_t::NOT_CONNECTED);
+            return ERROR(NOT_CONNECTED);
         }
         break;
     }
@@ -255,12 +269,7 @@ void Scene::invoke_signal(const std::vector<relid>& output, state_t value)
         if (id == 0) { continue; }
         if (auto r = rel.find(id); r != rel.end()) {
             r->second.value = value;
-            if (r->second.to_node.type == node_t::COMPONENT_OUTPUT) {
-                // TODO implement COMPOUT
-                // component_context->outputs[r->second.to_sock] = value;
-            } else if (r->second.from_node.type == node_t::COMPONENT_INPUT) {
-                // TODO implement COMPIN
-            } else {
+            if (r->second.to_node.type != node_t::COMPONENT_OUTPUT) {
                 auto n = get_base(r->second.to_node);
                 if (n != nullptr) { n->signal(); }
             }

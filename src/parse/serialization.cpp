@@ -19,7 +19,7 @@ namespace parse {
     /** Converts a Metadata object to a JSON value */
     Json::Value _to_json(const Metadata& v, bool is_component);
     /** Converts a ComponentContext object to a JSON value */
-    static Json::Value _to_json(const ComponentContext& v);
+    static Json::Value _to_json(Json::Value&, const ComponentContext& v);
     /** Converts the base node class to a JSON value */
     static Json::Value _to_json_base(const BaseNode& v);
     /** Converts all elements in the map to json */
@@ -48,7 +48,7 @@ namespace parse {
             out["rel"] = doc;
         }
         if (s.component_context.has_value()) {
-            out["base"] = _to_json(s.component_context.value());
+            _to_json(out, s.component_context.value());
         } else {
         }
         return out;
@@ -129,23 +129,10 @@ namespace parse {
         return out;
     }
 
-    Json::Value _to_json(const ComponentContext& v)
+    Json::Value _to_json(Json::Value& out, const ComponentContext& v)
     {
-        Json::Value out { Json::objectValue };
-        out["input"]  = { Json::objectValue };
-        out["output"] = { Json::objectValue };
-
-        for (auto rel_id : v.outputs) {
-            out["output"][std::to_string(rel_id.first)] = rel_id.second;
-        }
-        for (auto rel_id : v.inputs) {
-            Json::Value iter { Json::arrayValue };
-            for (auto sock_id : rel_id.second) {
-                iter.append(sock_id);
-            }
-            out["input"][std::to_string(rel_id.first)] = iter;
-        }
-
+        out["size_in"]  = v.inputs.size();
+        out["size_out"] = v.outputs.size();
         return out;
     }
 

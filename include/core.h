@@ -319,14 +319,33 @@ public:
     state_t value;
 };
 
+/**
+ * A component scene contains the ComponentContext, Component Context can
+ * execute a scene with given parameters.
+ */
 struct ComponentContext {
+    ComponentContext() = default;
+    ComponentContext(relid input_s, relid output_s);
     std::map<sockid, std::vector<relid>> inputs;
     std::map<sockid, relid> outputs;
 
-    uint64_t run(Scene*, uint64_t);
+    /**
+     * Execute a scene using the given input.
+     * @param s to run
+     * @param input binary encoded input. Starting from the lowest bit
+     * values are assigned to each input slot. Before running the method
+     * @returns binary encoded result
+     *
+     **/
+    uint64_t run(Scene* s, uint64_t input);
+    node get_input(uint32_t id) const;
+    node get_output(uint32_t id) const;
+    state_t get_value(node id) const;
 
 private:
+    /** Temporarily used input value */
     uint64_t execution_input;
+    /** Temporarily used output value */
     uint64_t execution_output;
 };
 
@@ -334,6 +353,8 @@ class Scene {
 public:
     Scene(const std::string& name = "", const std::string& author = "",
         const std::string& description = "");
+    Scene(ComponentContext ctx, const std::string& name = "",
+        const std::string& author = "", const std::string& description = "");
     Scene(Scene&&)                 = default;
     Scene(const Scene&)            = default;
     Scene& operator=(Scene&&)      = default;

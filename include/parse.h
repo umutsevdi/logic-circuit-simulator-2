@@ -22,6 +22,7 @@ namespace parse {
         INVALID_INPUT,
         INVALID_GATE,
         INVALID_SCENE,
+        INVALID_COMPONENT,
         PARSE_ERROR,
         NODE_NOT_FOUND,
         REL_CONNECT_ERROR,

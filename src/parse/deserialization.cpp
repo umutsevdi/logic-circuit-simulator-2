@@ -22,6 +22,9 @@ namespace parse {
     static error_t _from_json(const Json::Value&, Output&);
     /** Reads a JSON document and writes values to a Metadata object */
     static error_t _from_json(const Json::Value& doc, Metadata& v);
+    /** Reads a JSON document and writes values to a Component Context object */
+    static error_t _from_json(
+        const Json::Value& doc, std::optional<ComponentContext>& v);
     /** Reads a JSON document and writes its values to a map */
     template <typename T>
     static error_t _json_to_map(
@@ -37,6 +40,11 @@ namespace parse {
         error_t err = _from_json(doc["meta"], v.meta);
         if (err) { return err; }
 
+        if (doc["meta"]["type"].isString()
+            && doc["meta"]["type"].asString() == "component") {
+            err = _from_json(doc, v.component_context);
+            if (err) { return err; }
+        }
         const Json::Value& nodes = doc["nodes"];
         if (nodes["gates"].isObject()) {
             err = _json_to_map<Gate>(&v, nodes["gates"], v.gates);
@@ -156,6 +164,16 @@ namespace parse {
                 v.dependencies.push_back(j.asString());
             }
         }
+        return error_t::OK;
+    }
+
+    static error_t _from_json(
+        const Json::Value& doc, std::optional<ComponentContext>& v)
+    {
+        if (!(doc["size_in"].isInt() && doc["size_out"].isInt())) {
+            return ERROR(error_t::INVALID_COMPONENT);
+        }
+        v.emplace(doc["size_in"].asInt(), doc["size_out"].asInt());
         return error_t::OK;
     }
 
