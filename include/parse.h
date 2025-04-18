@@ -19,6 +19,7 @@ namespace parse {
     enum error_t {
         OK,
         INVALID_NODE,
+        INVALID_INPUT,
         INVALID_GATE,
         INVALID_SCENE,
         PARSE_ERROR,

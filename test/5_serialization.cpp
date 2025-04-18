@@ -67,6 +67,8 @@ TEST_CASE("Save, load and compare")
     Json::Value scene_loaded_str = parse::to_json(s_loaded);
     std::cout << scene_str.toStyledString() << std::endl
               << scene_loaded_str.toStyledString() << std::endl;
+
+
     REQUIRE(scene_str.toStyledString() == scene_loaded_str.toStyledString());
 
     REQUIRE(s_loaded.get_node<Output>(o)->get() == state_t::TRUE);

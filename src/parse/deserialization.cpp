@@ -127,10 +127,12 @@ namespace parse {
 
     error_t _from_json(const Json::Value& doc, Input& v)
     {
-        if (doc["data"].isBool()) {
+        if (doc["freq"].isInt()) {
+            v.set_freq(doc["freq"].isInt());
+        } else if (doc["data"].isBool()) {
             v.set(doc["data"].asBool());
-        } else if (doc["freq"].isUInt()) {
-            v.set_freq(doc["freq"].asUInt());
+        } else {
+            return ERROR(error_t::INVALID_INPUT);
         }
         return error_t::OK;
     }
@@ -213,9 +215,10 @@ namespace parse {
             error_t err = _from_json(*iter, id, r);
             if (err) { return err; }
             if (id > s->last_rel) { s->last_rel = id; }
-            bool ok = s->connect_with_id(
-                r.id, r.to_node, r.to_sock, r.from_node, r.from_sock);
-            if (!ok) { return ERROR(error_t::REL_CONNECT_ERROR); }
+            if (s->connect_with_id(
+                    r.id, r.to_node, r.to_sock, r.from_node, r.from_sock)) {
+                return ERROR(error_t::REL_CONNECT_ERROR);
+            }
         }
         return error_t::OK;
     }

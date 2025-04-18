@@ -1,4 +1,6 @@
 #include "parse.h"
+#include "json/value.h"
+#include <string>
 namespace lcs {
 namespace parse {
 
@@ -15,7 +17,9 @@ namespace parse {
     /** Converts a Output object to a JSON value */
     static Json::Value _to_json(const Output& v);
     /** Converts a Metadata object to a JSON value */
-    static Json::Value _to_json(const Metadata& v);
+    Json::Value _to_json(const Metadata& v, bool is_component);
+    /** Converts a ComponentContext object to a JSON value */
+    static Json::Value _to_json(const ComponentContext& v);
     /** Converts the base node class to a JSON value */
     static Json::Value _to_json_base(const BaseNode& v);
     /** Converts all elements in the map to json */
@@ -25,7 +29,7 @@ namespace parse {
     Json::Value to_json(Scene& s)
     {
         Json::Value out { Json::objectValue };
-        out["meta"] = _to_json(s.meta);
+        out["meta"] = _to_json(s.meta, s.component_context.has_value());
         if (!s.gates.empty()) {
             out["nodes"]["gates"] = _to_json<Gate>(s.gates);
         }
@@ -42,6 +46,10 @@ namespace parse {
                 doc[std::to_string(c.first)] = _to_json(c.second);
             }
             out["rel"] = doc;
+        }
+        if (s.component_context.has_value()) {
+            out["base"] = _to_json(s.component_context.value());
+        } else {
         }
         return out;
     }
@@ -93,8 +101,8 @@ namespace parse {
     Json::Value _to_json(const Input& v)
     {
         Json::Value out = _to_json_base(v);
-        if (v.type) {
-            out["freq"] = v.freq;
+        if (v.freq.has_value()) {
+            out["freq"] = v.freq.value();
         } else {
             out["data"] = v.value;
         }
@@ -103,13 +111,14 @@ namespace parse {
 
     Json::Value _to_json(const Output& v) { return _to_json_base(v); }
 
-    Json::Value _to_json(const Metadata& v)
+    Json::Value _to_json(const Metadata& v, bool is_component)
     {
         Json::Value out { Json::objectValue };
         out["name"]   = v.name;
         out["author"] = v.author;
         if (v.description != "") { out["description"] = v.description; }
         out["version"] = v.version;
+        out["type"]    = is_component ? "component" : "scene";
         if (!v.dependencies.empty()) {
             Json::Value dep { Json::arrayValue };
             for (const auto& d : v.dependencies) {
@@ -117,6 +126,26 @@ namespace parse {
             }
             out["dependencies"] = dep;
         }
+        return out;
+    }
+
+    Json::Value _to_json(const ComponentContext& v)
+    {
+        Json::Value out { Json::objectValue };
+        out["input"]  = { Json::objectValue };
+        out["output"] = { Json::objectValue };
+
+        for (auto rel_id : v.outputs) {
+            out["output"][std::to_string(rel_id.first)] = rel_id.second;
+        }
+        for (auto rel_id : v.inputs) {
+            Json::Value iter { Json::arrayValue };
+            for (auto sock_id : rel_id.second) {
+                iter.append(sock_id);
+            }
+            out["input"][std::to_string(rel_id.first)] = iter;
+        }
+
         return out;
     }
 

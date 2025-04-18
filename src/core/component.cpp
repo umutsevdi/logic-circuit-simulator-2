@@ -3,8 +3,6 @@
 
 namespace lcs {
 
-
-
 Component::Component(Scene* _s, node _id, const std::string& _path)
     : BaseNode { _s, node { _id.id, node_t::COMPONENT } }
     , path { _path }

@@ -30,7 +30,7 @@ std::ostream& operator<<(std::ostream& os, const Rel& r)
 Input::Input(Scene* _scene, node _id)
     : BaseNode { _scene, { _id.id, node_t::INPUT } }
     , value { false }
-    , type { false } { };
+    , freq { std::nullopt } { };
 
 std::ostream& operator<<(std::ostream& os, const Input& g)
 {
@@ -42,14 +42,12 @@ std::ostream& operator<<(std::ostream& os, const Input& g)
 void Input::set(bool v)
 {
     value = v;
-    type  = false;
     signal();
 }
 
 void Input::set_freq(uint32_t v)
 {
     freq = v;
-    type = true;
     signal();
 }
 

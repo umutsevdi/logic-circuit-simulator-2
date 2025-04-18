@@ -13,10 +13,23 @@
 #include "common.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace lcs {
+enum error_t {
+    OK,
+    INVALID_NODEID,
+    INVALID_RELID,
+    REL_NOT_FOUND,
+    INVALID_FROM_TYPE,
+    NOT_A_COMPONENT,
+    INVALID_TO_TYPE,
+    ALREADY_CONNECTED,
+    NOT_CONNECTED,
+
+};
 
 /** id type for socket, sock_t = 0 means disconnected */
 typedef uint16_t sockid;
@@ -282,11 +295,9 @@ public:
     void toggle();
 
     std::vector<relid> output;
-    union {
-        bool value;
-        uint32_t freq;
-    };
-    bool type;
+
+    bool value;
+    std::optional<uint32_t> freq;
 };
 
 /** An output node that displays the result */
@@ -306,6 +317,17 @@ public:
 
     relid input;
     state_t value;
+};
+
+struct ComponentContext {
+    std::map<sockid, std::vector<relid>> inputs;
+    std::map<sockid, relid> outputs;
+
+    uint64_t run(Scene*, uint64_t);
+
+private:
+    uint64_t execution_input;
+    uint64_t execution_output;
 };
 
 class Scene {
@@ -415,7 +437,7 @@ public:
     /** Leave from_sock empty if from is not a Component. */
     relid connect(node to_node, sockid to_sock, node from_node,
         sockid from_sock = 0) noexcept;
-    void disconnect(relid);
+    error_t disconnect(relid);
 
     /**
      * Update a series relationship to the value, and trigger signal for each
@@ -427,7 +449,7 @@ public:
 
     void set_position(node, point_t);
 
-    bool connect_with_id(relid& id, node to_node, sockid to_sock,
+    error_t connect_with_id(relid& id, node to_node, sockid to_sock,
         node from_node, sockid from_sock = 0) noexcept;
 
     // [id][period] map for timer inputs
@@ -441,24 +463,7 @@ public:
     relid last_rel;
 
     Metadata meta;
-};
-
-class ComponentScene : public Scene {
-public:
-    ComponentScene(const std::string& name = "", const std::string& author = "",
-        const std::string& description = "");
-    ComponentScene(ComponentScene&&)                 = default;
-    ComponentScene(const ComponentScene&)            = default;
-    ComponentScene& operator=(ComponentScene&&)      = default;
-    ComponentScene& operator=(const ComponentScene&) = default;
-    ~ComponentScene();
-
-    int in_size;
-    int out_size;
-
-    void set(int idx, bool);
-    bool get(int idx) const;
-    uint64_t run(uint64_t);
+    std::optional<ComponentContext> component_context;
 };
 
 /** Class to node_t conversion */
