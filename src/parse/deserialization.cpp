@@ -12,17 +12,18 @@ namespace parse {
     static error_t _from_json(const Json::Value& doc, node& v);
     /** Reads a JSON document and writes values to a Rel object */
     static error_t _from_json(const Json::Value& doc, relid id, Rel& v);
-    /** Reads a JSON document and writes values to a Gate object */
-    static error_t _from_json(const Json::Value& doc, Gate& v);
+    /** Reads a JSON document and writes values to a GateNode object */
+    static error_t _from_json(const Json::Value& doc, GateNode& v);
     /** Reads a JSON document and writes values to a Value object */
-    static error_t _from_json(const Json::Value&, Component&);
-    /** Reads a JSON document and writes values to a Input object */
-    static error_t _from_json(const Json::Value& doc, Input& v);
+    static error_t _from_json(const Json::Value&, ComponentNode&);
+    /** Reads a JSON document and writes values to a InputNode object */
+    static error_t _from_json(const Json::Value& doc, InputNode& v);
     /** Reads a JSON document and writes values to a Value object */
-    static error_t _from_json(const Json::Value&, Output&);
+    static error_t _from_json(const Json::Value&, OutputNode&);
     /** Reads a JSON document and writes values to a Metadata object */
-    static error_t _from_json(const Json::Value& doc, Metadata& v);
-    /** Reads a JSON document and writes values to a Component Context object */
+    static error_t _from_json(const Json::Value& doc, sys::Metadata& v);
+    /** Reads a JSON document and writes values to a ComponentNode Context
+     * object */
     static error_t _from_json(
         const Json::Value& doc, std::optional<ComponentContext>& v);
     /** Reads a JSON document and writes its values to a map */
@@ -47,19 +48,19 @@ namespace parse {
         }
         const Json::Value& nodes = doc["nodes"];
         if (nodes["gates"].isObject()) {
-            err = _json_to_map<Gate>(&v, nodes["gates"], v.gates);
+            err = _json_to_map<GateNode>(&v, nodes["gates"], v.gates);
             if (err) { return err; }
         }
         if (nodes["comp"].isObject()) {
-            err = _json_to_map<Component>(&v, nodes["comp"], v.components);
+            err = _json_to_map<ComponentNode>(&v, nodes["comp"], v.components);
             if (err) { return err; }
         }
         if (nodes["inputs"].isObject()) {
-            err = _json_to_map<Input>(&v, nodes["inputs"], v.inputs);
+            err = _json_to_map<InputNode>(&v, nodes["inputs"], v.inputs);
             if (err) { return err; }
         }
         if (nodes["outputs"].isObject()) {
-            err = _json_to_map<Output>(&v, nodes["outputs"], v.outputs);
+            err = _json_to_map<OutputNode>(&v, nodes["outputs"], v.outputs);
             if (err) { return err; }
         }
         if (doc["rel"].isObject()) {
@@ -118,7 +119,7 @@ namespace parse {
         return error_t::OK;
     }
 
-    error_t _from_json(const Json::Value& doc, Gate& v)
+    error_t _from_json(const Json::Value& doc, GateNode& v)
     {
         if (doc["size"].isInt()) {
             int max_in = doc["size"].asInt();
@@ -131,9 +132,12 @@ namespace parse {
         return error_t::OK;
     }
 
-    error_t _from_json(const Json::Value&, Component&) { return error_t::OK; }
+    error_t _from_json(const Json::Value&, ComponentNode&)
+    {
+        return error_t::OK;
+    }
 
-    error_t _from_json(const Json::Value& doc, Input& v)
+    error_t _from_json(const Json::Value& doc, InputNode& v)
     {
         if (doc["freq"].isInt()) {
             v.set_freq(doc["freq"].isInt());
@@ -145,9 +149,9 @@ namespace parse {
         return error_t::OK;
     }
 
-    error_t _from_json(const Json::Value&, Output&) { return error_t::OK; }
+    error_t _from_json(const Json::Value&, OutputNode&) { return error_t::OK; }
 
-    error_t _from_json(const Json::Value& doc, Metadata& v)
+    error_t _from_json(const Json::Value& doc, sys::Metadata& v)
     {
         if (!(doc["name"].isString() && doc["author"].isString()
                 && doc["version"].isInt())) {
@@ -161,7 +165,10 @@ namespace parse {
         v.version = doc["version"].asInt();
         if (doc["dependencies"].isArray()) {
             for (const auto& j : doc["dependencies"]) {
-                v.dependencies.push_back(j.asString());
+                sys::component_handle_t id = 0;
+                sys::error_t err = sys::get_component(j.asString(), id);
+                if (err) { return ERROR(error_t::INVALID_COMPONENT); }
+                v.dependencies.push_back(id);
             }
         }
         return error_t::OK;
@@ -196,7 +203,7 @@ namespace parse {
             }
             if (err) { return err; }
 
-            if constexpr (std::is_same<T, Gate>::value) {
+            if constexpr (std::is_same<T, GateNode>::value) {
                 if (!value["gate"].isString()) {
                     return ERROR(error_t::INVALID_GATE);
                 }
@@ -207,7 +214,7 @@ namespace parse {
                 t.dir   = dir;
                 m.emplace(id, t);
 
-            } else if constexpr (std::is_same<T, Component>::value) {
+            } else if constexpr (std::is_same<T, ComponentNode>::value) {
                 T t { s, id, "" };
                 t.point = point;
                 t.dir   = dir;

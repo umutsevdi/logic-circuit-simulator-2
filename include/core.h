@@ -18,6 +18,59 @@
 #include <vector>
 
 namespace lcs {
+namespace sys {
+
+    enum error_t {
+        OK,
+        COMPONENT_NOT_FOUND
+
+    };
+
+    typedef uint32_t component_handle_t;
+
+    struct Metadata {
+        Metadata(std::string _name, std::string _description,
+            std::string _author, int _version = VERSION)
+            : name { _name }
+            , description { _description }
+            , author { _author }
+            , version { _version } { };
+        Metadata() { };
+
+        std::string name;
+        std::string description;
+        std::string author;
+        int version;
+        std::vector<sys::component_handle_t> dependencies;
+
+        std::string to_dependency_string() const;
+    };
+
+    /**
+     * Attempts to obtain a component. If it hasn't been loaded yet, also
+     * loads the component and returns it's handle.
+     *
+     * @param name - component name
+     * @param id id to assign the handle
+     * @returns - error on failure.
+     *
+     */
+    error_t get_component(const std::string& name, component_handle_t& id);
+
+    /**
+     * Executes the component with given id with provided input, returning
+     * it's result.
+     *
+     * @param id - component handle
+     * @param input - binary encoded input value
+     * @returns - binary encoded result
+     */
+    uint64_t run_component(component_handle_t id, uint64_t input);
+
+    std::optional<Metadata> get_dependency_info(component_handle_t id);
+
+} // namespace sys
+
 enum error_t {
     OK,
     INVALID_NODEID,
@@ -28,6 +81,8 @@ enum error_t {
     INVALID_TO_TYPE,
     ALREADY_CONNECTED,
     NOT_CONNECTED,
+
+    COMPONENT_NOT_FOUND
 
 };
 
@@ -135,22 +190,6 @@ struct point_t {
     int y;
 };
 
-struct Metadata {
-    Metadata(std::string _name, std::string _description, std::string _author,
-        int _version = VERSION)
-        : name { _name }
-        , description { _description }
-        , author { _author }
-        , version { _version } { };
-    Metadata() { };
-
-    std::string name;
-    std::string description;
-    std::string author;
-    int version;
-    std::vector<std::string> dependencies;
-};
-
 class Scene;
 
 class BaseNode {
@@ -209,16 +248,16 @@ struct Rel {
 /**
  * Describes a single logic gate.
  */
-class Gate final : public BaseNode {
+class GateNode final : public BaseNode {
 public:
-    explicit Gate(Scene*, node, gate_t type, sockid max_in = 2);
-    Gate(const Gate&)            = default;
-    Gate(Gate&&)                 = default;
-    Gate& operator=(Gate&&)      = default;
-    Gate& operator=(const Gate&) = default;
-    ~Gate()                      = default;
+    explicit GateNode(Scene*, node, gate_t type, sockid max_in = 2);
+    GateNode(const GateNode&)            = default;
+    GateNode(GateNode&&)                 = default;
+    GateNode& operator=(GateNode&&)      = default;
+    GateNode& operator=(const GateNode&) = default;
+    ~GateNode()                          = default;
 
-    friend std::ostream& operator<<(std::ostream& os, const Gate& g);
+    friend std::ostream& operator<<(std::ostream& os, const GateNode& g);
 
     void signal() override;
     bool is_connected() const override;
@@ -243,15 +282,15 @@ private:
     state_t value;
 };
 
-class Component final : public BaseNode {
+class ComponentNode final : public BaseNode {
 public:
-    explicit Component(Scene*, node, const std::string& path);
-    Component(const Component&)            = default;
-    Component(Component&&)                 = default;
-    Component& operator=(Component&&)      = default;
-    Component& operator=(const Component&) = default;
-    ~Component()                           = default;
-    friend std::ostream& operator<<(std::ostream& os, const Component& g);
+    explicit ComponentNode(Scene*, node, const std::string& path);
+    ComponentNode(const ComponentNode&)            = default;
+    ComponentNode(ComponentNode&&)                 = default;
+    ComponentNode& operator=(ComponentNode&&)      = default;
+    ComponentNode& operator=(const ComponentNode&) = default;
+    ~ComponentNode()                               = default;
+    friend std::ostream& operator<<(std::ostream& os, const ComponentNode& g);
 
     void signal() override;
     bool is_connected() const override;
@@ -271,15 +310,15 @@ private:
 /**
  * An input node where it's value can be arbitrarily
  * changed. */
-class Input : public BaseNode {
+class InputNode : public BaseNode {
 public:
-    Input(Scene* _scene, node _id);
-    Input(const Input&)            = default;
-    Input(Input&&)                 = default;
-    Input& operator=(Input&&)      = default;
-    Input& operator=(const Input&) = default;
-    ~Input()                       = default;
-    friend std::ostream& operator<<(std::ostream& os, const Input& g);
+    InputNode(Scene* _scene, node _id);
+    InputNode(const InputNode&)            = default;
+    InputNode(InputNode&&)                 = default;
+    InputNode& operator=(InputNode&&)      = default;
+    InputNode& operator=(const InputNode&) = default;
+    ~InputNode()                           = default;
+    friend std::ostream& operator<<(std::ostream& os, const InputNode& g);
 
     void signal() override;
     bool is_connected() const override;
@@ -301,15 +340,15 @@ public:
 };
 
 /** An output node that displays the result */
-class Output final : public BaseNode {
+class OutputNode final : public BaseNode {
 public:
-    Output(Scene* _scene, node _id);
-    Output(const Output&)            = default;
-    Output(Output&&)                 = default;
-    Output& operator=(Output&&)      = default;
-    Output& operator=(const Output&) = default;
-    ~Output()                        = default;
-    friend std::ostream& operator<<(std::ostream& os, const Output& g);
+    OutputNode(Scene* _scene, node _id);
+    OutputNode(const OutputNode&)            = default;
+    OutputNode(OutputNode&&)                 = default;
+    OutputNode& operator=(OutputNode&&)      = default;
+    OutputNode& operator=(const OutputNode&) = default;
+    ~OutputNode()                            = default;
+    friend std::ostream& operator<<(std::ostream& os, const OutputNode& g);
 
     void signal() override;
     bool is_connected() const override;
@@ -364,35 +403,35 @@ public:
 
     template <class T, class... Args> node add_node(Args&&... args)
     {
-        constexpr bool is_gate      = std::is_same<T, Gate>::value;
-        constexpr bool is_component = std::is_same<T, Component>::value;
-        constexpr bool is_input     = std::is_same<T, Input>::value;
-        constexpr bool is_output    = std::is_same<T, Output>::value;
+        constexpr bool is_gate      = std::is_same<T, GateNode>::value;
+        constexpr bool is_component = std::is_same<T, ComponentNode>::value;
+        constexpr bool is_input     = std::is_same<T, InputNode>::value;
+        constexpr bool is_output    = std::is_same<T, OutputNode>::value;
 
         if constexpr (is_gate) {
             last_node[node_t::GATE].id++;
             return gates
                 .emplace(last_node[node_t::GATE],
-                    Gate { this, last_node[node_t::GATE].id, args... })
+                    GateNode { this, last_node[node_t::GATE].id, args... })
                 .first->first;
         } else if constexpr (is_component) {
             last_node[node_t::COMPONENT].id++;
             return components
                 .emplace(last_node[node_t::COMPONENT],
-                    Component {
+                    ComponentNode {
                         this, last_node[node_t::COMPONENT].id, args... })
                 .first->first;
         } else if constexpr (is_input) {
             last_node[node_t::INPUT].id++;
             return inputs
                 .emplace(last_node[node_t::INPUT],
-                    Input { this, last_node[node_t::INPUT].id, args... })
+                    InputNode { this, last_node[node_t::INPUT].id, args... })
                 .first->first;
         } else if constexpr (is_output) {
             last_node[node_t::OUTPUT].id++;
             return outputs
                 .emplace(last_node[node_t::OUTPUT],
-                    Output { this, last_node[node_t::OUTPUT].id, args... })
+                    OutputNode { this, last_node[node_t::OUTPUT].id, args... })
                 .first->first;
         }
         //    case node_t::DISPLAY:
@@ -409,10 +448,10 @@ public:
      */
     template <typename T> NRef<T> get_node(node id)
     {
-        constexpr bool is_gate      = std::is_same<T, Gate>::value;
-        constexpr bool is_component = std::is_same<T, Component>::value;
-        constexpr bool is_input     = std::is_same<T, Input>::value;
-        constexpr bool is_output    = std::is_same<T, Output>::value;
+        constexpr bool is_gate      = std::is_same<T, GateNode>::value;
+        constexpr bool is_component = std::is_same<T, ComponentNode>::value;
+        constexpr bool is_input     = std::is_same<T, InputNode>::value;
+        constexpr bool is_output    = std::is_same<T, OutputNode>::value;
         if constexpr (is_gate) {
             auto g = gates.find(id);
             lcs_assert(
@@ -475,27 +514,30 @@ public:
 
     // [id][period] map for timer inputs
     std::map<node, int> timer_sub_vec;
-    std::map<node, Gate> gates;
-    std::map<node, Component> components;
-    std::map<node, Input> inputs;
-    std::map<node, Output> outputs;
+    std::map<node, GateNode> gates;
+    std::map<node, ComponentNode> components;
+    std::map<node, InputNode> inputs;
+    std::map<node, OutputNode> outputs;
     std::map<relid, Rel> rel;
     node last_node[node_t::NODE_S];
     relid last_rel;
 
-    Metadata meta;
+    sys::Metadata meta;
     std::optional<ComponentContext> component_context;
+
+private:
+    sys::error_t add_dependency(const std::string& name);
 };
 
 /** Class to node_t conversion */
 template <typename T> constexpr node_t to_node_type()
 {
-    if constexpr (std::is_same<T, Gate>::value) { return node_t::GATE; }
-    if constexpr (std::is_same<T, Component>::value) {
+    if constexpr (std::is_same<T, GateNode>::value) { return node_t::GATE; }
+    if constexpr (std::is_same<T, ComponentNode>::value) {
         return node_t::COMPONENT;
     }
-    if constexpr (std::is_same<T, Input>::value) { return node_t::INPUT; }
-    if constexpr (std::is_same<T, Output>::value) { return node_t::OUTPUT; }
+    if constexpr (std::is_same<T, InputNode>::value) { return node_t::INPUT; }
+    if constexpr (std::is_same<T, OutputNode>::value) { return node_t::OUTPUT; }
     return node_t::NODE_S;
 }
 

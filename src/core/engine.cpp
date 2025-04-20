@@ -24,68 +24,68 @@ std::ostream& operator<<(std::ostream& os, const Rel& r)
 }
 
 /******************************************************************************
-                                Input
+                                InputNode
 *****************************************************************************/
 
-Input::Input(Scene* _scene, node _id)
+InputNode::InputNode(Scene* _scene, node _id)
     : BaseNode { _scene, { _id.id, node_t::INPUT } }
     , value { false }
     , freq { std::nullopt } { };
 
-std::ostream& operator<<(std::ostream& os, const Input& g)
+std::ostream& operator<<(std::ostream& os, const InputNode& g)
 {
 
     os << g.id << "{ value:" << g.value << " }";
     return os;
 };
 
-void Input::set(bool v)
+void InputNode::set(bool v)
 {
     value = v;
     signal();
 }
 
-void Input::set_freq(uint32_t v)
+void InputNode::set_freq(uint32_t v)
 {
     freq = v;
     signal();
 }
 
-void Input::toggle()
+void InputNode::toggle()
 {
     value = !value;
     signal();
 }
 
-void Input::signal()
+void InputNode::signal()
 {
     scene->invoke_signal(output, value ? state_t::TRUE : state_t::FALSE);
 }
 
-bool Input::is_connected() const { return true; };
+bool InputNode::is_connected() const { return true; };
 
-state_t Input::get() { return value ? state_t::TRUE : state_t::FALSE; };
+state_t InputNode::get() { return value ? state_t::TRUE : state_t::FALSE; };
 
 /******************************************************************************
-                                  Output
+                                  OutputNode
 *****************************************************************************/
 
-Output::Output(Scene* _scene, node _id)
+OutputNode::OutputNode(Scene* _scene, node _id)
     : BaseNode { _scene, { _id.id, node_t::OUTPUT } }
     , input { 0 }
     , value { state_t::DISABLED } { };
 
-std::ostream& operator<<(std::ostream& os, const Output& g)
+std::ostream& operator<<(std::ostream& os, const OutputNode& g)
 {
     os << g.id << "{ input:" << g.value << " }";
     return os;
 };
 
-state_t Output::get() { return value; }
+state_t OutputNode::get() { return value; }
 
-bool Output::is_connected() const { return input != 0; };
+bool OutputNode::is_connected() const { return input != 0; };
 
-void Output::signal()
+void OutputNode::signal()
 {
     value = input ? scene->get_rel(input)->value : state_t::DISABLED;
 }

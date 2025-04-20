@@ -10,7 +10,7 @@ static bool _nor(const std::vector<bool>&);
 static bool _xnor(const std::vector<bool>&);
 static bool _not(const std::vector<bool>&);
 
-Gate::Gate(Scene* _scene, node _id, gate_t _type, sockid _max_in)
+GateNode::GateNode(Scene* _scene, node _id, gate_t _type, sockid _max_in)
     : BaseNode { _scene, { _id.id, node_t::GATE } }
     , type { _type }
     , max_in { _max_in }
@@ -30,13 +30,13 @@ Gate::Gate(Scene* _scene, node _id, gate_t _type, sockid _max_in)
     _apply = __functions[type];
 }
 
-bool Gate::is_connected() const
+bool GateNode::is_connected() const
 {
     return std::all_of(
         inputs.begin(), inputs.end(), [&](relid i) { return i != 0; });
 }
 
-state_t Gate::get()
+state_t GateNode::get()
 {
     if (!is_connected()) {
         value = state_t::DISABLED;
@@ -59,9 +59,9 @@ state_t Gate::get()
     return value;
 }
 
-void Gate::signal() { scene->invoke_signal(output, get()); }
+void GateNode::signal() { scene->invoke_signal(output, get()); }
 
-bool Gate::increment()
+bool GateNode::increment()
 {
     if (type == gate_t::NOT) { return false; }
     max_in++;
@@ -71,7 +71,7 @@ bool Gate::increment()
     return true;
 }
 
-bool Gate::decrement()
+bool GateNode::decrement()
 {
     if (type == gate_t::NOT || max_in == 2) { return false; }
     if (inputs[inputs.size() - 1] != 0) {
@@ -82,7 +82,7 @@ bool Gate::decrement()
     return true;
 }
 
-std::ostream& operator<<(std::ostream& os, const Gate& g)
+std::ostream& operator<<(std::ostream& os, const GateNode& g)
 {
 
     os << g.id << "{" << gate_to_str(g.type) << g.value << "}";

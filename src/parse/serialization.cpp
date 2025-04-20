@@ -1,3 +1,4 @@
+#include "core.h"
 #include "parse.h"
 #include "json/value.h"
 #include <string>
@@ -10,14 +11,14 @@ namespace parse {
     static Json::Value _to_json(const point_t& v);
     /** Converts a Rel object to a JSON value */
     static Json::Value _to_json(const Rel& v);
-    /** Converts a Gate object to a JSON value */
-    static Json::Value _to_json(const Gate& v);
-    /** Converts a Input object to a JSON value */
-    static Json::Value _to_json(const Input& v);
-    /** Converts a Output object to a JSON value */
-    static Json::Value _to_json(const Output& v);
+    /** Converts a GateNode object to a JSON value */
+    static Json::Value _to_json(const GateNode& v);
+    /** Converts a InputNode object to a JSON value */
+    static Json::Value _to_json(const InputNode& v);
+    /** Converts a OutputNode object to a JSON value */
+    static Json::Value _to_json(const OutputNode& v);
     /** Converts a Metadata object to a JSON value */
-    Json::Value _to_json(const Metadata& v, bool is_component);
+    Json::Value _to_json(const sys::Metadata& v, bool is_component);
     /** Converts a ComponentContext object to a JSON value */
     static Json::Value _to_json(Json::Value&, const ComponentContext& v);
     /** Converts the base node class to a JSON value */
@@ -31,13 +32,13 @@ namespace parse {
         Json::Value out { Json::objectValue };
         out["meta"] = _to_json(s.meta, s.component_context.has_value());
         if (!s.gates.empty()) {
-            out["nodes"]["gates"] = _to_json<Gate>(s.gates);
+            out["nodes"]["gates"] = _to_json<GateNode>(s.gates);
         }
         if (!s.inputs.empty()) {
-            out["nodes"]["inputs"] = _to_json<Input>(s.inputs);
+            out["nodes"]["inputs"] = _to_json<InputNode>(s.inputs);
         }
         if (!s.outputs.empty()) {
-            out["nodes"]["outputs"] = _to_json<Output>(s.outputs);
+            out["nodes"]["outputs"] = _to_json<OutputNode>(s.outputs);
         }
 
         if (!s.rel.empty()) {
@@ -90,7 +91,7 @@ namespace parse {
         return out;
     }
 
-    Json::Value _to_json(const Gate& v)
+    Json::Value _to_json(const GateNode& v)
     {
         Json::Value out = _to_json_base(v);
         out["gate"]     = gate_to_str(v.type);
@@ -98,7 +99,7 @@ namespace parse {
         return out;
     }
 
-    Json::Value _to_json(const Input& v)
+    Json::Value _to_json(const InputNode& v)
     {
         Json::Value out = _to_json_base(v);
         if (v.freq.has_value()) {
@@ -109,9 +110,9 @@ namespace parse {
         return out;
     }
 
-    Json::Value _to_json(const Output& v) { return _to_json_base(v); }
+    Json::Value _to_json(const OutputNode& v) { return _to_json_base(v); }
 
-    Json::Value _to_json(const Metadata& v, bool is_component)
+    Json::Value _to_json(const sys::Metadata& v, bool is_component)
     {
         Json::Value out { Json::objectValue };
         out["name"]   = v.name;
@@ -122,7 +123,12 @@ namespace parse {
         if (!v.dependencies.empty()) {
             Json::Value dep { Json::arrayValue };
             for (const auto& d : v.dependencies) {
-                dep.append(d);
+                if (auto d_meta = sys::get_dependency_info(d);
+                    d_meta.has_value()) {
+                    dep.append(d_meta.value().to_dependency_string());
+                } else {
+                    return ERROR(error_t::INVALID_COMPONENT);
+                }
             }
             out["dependencies"] = dep;
         }

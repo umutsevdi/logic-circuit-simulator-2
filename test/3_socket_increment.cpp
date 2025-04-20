@@ -8,21 +8,21 @@ TEST_CASE("Increment socket size, expect update")
 {
     Scene s;
 
-    auto v     = s.add_node<Input>();
-    auto v2    = s.add_node<Input>();
-    auto g_and = s.add_node<Gate>(gate_t::AND);
-    auto o     = s.add_node<Output>();
+    auto v     = s.add_node<InputNode>();
+    auto v2    = s.add_node<InputNode>();
+    auto g_and = s.add_node<GateNode>(gate_t::AND);
+    auto o     = s.add_node<OutputNode>();
 
-    s.get_node<Input>(v)->set(true);
-    s.get_node<Input>(v2)->set(true);
+    s.get_node<InputNode>(v)->set(true);
+    s.get_node<InputNode>(v2)->set(true);
 
     REQUIRE(s.connect(o, 0, g_and));
     REQUIRE(s.connect(g_and, 0, v));
     REQUIRE(s.connect(g_and, 1, v2));
 
-    REQUIRE(s.get_node<Output>(o)->get() == state_t::TRUE);
-    s.get_node<Gate>(g_and)->increment();
-    REQUIRE(s.get_node<Output>(o)->get() == state_t::DISABLED);
-    s.get_node<Gate>(g_and)->decrement();
-    REQUIRE(s.get_node<Output>(o)->get() == state_t::TRUE);
+    REQUIRE(s.get_node<OutputNode>(o)->get() == state_t::TRUE);
+    s.get_node<GateNode>(g_and)->increment();
+    REQUIRE(s.get_node<OutputNode>(o)->get() == state_t::DISABLED);
+    s.get_node<GateNode>(g_and)->decrement();
+    REQUIRE(s.get_node<OutputNode>(o)->get() == state_t::TRUE);
 }

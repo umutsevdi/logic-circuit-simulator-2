@@ -1,5 +1,6 @@
 #include "core.h"
 #include <iostream>
+#include <string>
 
 namespace lcs {
 
@@ -66,23 +67,23 @@ uint64_t ComponentContext::run(Scene* s, uint64_t v)
     return s->component_context->execution_output >> 1;
 }
 
-Component::Component(Scene* _s, node _id, const std::string& _path)
+ComponentNode::ComponentNode(Scene* _s, node _id, const std::string& _path)
     : BaseNode { _s, node { _id.id, node_t::COMPONENT } }
     , path { _path }
 {
 }
 
-bool Component::is_connected() const { return false; }
+bool ComponentNode::is_connected() const { return false; }
 
-state_t Component::get() { return state_t::DISABLED; }
+state_t ComponentNode::get() { return state_t::DISABLED; }
 
-void Component::signal()
+void ComponentNode::signal()
 {
     L_INFO(CLASS << "Unimplemented");
     throw "Unimplemented";
 }
 
-std::ostream& operator<<(std::ostream& os, const Component& g)
+std::ostream& operator<<(std::ostream& os, const ComponentNode& g)
 {
     os << "COMP [" << g.id << "]{inputs:";
     for (auto i : g.inputs) {
