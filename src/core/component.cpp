@@ -9,6 +9,13 @@ namespace lcs {
 
 ComponentContext::ComponentContext(sockid input_s, sockid output_s)
 {
+    setup(input_s, output_s);
+}
+
+void ComponentContext::setup(sockid input_s, sockid output_s)
+{
+    inputs.clear();
+    outputs.clear();
     for (relid i = 1; i <= input_s; i++) {
         inputs[i] = {};
     }
@@ -125,7 +132,7 @@ void ComponentNode::signal()
         _is_disabled   = false;
         for (relid in : inputs) {
             if (in != 0) {
-                auto rel = scene->get_rel(in);
+                auto rel = _scene->get_rel(in);
                 lcs_assert(rel != nullptr);
                 if (rel->value == state_t::DISABLED) {
                     _is_disabled = true;
@@ -142,21 +149,13 @@ void ComponentNode::signal()
 
     for (auto out : outputs) {
         L_INFO(CLASS "Sending " << state_t_str(get(out.first)) << " signal");
-        scene->invoke_signal(out.second, get(out.first));
+        _scene->invoke_signal(out.second, get(out.first));
     }
 }
 
 std::ostream& operator<<(std::ostream& os, const ComponentNode& g)
 {
-    os << "COMP [" << g.id << "](" << g.path << "){inputs:";
-    for (auto i : g.inputs) {
-        os << i << ", ";
-    }
-    os << ", output:";
-    for (auto i : g.outputs) {
-        os << i.first << ", ";
-    }
-    os << " }";
+    os << g._id << "{" << strlimit(g.path, 15) << "}";
     return os;
 }
 

@@ -9,7 +9,7 @@ external/tfd/
 -I
 external/jsoncpp/include/
 -I
-external/catch2/src/
+external/doctest/doctest/
 -I/usr/include/gtkmm-4.0
 -I/usr/lib64/gtkmm-4.0/include
 -I/usr/include/pangomm-2.48

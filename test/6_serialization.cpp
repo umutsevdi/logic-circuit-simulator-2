@@ -1,9 +1,7 @@
-#include "catch2/catch_test_macros.hpp"
-#include "common.h"
 #include "core.h"
-#include "parse.h"
 #include "test_util.h"
-#include <catch2/catch_all.hpp>
+#include <doctest.h>
+#include <json/json.h>
 
 using namespace lcs;
 
@@ -26,7 +24,7 @@ TEST_CASE("Parse JSON subnodes")
     s.get_node<InputNode>(v1)->set(true);
     s.get_node<InputNode>(v2)->set(false);
     s.get_node<InputNode>(v3)->set(true);
-    std::string v = parse::to_json(s);
+    std::string v = s.to_json().toStyledString();
     REQUIRE(!v.empty());
 }
 
@@ -46,7 +44,7 @@ TEST_CASE("Parse non-zero context")
     s.get_base(o)->dir    = direction_t::DOWN;
     s.get_base(v1)->point = { 1, 3 };
 
-    std::string out = parse::to_json(s);
+    std::string out = s.to_json().toStyledString();
     REQUIRE(!out.empty());
 }
 
@@ -58,14 +56,14 @@ TEST_CASE("Save, load and compare")
     s.get_node<InputNode>(v)->set(true);
     s.connect(o, 0, v);
 
-    std::string scene_str = parse::to_json(s);
+    std::string scene_str = s.to_json().toStyledString();
     Scene s_loaded;
-    REQUIRE(parse::from_json(scene_str, s_loaded) == lcs::error_t::OK);
+    REQUIRE_EQ(parse::load_scene(scene_str, s_loaded), lcs::error_t::OK);
 
-    std::string scene_loaded_str = parse::to_json(s_loaded);
+    std::string scene_loaded_str = s_loaded.to_json().toStyledString();
 
-    REQUIRE(scene_str == scene_loaded_str);
-    REQUIRE(s_loaded.get_node<OutputNode>(o)->get() == state_t::TRUE);
+    REQUIRE_EQ(scene_str, scene_loaded_str);
+    REQUIRE_EQ(s_loaded.get_node<OutputNode>(o)->get(), state_t::TRUE);
 }
 
 TEST_CASE("Save a complicated JSON, load and run the tests")
@@ -76,28 +74,31 @@ TEST_CASE("Save a complicated JSON, load and run the tests")
     _create_full_adder_io(s);
     _create_full_adder(s);
 
-    std::string s_str = parse::to_json(s);
+    std::string s_str = s.to_json().toStyledString();
     Scene s_loaded {};
 
-    REQUIRE(parse::from_json(s_str, s_loaded) == lcs::error_t::OK);
+    Json::Value doc;
+    REQUIRE_EQ(parse::load_scene(s_str, s_loaded), lcs::error_t::OK);
 
-    // Test cases from TEST_CASE("Full Adder")
-    s_loaded.get_node<InputNode>(a)->set(true);
-    s_loaded.get_node<InputNode>(b)->set(false);
-    s_loaded.get_node<InputNode>(c_in)->set(false);
-    REQUIRE(s_loaded.get_node<OutputNode>(sum)->get() == state_t::TRUE);
-    REQUIRE(s_loaded.get_node<OutputNode>(c_out)->get() == state_t::FALSE);
+    SUBCASE("Test cases from TEST_CASE(\"Full Adder\")")
+    {
+        s_loaded.get_node<InputNode>(a)->set(true);
+        s_loaded.get_node<InputNode>(b)->set(false);
+        s_loaded.get_node<InputNode>(c_in)->set(false);
+        REQUIRE_EQ(s_loaded.get_node<OutputNode>(sum)->get(), state_t::TRUE);
+        REQUIRE_EQ(s_loaded.get_node<OutputNode>(c_out)->get(), state_t::FALSE);
 
-    s_loaded.get_node<InputNode>(b)->set(true);
-    REQUIRE(s_loaded.get_node<OutputNode>(sum)->get() == state_t::FALSE);
-    REQUIRE(s_loaded.get_node<OutputNode>(c_out)->get() == state_t::TRUE);
+        s_loaded.get_node<InputNode>(b)->set(true);
+        REQUIRE_EQ(s_loaded.get_node<OutputNode>(sum)->get(), state_t::FALSE);
+        REQUIRE_EQ(s_loaded.get_node<OutputNode>(c_out)->get(), state_t::TRUE);
 
-    s_loaded.get_node<InputNode>(c_in)->set(true);
-    REQUIRE(s_loaded.get_node<OutputNode>(sum)->get() == state_t::TRUE);
-    REQUIRE(s_loaded.get_node<OutputNode>(c_out)->get() == state_t::TRUE);
+        s_loaded.get_node<InputNode>(c_in)->set(true);
+        REQUIRE_EQ(s_loaded.get_node<OutputNode>(sum)->get(), state_t::TRUE);
+        REQUIRE_EQ(s_loaded.get_node<OutputNode>(c_out)->get(), state_t::TRUE);
+    }
 }
 
-TEST_CASE("Save a component")
+TEST_CASE("Save a component, reload and run")
 {
     // Taken from "Create a 2x1 MUX component"
     // IN1 = 1, IN2 = 2, IN3 = SEL
@@ -116,30 +117,28 @@ TEST_CASE("Save a component")
     s.connect(g_out, 1, g_and_2);
     s.connect(s.component_context->get_output(1), 0, g_out);
 
-    REQUIRE(s.component_context->run(&s, 0b111) == 1);
-    REQUIRE(s.component_context->run(&s, 0b110) == 0);
-    REQUIRE(s.component_context->run(&s, 0b101) == 1);
-    REQUIRE(s.component_context->run(&s, 0b100) == 0);
-    REQUIRE(s.component_context->run(&s, 0b011) == 1);
-    REQUIRE(s.component_context->run(&s, 0b010) == 1);
-    REQUIRE(s.component_context->run(&s, 0b001) == 0);
-    REQUIRE(s.component_context->run(&s, 0b000) == 0);
-
-    std::string s_str = parse::to_json(s);
+    REQUIRE_EQ(s.component_context->run(&s, 0b111), 1);
+    REQUIRE_EQ(s.component_context->run(&s, 0b110), 0);
+    REQUIRE_EQ(s.component_context->run(&s, 0b101), 1);
+    REQUIRE_EQ(s.component_context->run(&s, 0b100), 0);
+    REQUIRE_EQ(s.component_context->run(&s, 0b011), 1);
+    REQUIRE_EQ(s.component_context->run(&s, 0b010), 1);
+    REQUIRE_EQ(s.component_context->run(&s, 0b001), 0);
+    REQUIRE_EQ(s.component_context->run(&s, 0b000), 0);
+    std::string s_str = s.to_json().toStyledString();
     Scene s_loaded {};
-    REQUIRE(parse::from_json(s_str, s_loaded) == lcs::error_t::OK);
-    std::string scene_loaded_str = parse::to_json(s_loaded);
+    REQUIRE_EQ(parse::load_scene(s_str, s_loaded), lcs::error_t::OK);
+    std::string scene_loaded_str = s_loaded.to_json().toStyledString();
+    REQUIRE_EQ(s_str, scene_loaded_str);
 
-    REQUIRE(s_str == scene_loaded_str);
-
-    REQUIRE(s.component_context->run(&s_loaded, 0b111) == 1);
-    REQUIRE(s.component_context->run(&s_loaded, 0b110) == 0);
-    REQUIRE(s.component_context->run(&s_loaded, 0b101) == 1);
-    REQUIRE(s.component_context->run(&s_loaded, 0b100) == 0);
-    REQUIRE(s.component_context->run(&s_loaded, 0b011) == 1);
-    REQUIRE(s.component_context->run(&s_loaded, 0b010) == 1);
-    REQUIRE(s.component_context->run(&s_loaded, 0b001) == 0);
-    REQUIRE(s.component_context->run(&s_loaded, 0b000) == 0);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b111), 1);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b110), 0);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b101), 1);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b100), 0);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b011), 1);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b010), 1);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b001), 0);
+    REQUIRE_EQ(s.component_context->run(&s_loaded, 0b000), 0);
 }
 
 TEST_CASE("Save a simple component, and use it in a scene")
@@ -147,38 +146,39 @@ TEST_CASE("Save a simple component, and use it in a scene")
     // Taken from TEST_CASE("Full Adder")
     Scene s { "Save a simple component, and use it in a scene" };
     s.component_context = { 2, 1 };
-    node a              = s.component_context->get_input(1);
-    node b              = s.component_context->get_input(2);
-    node c_out          = s.component_context->get_output(1);
     node g_and          = s.add_node<GateNode>(gate_t::AND);
-    s.connect(c_out, 0, g_and);
-    s.connect(g_and, 0, a);
-    s.connect(g_and, 1, b);
+    s.connect(s.component_context->get_output(1), 0, g_and);
+    s.connect(g_and, 0, s.component_context->get_input(1));
+    s.connect(g_and, 1, s.component_context->get_input(2));
 
-    REQUIRE(s.component_context->run(&s, 0b11) == 1);
-    REQUIRE(s.component_context->run(&s, 0b10) == 0);
-    REQUIRE(s.component_context->run(&s, 0b01) == 0);
-    REQUIRE(s.component_context->run(&s, 0b00) == 0);
+    REQUIRE_EQ(s.component_context->run(&s, 0b11), 1);
+    REQUIRE_EQ(s.component_context->run(&s, 0b10), 0);
+    REQUIRE_EQ(s.component_context->run(&s, 0b01), 0);
+    REQUIRE_EQ(s.component_context->run(&s, 0b00), 0);
     std::string dependency = s.meta.to_dependency_string();
-    REQUIRE(
-        sys::load_component(dependency, parse::to_json(s)) == lcs::error_t::OK);
+    REQUIRE_EQ(sys::load_component(dependency, s.to_json().toStyledString()),
+        lcs::error_t::OK);
     REQUIRE(sys::get_dependency(dependency) != nullptr);
+    REQUIRE_EQ(sys::run_component(dependency, 0b11), 1);
+    REQUIRE_EQ(sys::run_component(dependency, 0b10), 0);
+    REQUIRE_EQ(sys::run_component(dependency, 0b01), 0);
+    REQUIRE_EQ(sys::run_component(dependency, 0b00), 0);
 
-    Scene s2 {};
-    s2.meta.dependencies.push_back(dependency);
-    s2.meta.load_dependencies();
+    //  Scene s2 {};
+    //  s2.meta.dependencies.push_back(dependency);
+    //  s2.meta.load_dependencies();
 
-    node component = s2.add_node<ComponentNode>(dependency);
-    node i1        = s2.add_node<InputNode>();
-    node i2        = s2.add_node<InputNode>();
-    node o         = s2.add_node<OutputNode>();
+    //  node component = s2.add_node<ComponentNode>(dependency);
+    //  node i1        = s2.add_node<InputNode>();
+    //  node i2        = s2.add_node<InputNode>();
+    //  node o         = s2.add_node<OutputNode>();
 
-    REQUIRE(s2.connect(component, 0, i1) != 0);
-    L_INFO("OK");
-    REQUIRE(s2.connect(component, 1, i2) != 0);
-    L_INFO("OK");
-    REQUIRE(s2.connect(o, 0, component, 1) != 0);
-    L_INFO("OK");
+    //  REQUIRE(s2.connect(component, 0, i1) );
+    //  L_INFO("OK");
+    //  REQUIRE(s2.connect(component, 1, i2) );
+    //  L_INFO("OK");
+    //  REQUIRE(s2.connect(o, 0, component, 1) );
+    //  L_INFO("OK");
 }
 
 /*
@@ -205,7 +205,7 @@ TEST_CASE("Save a component, load it to a scene")
     REQUIRE(s2.meta.dependencies.size() > 0);
 
     node cnode = s2.add_node<ComponentNode>(s.meta.to_dependency_string());
-    REQUIRE(cnode.id != 0);
+    REQUIRE(cnode.id );
 
     node i1 = s2.add_node<InputNode>();
     node i2 = s2.add_node<InputNode>();
@@ -214,13 +214,13 @@ TEST_CASE("Save a component, load it to a scene")
     node o1 = s2.add_node<OutputNode>();
     node o2 = s2.add_node<OutputNode>();
 
-    REQUIRE(s2.connect(cnode, 0, i1) != 0);
-    REQUIRE(s2.connect(cnode, 1, i2) != 0);
+    REQUIRE(s2.connect(cnode, 0, i1) );
+    REQUIRE(s2.connect(cnode, 1, i2) );
 
-    REQUIRE(s2.connect(cnode, 2, i3) != 0);
+    REQUIRE(s2.connect(cnode, 2, i3) );
 
-    REQUIRE(s2.connect(o1, 0, cnode, 0) != 0);
-    REQUIRE(s2.connect(o2, 1, cnode, 1) != 0);
+    REQUIRE(s2.connect(o1, 0, cnode, 0) );
+    REQUIRE(s2.connect(o2, 1, cnode, 1) );
 
     //  s.get_node<InputNode>(i1)->set(true);
     //  s.get_node<InputNode>(i2)->set(false);

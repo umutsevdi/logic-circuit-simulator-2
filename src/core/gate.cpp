@@ -56,13 +56,7 @@ void GateNode::signal()
         _is_disabled = false;
         for (relid in : inputs) {
             L_INFO(CLASS << in);
-
-            {
-#define __DO(a) a.second
-                VEC_TO_STR(std::cout, scene->rel, __DO);
-#undef __DO
-            }
-            auto rel = scene->get_rel(in);
+            auto rel = _scene->get_rel(in);
             L_INFO(CLASS "rel" << rel);
             lcs_assert(rel != nullptr);
             if (rel->value == state_t::DISABLED) {
@@ -80,7 +74,7 @@ void GateNode::signal()
         _is_disabled = true;
     }
     L_INFO(CLASS "Sending " << state_t_str(get()) << " signal ");
-    scene->invoke_signal(output, get());
+    _scene->invoke_signal(output, get());
 }
 
 bool GateNode::increment()
@@ -97,7 +91,7 @@ bool GateNode::decrement()
 {
     if (type == gate_t::NOT || max_in == 2) { return false; }
     if (inputs[inputs.size() - 1] != 0) {
-        scene->disconnect(inputs[inputs.size() - 1]);
+        _scene->disconnect(inputs[inputs.size() - 1]);
     }
     inputs.pop_back();
     signal();
@@ -107,7 +101,8 @@ bool GateNode::decrement()
 std::ostream& operator<<(std::ostream& os, const GateNode& g)
 {
 
-    os << g.id << "{" << gate_to_str(g.type) << g.value << "}";
+    os << g.id() << "{" << gate_to_str(g.type) << ", " << state_t_str(g.value)
+       << "}";
     return os;
 };
 

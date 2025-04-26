@@ -3,175 +3,146 @@
 #include "json/value.h"
 #include <string>
 namespace lcs {
-namespace parse {
 
-    /** Converts a node object to a JSON value */
-    static Json::Value _to_json(const node& v);
-    /** Converts a point_t object to a JSON value */
-    static Json::Value _to_json(const point_t& v);
-    /** Converts a Rel object to a JSON value */
-    static Json::Value _to_json(const Rel& v);
-    /** Converts a GateNode object to a JSON value */
-    static Json::Value _to_json(const GateNode& v);
-    /** Converts a InputNode object to a JSON value */
-    static Json::Value _to_json(const InputNode& v);
-    /** Converts a OutputNode object to a JSON value */
-    static Json::Value _to_json(const OutputNode& v);
-    /** Converts a Metadata object to a JSON value */
-    Json::Value _to_json(const sys::Metadata& v, bool is_component);
-    /** Converts a ComponentContext object to a JSON value */
-    static Json::Value _to_json(Json::Value&, const ComponentContext& v);
-    /** Converts the base node class to a JSON value */
-    static Json::Value _to_json_base(const BaseNode& v);
-    /** Converts all elements in the map to json */
-    template <typename T>
-    static Json::Value _to_json(const std::map<node, T>& m);
+template <typename T> Json::Value _to_json(const std::map<node, T>& m)
+{
+    Json::Value doc { Json::objectValue };
+    for (const auto& c : m) {
+        std::string id = std::to_string(c.first.id);
+        doc[id]        = c.second.to_json();
+    }
+    return doc;
+}
 
-    Json::Value _to_json(Scene& s)
-    {
-        Json::Value out { Json::objectValue };
-        out["meta"] = _to_json(s.meta, s.component_context.has_value());
-        if (!s.gates.empty()) {
-            out["nodes"]["gates"] = _to_json<GateNode>(s.gates);
-        }
-        if (!s.inputs.empty()) {
-            out["nodes"]["inputs"] = _to_json<InputNode>(s.inputs);
-        }
-        if (!s.outputs.empty()) {
-            out["nodes"]["outputs"] = _to_json<OutputNode>(s.outputs);
-        }
-        if (!s.components.empty()) {
-            out["nodes"]["comp"] = _to_json<ComponentNode>(s.components);
-        }
-
-        if (!s.rel.empty()) {
-            Json::Value doc { Json::objectValue };
-            for (const auto& c : s.rel) {
-                doc[std::to_string(c.first)] = _to_json(c.second);
-            }
-            out["rel"] = doc;
-        }
-        if (s.component_context.has_value()) {
-            _to_json(out, s.component_context.value());
-        } else {
-        }
-        return out;
+Json::Value Scene::to_json(void) const
+{
+    Json::Value out { Json::objectValue };
+    out["meta"] = meta.to_json();
+    if (!gates.empty()) { out["nodes"]["gates"] = _to_json<GateNode>(gates); }
+    if (!inputs.empty()) {
+        out["nodes"]["inputs"] = _to_json<InputNode>(inputs);
+    }
+    if (!outputs.empty()) {
+        out["nodes"]["outputs"] = _to_json<OutputNode>(outputs);
+    }
+    if (!components.empty()) {
+        out["nodes"]["comp"] = _to_json<ComponentNode>(components);
     }
 
-    Json::Value _to_json(const node& v)
-    {
-        Json::Value out { Json::objectValue };
-        out["id"]   = v.id;
-        out["type"] = node_to_str(v.type);
-        return out;
-    }
-
-    Json::Value _to_json(const point_t& v)
-    {
-        Json::Value out { Json::objectValue };
-        out["x"] = v.x;
-        out["y"] = v.y;
-        return out;
-    }
-
-    Json::Value _to_json(const Rel& v)
-    {
-        Json::Value out { Json::objectValue };
-        Json::Value from = _to_json(v.from_node);
-        if (v.from_sock) { from["sock"] = v.from_sock; }
-        Json::Value to = _to_json(v.to_node);
-        if (v.to_sock) { to["sock"] = v.to_sock; }
-        out["from"] = from;
-        out["to"]   = to;
-
-        if (!v.curve_points.empty()) {
-            Json::Value curve_points { Json::arrayValue };
-            for (const auto& c : v.curve_points) {
-                curve_points.append(_to_json(c));
-            }
-            out["curve"] = curve_points;
-        }
-        return out;
-    }
-
-    Json::Value _to_json(const GateNode& v)
-    {
-        Json::Value out = _to_json_base(v);
-        out["gate"]     = gate_to_str(v.type);
-        if (v.type != gate_t::NOT && v.max_in != 2) { out["size"] = v.max_in; }
-        return out;
-    }
-
-    Json::Value _to_json(const InputNode& v)
-    {
-        Json::Value out = _to_json_base(v);
-        if (v.freq.has_value()) {
-            out["freq"] = v.freq.value();
-        } else {
-            out["data"] = v.value;
-        }
-        return out;
-    }
-    Json::Value _to_json(const ComponentNode v)
-    {
-        Json::Value out = _to_json_base(v);
-        out["depends"]  = v.path;
-        return out;
-    }
-
-    Json::Value _to_json(const OutputNode& v) { return _to_json_base(v); }
-
-    Json::Value _to_json(const sys::Metadata& v, bool is_component)
-    {
-        Json::Value out { Json::objectValue };
-        out["name"]   = v.name;
-        out["author"] = v.author;
-        if (v.description != "") { out["description"] = v.description; }
-        out["version"] = v.version;
-        out["type"]    = is_component ? "component" : "scene";
-        if (!v.dependencies.empty()) {
-            Json::Value dep { Json::arrayValue };
-            for (const auto& d : v.dependencies) {
-                if (auto d_meta = sys::get_dependency(d); d_meta != nullptr) {
-                    dep.append(d_meta->meta.to_dependency_string());
-                } else {
-                    return ERROR(error_t::INVALID_COMPONENT);
-                }
-            }
-            out["dependencies"] = dep;
-        }
-        return out;
-    }
-
-    Json::Value _to_json(Json::Value& out, const ComponentContext& v)
-    {
-        out["size_in"]  = v.inputs.size();
-        out["size_out"] = v.outputs.size();
-        return out;
-    }
-
-    template <typename T> Json::Value _to_json(const std::map<node, T>& m)
-    {
+    if (!rel.empty()) {
         Json::Value doc { Json::objectValue };
-        for (const auto& c : m) {
-            std::string id = std::to_string(c.first.id);
-            doc[id]        = _to_json(c.second);
+        for (const auto& c : rel) {
+            doc[std::to_string(c.first)] = c.second.to_json();
         }
-        return doc;
+        out["rel"] = doc;
     }
-
-    Json::Value _to_json_base(const BaseNode& v)
-    {
-        Json::Value out { Json::objectValue };
-        if (v.dir != direction_t::RIGHT) {
-            out["dir"] = direction_to_str(v.dir);
-        }
-        if (v.point.x != 0 || v.point.y != 0) {
-            out["pos"] = _to_json(v.point);
-        }
-        return out;
+    if (component_context.has_value()) {
+        out["component"] = component_context->to_json();
     }
+    return out;
+}
 
-    std::string to_json(Scene& s) { return _to_json(s).toStyledString(); }
-} // namespace parse
+Json::Value node::to_json(void) const
+{
+    Json::Value out { Json::objectValue };
+    out["id"]   = id;
+    out["type"] = node_to_str(type);
+    return out;
+}
+
+Json::Value point_t::to_json(void) const
+{
+    Json::Value out { Json::objectValue };
+    out["x"] = x;
+    out["y"] = y;
+    return out;
+}
+
+Json::Value Rel::to_json(void) const
+{
+    Json::Value out { Json::objectValue };
+    Json::Value from = from_node.to_json();
+    if (from_sock) { from["sock"] = from_sock; }
+    Json::Value to = to_node.to_json();
+    if (to_sock) { to["sock"] = to_sock; }
+    out["from"] = from;
+    out["to"]   = to;
+
+    if (!curve_points.empty()) {
+        Json::Value out_curve { Json::arrayValue };
+        for (const auto& c : curve_points) {
+            out_curve.append(c.to_json());
+        }
+        out["curve"] = out_curve;
+    }
+    return out;
+}
+
+Json::Value GateNode::to_json(void) const
+{
+    Json::Value out = this->BaseNode::to_json();
+    out["gate"]     = gate_to_str(type);
+    if (type != gate_t::NOT && max_in != 2) { out["size"] = max_in; }
+    return out;
+}
+
+Json::Value InputNode::to_json(void) const
+{
+    Json::Value out = this->BaseNode::to_json();
+    if (freq.has_value()) {
+        out["freq"] = freq.value();
+    } else {
+        out["data"] = value;
+    }
+    return out;
+}
+Json::Value ComponentNode::to_json(void) const
+{
+    Json::Value out = this->BaseNode::to_json();
+    out["depends"]  = path;
+    return out;
+}
+
+Json::Value OutputNode::to_json(void) const
+{
+    return this->BaseNode::to_json();
+}
+
+Json::Value sys::Metadata::to_json(void) const
+{
+    Json::Value out { Json::objectValue };
+    out["name"]   = name;
+    out["author"] = author;
+    if (description != "") { out["description"] = description; }
+    out["version"] = version;
+    if (!dependencies.empty()) {
+        Json::Value dep { Json::arrayValue };
+        for (const auto& d : dependencies) {
+            if (auto d_meta = sys::get_dependency(d); d_meta != nullptr) {
+                dep.append(d_meta->meta.to_dependency_string());
+            } else {
+                return ERROR(error_t::INVALID_COMPONENT);
+            }
+        }
+        out["dependencies"] = dep;
+    }
+    return out;
+}
+
+Json::Value ComponentContext::to_json(void) const
+{
+    Json::Value out { Json::objectValue };
+    out["in"]  = inputs.size();
+    out["out"] = outputs.size();
+    return out;
+}
+
+Json::Value BaseNode::to_json(void) const
+{
+    Json::Value out { Json::objectValue };
+    if (dir != direction_t::RIGHT) { out["dir"] = direction_to_str(dir); }
+    if (point.x != 0 || point.y != 0) { out["pos"] = point.to_json(); }
+    return out;
+}
+
 } // namespace lcs

@@ -289,12 +289,9 @@ void Scene::invoke_signal(const std::vector<relid>& output, state_t value)
 
 std::ostream& operator<<(std::ostream& os, const Scene& s)
 {
-    std::string d_str { s.meta.to_dependency_string() };
-    if (d_str.length() > 10) {
-        d_str = std::string { d_str.begin(), d_str.begin() + 10 } + "...";
-    }
-    os << (s.component_context.has_value() ? "Component" : "Scene") << "(\""
-       << d_str << "\")";
+    std::string d_str {};
+    os << "SCENE" << (s.component_context.has_value() ? "[C]" : "[S]") << "{"
+       << strlimit(s.meta.to_dependency_string(), 15) << "}";
     if (s.component_context.has_value()) {
         os << "[" << s.component_context->inputs.size() << ", "
            << s.component_context->outputs.size() << "]" << "\t";

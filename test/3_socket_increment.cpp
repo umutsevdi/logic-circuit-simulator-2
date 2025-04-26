@@ -1,7 +1,6 @@
-#include "catch2/catch_test_macros.hpp"
 #include "common.h"
 #include "core.h"
-#include <catch2/catch_all.hpp>
+#include <doctest.h>
 
 using namespace lcs;
 TEST_CASE("Increment socket size, expect update")
@@ -20,9 +19,9 @@ TEST_CASE("Increment socket size, expect update")
     REQUIRE(s.connect(g_and, 0, v));
     REQUIRE(s.connect(g_and, 1, v2));
 
-    REQUIRE(s.get_node<OutputNode>(o)->get() == state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
     s.get_node<GateNode>(g_and)->increment();
-    REQUIRE(s.get_node<OutputNode>(o)->get() == state_t::DISABLED);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::DISABLED);
     s.get_node<GateNode>(g_and)->decrement();
-    REQUIRE(s.get_node<OutputNode>(o)->get() == state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
 }

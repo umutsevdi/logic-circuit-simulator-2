@@ -1,12 +1,12 @@
 [submodule "external/doxygen-awesome-css"]
 	path = external/doxygen-awesome-css
 	url = https://github.com/jothepro/doxygen-awesome-css.git
-[submodule "external/catch2"]
-	path = external/catch2
-	url = https://github.com/catchorg/Catch2.git
 [submodule "external/tfd"]
 	path = external/tfd
 	url = git@github.com:umutsevdi/tinyfiledialogs.git
 [submodule "external/jsoncpp"]
 	path = external/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "external/doctest"]
+	path = external/doctest
+	url = https://github.com/doctest/doctest.git

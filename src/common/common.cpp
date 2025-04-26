@@ -10,27 +10,32 @@ int __expect(std::function<bool(void)> expr, const char* msg) noexcept
 {
     int is_err = 1;
     try {
-        if (expr())
+        if (expr()) {
             is_err = 0;
-        else
+        } else {
             tinyfd_messageBox("Logic Circuit Simulator: Assertion Failed", msg,
                 "ok", "error", 1);
+        }
     } catch (const std::exception& ex) {
+        L_ERROR("Exception occurred: " << ex.what());
         tinyfd_messageBox(
             "Logic Circuit Simulator: Exception", ex.what(), "ok", "error", 0);
     } catch (const std::string& ex) {
+        L_FATAL("Exception occurred: " << ex);
         tinyfd_messageBox(
             "Logic Circuit Simulator: Exception", ex.c_str(), "ok", "error", 0);
     }
-    if (is_err) { std::cout << msg; }
     return is_err;
 }
 
 int __expect_with_message(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept
 {
-    std::stringstream s {};
 
+    _log_pre(std::cout, __S_FATAL, file, line, function)
+        << RED BOLD "Assertion " << str_expr << " failed!" RESET << std::endl;
+
+    std::stringstream s {};
     s << "ERROR " << file << " : " << line << "\t" << function
       << "(...) Assertion " << str_expr << " failed!" << std::endl;
     return __expect(expr, s.str().c_str());

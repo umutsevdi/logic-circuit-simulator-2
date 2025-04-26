@@ -52,7 +52,8 @@ namespace sys {
     error_t load_component(const std::string name, std::string data)
     {
         Scene s;
-        error_t err = parse::from_json(data, s);
+
+        error_t err = parse::load_scene(data, s);
         if (err) { return err; }
         if (!s.component_context.has_value()) {
             return ERROR(error_t::NOT_A_COMPONENT);

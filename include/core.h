@@ -11,6 +11,7 @@
  ******************************************************************************/
 
 #include "common.h"
+#include "parse.h"
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -21,7 +22,7 @@ namespace lcs {
 class Scene;
 namespace sys {
 
-    struct Metadata {
+    struct Metadata final : parse::Serializable {
         Metadata(std::string _name, std::string _description,
             std::string _author, int _version = VERSION)
             : name { _name }
@@ -39,6 +40,10 @@ namespace sys {
         std::string to_dependency_string(void) const;
         error_t load_dependencies(void);
         error_t load_dependencies(const std::string& self_dependency);
+
+        /* Serializable interface */
+        Json::Value to_json(void) const override;
+        error_t from_json(const Json::Value&) override;
     };
 
     /**
@@ -64,7 +69,7 @@ namespace sys {
      * Executes the component with given id with provided input, returning
      * it's result.
      *
-     * @param id - component handle
+     * @param name - component name
      * @param input - binary encoded input value
      * @returns - binary encoded result
      */
@@ -111,7 +116,7 @@ node_t str_to_node(const std::string&);
  * id is a non-zero identifier. Together with the type, represents a unique
  * node.
  * */
-struct node {
+struct node final : public parse::Serializable {
     node(uint32_t _id = 0, node_t _type = GATE);
     node(node&&)                 = default;
     node(const node&)            = default;
@@ -122,6 +127,10 @@ struct node {
     node_t type : 8;
     friend std::ostream& operator<<(std::ostream& os, const node& r);
     bool operator<(const node& n) const { return this->id < n.id; }
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
 };
 
 enum state_t {
@@ -173,14 +182,21 @@ constexpr const char* gate_to_str(gate_t g)
 }
 gate_t str_to_gate(const std::string&);
 
-struct point_t {
+struct point_t final : public parse::Serializable {
+    point_t(int _x = 0, int _y = 0)
+        : x { _x }
+        , y { _y } { };
     int x;
     int y;
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
 };
 
 class Scene;
 
-class BaseNode {
+class BaseNode : public parse::Serializable {
 public:
     explicit BaseNode(Scene*, node, direction_t _dir = direction_t::RIGHT,
         point_t _p = { 0, 0 });
@@ -192,6 +208,8 @@ public:
     BaseNode* get_base(void) { return dynamic_cast<BaseNode*>(this); };
     friend std::ostream& operator<<(std::ostream& os, const BaseNode& r);
 
+    inline node id(void) const { return _id; }
+
     /**
      * Updates the internal data and send out signals to all connected nodes.
      */
@@ -201,13 +219,15 @@ public:
     /** Get the current status */
     virtual state_t get(sockid slot = 0) const = 0;
 
-    inline node get_node(void) const { return id; }
-
-    node id;
     direction_t dir;
     point_t point;
-    //    protected:
-    Scene* scene;
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+
+protected:
+    Scene* _scene;
+    node _id;
 };
 
 /**
@@ -217,7 +237,7 @@ public:
  * the connected output is a Component, since components
  * can have multiple output sockets.
  */
-struct Rel {
+struct Rel final : public parse::Serializable {
     explicit Rel(relid _id, node _from_node, node _to_node, sockid _from_sock,
         sockid _to_sock);
     Rel() { }
@@ -231,6 +251,10 @@ struct Rel {
     sockid to_sock;
     state_t value;
     std::vector<point_t> curve_points;
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
 };
 
 /**
@@ -264,6 +288,10 @@ public:
     gate_t type;
     sockid max_in;
 
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
+
 private:
     /** Gate specific calculation function */
     bool (*_apply)(const std::vector<bool>&);
@@ -291,6 +319,10 @@ public:
     std::vector<relid> inputs;
 
     std::string path;
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
 
 private:
     bool _is_disabled;
@@ -327,6 +359,10 @@ public:
 
     bool value;
     std::optional<uint32_t> freq;
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
 };
 
 /** An output node that displays the result */
@@ -346,18 +382,23 @@ public:
 
     relid input;
     state_t value;
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
 };
 
 /**
  * A component scene contains the ComponentContext, Component Context can
  * execute a scene with given parameters.
  */
-struct ComponentContext {
+struct ComponentContext final : public parse::Serializable {
     ComponentContext() = default;
     ComponentContext(sockid input_s, sockid output_s);
     std::map<sockid, std::vector<relid>> inputs;
     std::map<sockid, relid> outputs;
 
+    void setup(sockid input_s, sockid output_s);
     /**
      * Execute a scene using the given input.
      * @param s to run
@@ -372,6 +413,10 @@ struct ComponentContext {
     state_t get_value(node id) const;
     void set_value(sockid sock, state_t value);
 
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
+
 private:
     /** Temporarily used input value */
     uint64_t execution_input;
@@ -379,7 +424,7 @@ private:
     uint64_t execution_output;
 };
 
-class Scene {
+class Scene final : public parse::Serializable {
 public:
     Scene(const std::string& name = "", const std::string& author = "",
         const std::string& description = "");
@@ -515,6 +560,10 @@ public:
 
     sys::Metadata meta;
     std::optional<ComponentContext> component_context;
+
+    /* Serializable interface */
+    Json::Value to_json(void) const override;
+    error_t from_json(const Json::Value&) override;
 };
 
 /** Class to node_t conversion */

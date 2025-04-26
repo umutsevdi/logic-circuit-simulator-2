@@ -10,25 +10,34 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "core.h"
+#include "common.h"
 
+namespace Json {
+class Value;
+}
 namespace lcs {
+class Scene;
 namespace parse {
+    class Serializable {
+        /**
+         * Converts given object to a Json::Value
+         * @returns Json document
+         */
+        virtual Json::Value to_json(void) const = 0;
+        /**
+         * Reads contents of the document and updates its fields.
+         * @returns error on failure
+         */
+        virtual error_t from_json(const Json::Value&) = 0;
+    };
 
     /**
-     * Serializes a scene to JSON.
-     * @param s - scene to clone
-     * @returns JSON::Value
-     */
-    std::string to_json(Scene& s);
-
-    /**
-     * Reads from a JSON document and generates a scene
-     * @param doc - to read from
-     * @param s - to save into
+     * Reads scene data from given string and updates the given scene.
+     * @param str to read from
+     * @param scene to write into
      * @returns error on failure
+     *
      */
-    error_t from_json(const std::string& doc, Scene& s);
-
+    error_t load_scene(const std::string& str, Scene& scene);
 } // namespace parse
 } // namespace lcs

@@ -25,7 +25,7 @@ std::ostream& operator<<(std::ostream& os, const Rel& r)
 
 std::ostream& operator<<(std::ostream& os, const BaseNode& g)
 {
-    os << g.id << "{}";
+    os << g._id << "{}";
     return os;
 }
 
@@ -41,7 +41,7 @@ InputNode::InputNode(Scene* _scene, node _id)
 std::ostream& operator<<(std::ostream& os, const InputNode& g)
 {
 
-    os << g.id << "{ value:" << g.value << " }";
+    os << g.id() << "{" << state_t_str((state_t)g.value) << " }";
     return os;
 };
 
@@ -66,7 +66,7 @@ void InputNode::toggle()
 void InputNode::signal()
 {
     L_INFO(CLASS "Sending " << state_t_str((state_t)value) << " signal");
-    scene->invoke_signal(output, value ? state_t::TRUE : state_t::FALSE);
+    _scene->invoke_signal(output, value ? state_t::TRUE : state_t::FALSE);
 }
 
 bool InputNode::is_connected() const { return true; };
@@ -87,7 +87,7 @@ OutputNode::OutputNode(Scene* _scene, node _id)
 
 std::ostream& operator<<(std::ostream& os, const OutputNode& g)
 {
-    os << g.id << "{ input:" << g.value << " }";
+    os << g.id() << "{" << state_t_str(g.value) << " }";
     return os;
 };
 
@@ -97,19 +97,19 @@ bool OutputNode::is_connected() const { return input != 0; };
 
 void OutputNode::signal()
 {
-    value = input ? scene->get_rel(input)->value : state_t::DISABLED;
-    L_INFO(CLASS "Received " << value << " signal");
+    value = input ? _scene->get_rel(input)->value : state_t::DISABLED;
+    L_INFO(CLASS "Received " << state_t_str(value) << " signal");
 }
 
 /******************************************************************************
                                     Context
 *****************************************************************************/
 
-BaseNode::BaseNode(Scene* _scene, node _id, direction_t _dir, point_t _p)
-    : id { _id }
-    , dir { _dir }
+BaseNode::BaseNode(Scene* scene, node id, direction_t _dir, point_t _p)
+    : dir { _dir }
     , point { _p }
-    , scene { _scene }
+    , _scene { scene }
+    , _id { id }
 {
 }
 
