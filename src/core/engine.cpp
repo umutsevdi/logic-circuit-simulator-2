@@ -19,7 +19,13 @@ std::ostream& operator<<(std::ostream& os, const Rel& r)
 {
     os << "Rel[" << r.id << "]\t{ from: " << r.from_node << "[" << r.from_sock
        << "],\tto: " << r.to_node << "[" << r.to_sock
-       << "],\tvalue: " << r.value << "}";
+       << "],\tvalue: " << state_t_str(r.value) << "}";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const BaseNode& g)
+{
+    os << g.id << "{}";
     return os;
 }
 
@@ -59,12 +65,16 @@ void InputNode::toggle()
 
 void InputNode::signal()
 {
+    L_INFO(CLASS "Sending " << state_t_str((state_t)value) << " signal");
     scene->invoke_signal(output, value ? state_t::TRUE : state_t::FALSE);
 }
 
 bool InputNode::is_connected() const { return true; };
 
-state_t InputNode::get() { return value ? state_t::TRUE : state_t::FALSE; };
+state_t InputNode::get(sockid) const
+{
+    return value ? state_t::TRUE : state_t::FALSE;
+};
 
 /******************************************************************************
                                   OutputNode
@@ -81,13 +91,14 @@ std::ostream& operator<<(std::ostream& os, const OutputNode& g)
     return os;
 };
 
-state_t OutputNode::get() { return value; }
+state_t OutputNode::get(sockid) const { return value; }
 
 bool OutputNode::is_connected() const { return input != 0; };
 
 void OutputNode::signal()
 {
     value = input ? scene->get_rel(input)->value : state_t::DISABLED;
+    L_INFO(CLASS "Received " << value << " signal");
 }
 
 /******************************************************************************

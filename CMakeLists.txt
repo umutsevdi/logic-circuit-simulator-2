@@ -33,7 +33,7 @@ message("Doxygen: ${LCS_ENABLE_DOXYGEN}")
 message("GUI: ${LCS_GUI}")
 
 set(__CORE core common parse jsoncpp_static)
-set(__DEPENDS ui $__CORE)
+set(__DEPENDS ui ${__CORE})
 
 message("Build Type: ${CMAKE_BUILD_TYPE}")
 add_compile_options(-Wall -Wextra)

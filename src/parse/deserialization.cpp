@@ -1,11 +1,10 @@
 #include "core.h"
 #include "parse.h"
-#include "json/value.h"
+#include <json/json.h>
 #include <map>
 
 namespace lcs {
 namespace parse {
-
     /** Reads a JSON document and writes values to a point_t object */
     static error_t _from_json(const Json::Value& doc, point_t& v);
     /** Reads a JSON document and writes values to a node object */
@@ -68,6 +67,16 @@ namespace parse {
             if (err) { return err; }
         }
 
+        for (auto& comp : v.components) {
+            bool found = false;
+            for (const auto& dep : v.meta.dependencies) {
+                if (comp.second.path == dep) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) { return ERROR(error_t::UNDEFINED_DEPENDENCY); }
+        }
         return error_t::OK;
     }
 
@@ -97,7 +106,7 @@ namespace parse {
     {
         v.id = id;
         if (!(doc["from"].isObject() && doc["to"].isObject())) {
-            return parse::error_t::INVALID_NODE;
+            return error_t::INVALID_NODE;
         }
         error_t err = _from_json(doc["from"], v.from_node);
         if (err) { return err; }
@@ -132,8 +141,12 @@ namespace parse {
         return error_t::OK;
     }
 
-    error_t _from_json(const Json::Value&, ComponentNode&)
+    error_t _from_json(const Json::Value& doc, ComponentNode& v)
     {
+        if (!doc["depends"].isString()) {
+            return ERROR(error_t::INVALID_COMPONENT);
+        }
+        v.set_component(doc["depends"].asString());
         return error_t::OK;
     }
 
@@ -164,11 +177,11 @@ namespace parse {
         }
         v.version = doc["version"].asInt();
         if (doc["dependencies"].isArray()) {
+            return error_t::OK;
             for (const auto& j : doc["dependencies"]) {
-                sys::component_handle_t id = 0;
-                sys::error_t err = sys::get_component(j.asString(), id);
-                if (err) { return ERROR(error_t::INVALID_COMPONENT); }
-                v.dependencies.push_back(id);
+                error_t err = sys::verify_component(j.asString());
+                if (err) { return err; }
+                v.dependencies.push_back(j.asString());
             }
         }
         return error_t::OK;
@@ -213,11 +226,6 @@ namespace parse {
                 t.point = point;
                 t.dir   = dir;
                 m.emplace(id, t);
-
-            } else if constexpr (std::is_same<T, ComponentNode>::value) {
-                T t { s, id, "" };
-                t.point = point;
-                t.dir   = dir;
             } else {
                 T t { s, id };
                 err = _from_json(value, t);
@@ -248,5 +256,14 @@ namespace parse {
         return error_t::OK;
     }
 
+    error_t from_json(const std::string& doc, Scene& s)
+    {
+        Json::Reader reader {};
+        Json::Value root;
+        bool ok = reader.parse(doc, root);
+        if (!ok) { return ERROR(error_t::INVALID_JSON_FORMAT); }
+        error_t err = parse::from_json(root, s);
+        return err;
+    }
 } // namespace parse
 } // namespace lcs

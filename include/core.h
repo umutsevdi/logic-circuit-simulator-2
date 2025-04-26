@@ -1,7 +1,7 @@
 #pragma once
 /*******************************************************************************
  * \file
- * File: engine/engine.h
+ * File: core.h
  * Created: 01/18/25
  * Author: Umut Sevdi
  * Description:
@@ -18,15 +18,8 @@
 #include <vector>
 
 namespace lcs {
+class Scene;
 namespace sys {
-
-    enum error_t {
-        OK,
-        COMPONENT_NOT_FOUND
-
-    };
-
-    typedef uint32_t component_handle_t;
 
     struct Metadata {
         Metadata(std::string _name, std::string _description,
@@ -41,9 +34,11 @@ namespace sys {
         std::string description;
         std::string author;
         int version;
-        std::vector<sys::component_handle_t> dependencies;
+        std::vector<std::string> dependencies;
 
-        std::string to_dependency_string() const;
+        std::string to_dependency_string(void) const;
+        error_t load_dependencies(void);
+        error_t load_dependencies(const std::string& self_dependency);
     };
 
     /**
@@ -51,11 +46,19 @@ namespace sys {
      * loads the component and returns it's handle.
      *
      * @param name - component name
-     * @param id id to assign the handle
      * @returns - error on failure.
-     *
      */
-    error_t get_component(const std::string& name, component_handle_t& id);
+    error_t verify_component(const std::string& name);
+
+    /**
+     * Parse a component from given string data, if it's a valid component
+     * insert it to _loaded_components
+     *
+     * @param name - to save as
+     * @param data - to parse
+     * @returns - error on failure
+     */
+    error_t load_component(const std::string name, std::string data);
 
     /**
      * Executes the component with given id with provided input, returning
@@ -65,26 +68,11 @@ namespace sys {
      * @param input - binary encoded input value
      * @returns - binary encoded result
      */
-    uint64_t run_component(component_handle_t id, uint64_t input);
+    uint64_t run_component(const std::string& name, uint64_t input);
 
-    std::optional<Metadata> get_dependency_info(component_handle_t id);
+    NRef<const Scene> get_dependency(const std::string& name);
 
 } // namespace sys
-
-enum error_t {
-    OK,
-    INVALID_NODEID,
-    INVALID_RELID,
-    REL_NOT_FOUND,
-    INVALID_FROM_TYPE,
-    NOT_A_COMPONENT,
-    INVALID_TO_TYPE,
-    ALREADY_CONNECTED,
-    NOT_CONNECTED,
-
-    COMPONENT_NOT_FOUND
-
-};
 
 /** id type for socket, sock_t = 0 means disconnected */
 typedef uint16_t sockid;
@@ -201,24 +189,24 @@ public:
     BaseNode& operator=(BaseNode&&)      = default;
     BaseNode& operator=(const BaseNode&) = default;
     virtual ~BaseNode()                  = default;
-    BaseNode* get_base() { return dynamic_cast<BaseNode*>(this); };
+    BaseNode* get_base(void) { return dynamic_cast<BaseNode*>(this); };
+    friend std::ostream& operator<<(std::ostream& os, const BaseNode& r);
 
     /**
      * Updates the internal data and send out signals to all connected nodes.
      */
-    virtual void signal() = 0;
+    virtual void signal(void) = 0;
     /** Returns whether all nodes are connected */
-    virtual bool is_connected() const = 0;
+    virtual bool is_connected(void) const = 0;
     /** Get the current status */
-    virtual state_t get() = 0;
+    virtual state_t get(sockid slot = 0) const = 0;
 
-    inline node get_node() const { return id; }
+    inline node get_node(void) const { return id; }
 
     node id;
     direction_t dir;
     point_t point;
-
-protected:
+    //    protected:
     Scene* scene;
 };
 
@@ -259,9 +247,9 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const GateNode& g);
 
-    void signal() override;
-    bool is_connected() const override;
-    state_t get() override;
+    void signal(void) override;
+    bool is_connected(void) const override;
+    state_t get(sockid slot = 0) const override;
 
     /** max_in number of inputs, denoted with relation id */
     std::vector<relid> inputs;
@@ -269,9 +257,9 @@ public:
     std::vector<relid> output;
 
     /** Adds a new input socket */
-    bool increment();
+    bool increment(void);
     /** Removes an input socket */
-    bool decrement();
+    bool decrement(void);
 
     gate_t type;
     sockid max_in;
@@ -280,11 +268,12 @@ private:
     /** Gate specific calculation function */
     bool (*_apply)(const std::vector<bool>&);
     state_t value;
+    bool _is_disabled;
 };
 
 class ComponentNode final : public BaseNode {
 public:
-    explicit ComponentNode(Scene*, node, const std::string& path);
+    explicit ComponentNode(Scene*, node, const std::string& path = "");
     ComponentNode(const ComponentNode&)            = default;
     ComponentNode(ComponentNode&&)                 = default;
     ComponentNode& operator=(ComponentNode&&)      = default;
@@ -292,19 +281,20 @@ public:
     ~ComponentNode()                               = default;
     friend std::ostream& operator<<(std::ostream& os, const ComponentNode& g);
 
-    void signal() override;
-    bool is_connected() const override;
-    state_t get() override;
+    error_t set_component(const std::string& path);
+
+    void signal(void) override;
+    bool is_connected(void) const override;
+    state_t get(sockid slot = 0) const override;
 
     std::map<sockid, std::vector<relid>> outputs;
     std::vector<relid> inputs;
 
-private:
     std::string path;
-    sockid max_in;
-    sockid max_out;
 
-    bool apply(std::vector<relid>&);
+private:
+    bool _is_disabled;
+    uint64_t _output_value;
 };
 
 /**
@@ -320,9 +310,9 @@ public:
     ~InputNode()                           = default;
     friend std::ostream& operator<<(std::ostream& os, const InputNode& g);
 
-    void signal() override;
-    bool is_connected() const override;
-    state_t get() override;
+    void signal(void) override;
+    bool is_connected(void) const override;
+    state_t get(sockid slot = 0) const override;
 
     /**
      * Set the value, and notify connected nodes.
@@ -331,7 +321,7 @@ public:
     void set(bool value);
     void set_freq(uint32_t freq);
     /** Inverts the value and notifies connected nodes. */
-    void toggle();
+    void toggle(void);
 
     std::vector<relid> output;
 
@@ -350,9 +340,9 @@ public:
     ~OutputNode()                            = default;
     friend std::ostream& operator<<(std::ostream& os, const OutputNode& g);
 
-    void signal() override;
-    bool is_connected() const override;
-    state_t get() override;
+    void signal(void) override;
+    bool is_connected(void) const override;
+    state_t get(sockid slot = 0) const override;
 
     relid input;
     state_t value;
@@ -364,7 +354,7 @@ public:
  */
 struct ComponentContext {
     ComponentContext() = default;
-    ComponentContext(relid input_s, relid output_s);
+    ComponentContext(sockid input_s, sockid output_s);
     std::map<sockid, std::vector<relid>> inputs;
     std::map<sockid, relid> outputs;
 
@@ -380,6 +370,7 @@ struct ComponentContext {
     node get_input(uint32_t id) const;
     node get_output(uint32_t id) const;
     state_t get_value(node id) const;
+    void set_value(sockid sock, state_t value);
 
 private:
     /** Temporarily used input value */
@@ -509,7 +500,7 @@ public:
 
     void set_position(node, point_t);
 
-    error_t connect_with_id(relid& id, node to_node, sockid to_sock,
+    error_t connect_with_id(relid id, node to_node, sockid to_sock,
         node from_node, sockid from_sock = 0) noexcept;
 
     // [id][period] map for timer inputs
@@ -524,13 +515,10 @@ public:
 
     sys::Metadata meta;
     std::optional<ComponentContext> component_context;
-
-private:
-    sys::error_t add_dependency(const std::string& name);
 };
 
 /** Class to node_t conversion */
-template <typename T> constexpr node_t to_node_type()
+template <typename T> constexpr node_t to_node_type(void)
 {
     if constexpr (std::is_same<T, GateNode>::value) { return node_t::GATE; }
     if constexpr (std::is_same<T, ComponentNode>::value) {

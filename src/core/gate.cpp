@@ -1,4 +1,6 @@
+#include "common.h"
 #include "core.h"
+#include "parse.h"
 #include <algorithm>
 
 namespace lcs {
@@ -15,6 +17,7 @@ GateNode::GateNode(Scene* _scene, node _id, gate_t _type, sockid _max_in)
     , type { _type }
     , max_in { _max_in }
     , value { state_t::DISABLED }
+    , _is_disabled { true }
 {
     if (type == gate_t::NOT) {
         max_in = 1;
@@ -36,30 +39,49 @@ bool GateNode::is_connected() const
         inputs.begin(), inputs.end(), [&](relid i) { return i != 0; });
 }
 
-state_t GateNode::get()
+state_t GateNode::get(sockid) const
 {
-    if (!is_connected()) {
-        value = state_t::DISABLED;
-        return value;
-    }
-    value = state_t::DISABLED;
-    std::vector<bool> v {};
-    v.reserve(inputs.size());
-    bool is_disabled = false;
-    for (relid in : inputs) {
-        auto rel = scene->get_rel(in);
-        lcs_assert(rel != nullptr);
-        if (rel->value == state_t::DISABLED) {
-            is_disabled = true;
-            break;
-        }
-        v.push_back(rel->value == TRUE ? TRUE : FALSE);
-    }
-    if (!is_disabled) { value = _apply(v) ? state_t::TRUE : state_t::FALSE; }
-    return value;
+    return _is_disabled ? state_t::DISABLED : value;
 }
 
-void GateNode::signal() { scene->invoke_signal(output, get()); }
+void GateNode::signal()
+{
+    L_INFO(CLASS "Arrived");
+    value = state_t::DISABLED;
+    if (is_connected()) {
+        L_INFO(CLASS "a");
+        std::vector<bool> v {};
+        v.reserve(inputs.size());
+        L_INFO(CLASS "b");
+        _is_disabled = false;
+        for (relid in : inputs) {
+            L_INFO(CLASS << in);
+
+            {
+#define __DO(a) a.second
+                VEC_TO_STR(std::cout, scene->rel, __DO);
+#undef __DO
+            }
+            auto rel = scene->get_rel(in);
+            L_INFO(CLASS "rel" << rel);
+            lcs_assert(rel != nullptr);
+            if (rel->value == state_t::DISABLED) {
+                _is_disabled = true;
+                break;
+            }
+            v.push_back(rel->value == TRUE ? TRUE : FALSE);
+        }
+        L_INFO(CLASS "is disabled? " << _is_disabled);
+        if (!_is_disabled) {
+            L_INFO(CLASS "_apply");
+            value = _apply(v) ? state_t::TRUE : state_t::FALSE;
+        }
+    } else {
+        _is_disabled = true;
+    }
+    L_INFO(CLASS "Sending " << state_t_str(get()) << " signal ");
+    scene->invoke_signal(output, get());
+}
 
 bool GateNode::increment()
 {

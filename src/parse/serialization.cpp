@@ -27,7 +27,7 @@ namespace parse {
     template <typename T>
     static Json::Value _to_json(const std::map<node, T>& m);
 
-    Json::Value to_json(Scene& s)
+    Json::Value _to_json(Scene& s)
     {
         Json::Value out { Json::objectValue };
         out["meta"] = _to_json(s.meta, s.component_context.has_value());
@@ -39,6 +39,9 @@ namespace parse {
         }
         if (!s.outputs.empty()) {
             out["nodes"]["outputs"] = _to_json<OutputNode>(s.outputs);
+        }
+        if (!s.components.empty()) {
+            out["nodes"]["comp"] = _to_json<ComponentNode>(s.components);
         }
 
         if (!s.rel.empty()) {
@@ -109,6 +112,12 @@ namespace parse {
         }
         return out;
     }
+    Json::Value _to_json(const ComponentNode v)
+    {
+        Json::Value out = _to_json_base(v);
+        out["depends"]  = v.path;
+        return out;
+    }
 
     Json::Value _to_json(const OutputNode& v) { return _to_json_base(v); }
 
@@ -123,9 +132,8 @@ namespace parse {
         if (!v.dependencies.empty()) {
             Json::Value dep { Json::arrayValue };
             for (const auto& d : v.dependencies) {
-                if (auto d_meta = sys::get_dependency_info(d);
-                    d_meta.has_value()) {
-                    dep.append(d_meta.value().to_dependency_string());
+                if (auto d_meta = sys::get_dependency(d); d_meta != nullptr) {
+                    dep.append(d_meta->meta.to_dependency_string());
                 } else {
                     return ERROR(error_t::INVALID_COMPONENT);
                 }
@@ -164,5 +172,6 @@ namespace parse {
         return out;
     }
 
+    std::string to_json(Scene& s) { return _to_json(s).toStyledString(); }
 } // namespace parse
 } // namespace lcs

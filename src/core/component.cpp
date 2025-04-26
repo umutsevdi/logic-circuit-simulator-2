@@ -1,10 +1,13 @@
+#include "common.h"
 #include "core.h"
+#include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 
 namespace lcs {
 
-ComponentContext::ComponentContext(relid input_s, relid output_s)
+ComponentContext::ComponentContext(sockid input_s, sockid output_s)
 {
     for (relid i = 1; i <= input_s; i++) {
         inputs[i] = {};
@@ -32,6 +35,17 @@ node ComponentContext::get_output(uint32_t id) const
     return { 0 };
 }
 
+void ComponentContext::set_value(sockid sock, state_t value)
+{
+    if (sock > 0 && sock < 64) {
+        if (value == state_t::TRUE) {
+            execution_output |= 1 << sock;
+        } else {
+            execution_output &= ~(1 << sock);
+        }
+    }
+}
+
 state_t ComponentContext::get_value(node id) const
 {
     if (id.type == node_t::COMPONENT_INPUT) {
@@ -50,6 +64,7 @@ state_t ComponentContext::get_value(node id) const
 
 uint64_t ComponentContext::run(Scene* s, uint64_t v)
 {
+    L_INFO("Execute component: " << v);
     v <<= 1;
     s->component_context->execution_input  = v;
     s->component_context->execution_output = 0;
@@ -69,23 +84,71 @@ uint64_t ComponentContext::run(Scene* s, uint64_t v)
 
 ComponentNode::ComponentNode(Scene* _s, node _id, const std::string& _path)
     : BaseNode { _s, node { _id.id, node_t::COMPONENT } }
-    , path { _path }
+    , _output_value { 0 }
 {
+    if (_path != "") { set_component(_path); }
 }
 
-bool ComponentNode::is_connected() const { return false; }
+error_t ComponentNode::set_component(const std::string& _path)
+{
+    if (_path == "") { return ERROR(error_t::INVALID_DEPENDENCY_FORMAT); }
+    auto ref = sys::get_dependency(_path);
+    if (ref == nullptr) { return ERROR(error_t::COMPONENT_NOT_FOUND); }
+    // TODO add disconnect by relid
+    for (size_t i = 0; i < ref->component_context->inputs.size(); i++) {
+        inputs.push_back(0);
+    }
+    // TODO add disconnect by relid
+    for (size_t i = 0; i < ref->component_context->outputs.size(); i++) {
+        outputs[i] = {};
+    }
+    path = _path;
+    return error_t::OK;
+}
 
-state_t ComponentNode::get() { return state_t::DISABLED; }
+bool ComponentNode::is_connected() const
+{
+    return std::all_of(
+        inputs.begin(), inputs.end(), [&](relid i) { return i != 0; });
+}
+
+state_t ComponentNode::get(sockid id) const
+{
+    if (_is_disabled) { return state_t::DISABLED; }
+    return _output_value & (1 << id) ? TRUE : FALSE;
+}
 
 void ComponentNode::signal()
 {
-    L_INFO(CLASS << "Unimplemented");
-    throw "Unimplemented";
+    if (is_connected()) {
+        uint64_t input = 0;
+        _is_disabled   = false;
+        for (relid in : inputs) {
+            if (in != 0) {
+                auto rel = scene->get_rel(in);
+                lcs_assert(rel != nullptr);
+                if (rel->value == state_t::DISABLED) {
+                    _is_disabled = true;
+                    break;
+                }
+                input <<= 1;
+                if (rel->value == TRUE) { input++; }
+            }
+        }
+        if (!_is_disabled) { _output_value = sys::run_component(path, input); }
+    } else {
+        _is_disabled = true;
+    }
+
+    for (auto out : outputs) {
+        L_INFO(CLASS "Sending " << state_t_str(get(out.first)) << " signal");
+        scene->invoke_signal(out.second, get(out.first));
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const ComponentNode& g)
 {
-    os << "COMP [" << g.id << "]{inputs:";
+    os << "COMP [" << g.id << "](" << g.path << "){inputs:";
     for (auto i : g.inputs) {
         os << i << ", ";
     }

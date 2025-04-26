@@ -1,5 +1,8 @@
+#include "catch2/catch_test_macros.hpp"
+#include "common.h"
 #include "core.h"
 #include "parse.h"
+#include "test_util.h"
 #include <catch2/catch_all.hpp>
 
 using namespace lcs;
@@ -23,7 +26,7 @@ TEST_CASE("Parse JSON subnodes")
     s.get_node<InputNode>(v1)->set(true);
     s.get_node<InputNode>(v2)->set(false);
     s.get_node<InputNode>(v3)->set(true);
-    Json::Value v = parse::to_json(s);
+    std::string v = parse::to_json(s);
     REQUIRE(!v.empty());
 }
 
@@ -43,7 +46,7 @@ TEST_CASE("Parse non-zero context")
     s.get_base(o)->dir    = direction_t::DOWN;
     s.get_base(v1)->point = { 1, 3 };
 
-    Json::Value out = parse::to_json(s);
+    std::string out = parse::to_json(s);
     REQUIRE(!out.empty());
 }
 
@@ -55,13 +58,13 @@ TEST_CASE("Save, load and compare")
     s.get_node<InputNode>(v)->set(true);
     s.connect(o, 0, v);
 
-    Json::Value scene_str = parse::to_json(s);
+    std::string scene_str = parse::to_json(s);
     Scene s_loaded;
-    REQUIRE(parse::from_json(scene_str, s_loaded) == parse::OK);
+    REQUIRE(parse::from_json(scene_str, s_loaded) == lcs::error_t::OK);
 
-    Json::Value scene_loaded_str = parse::to_json(s_loaded);
+    std::string scene_loaded_str = parse::to_json(s_loaded);
 
-    REQUIRE(scene_str.toStyledString() == scene_loaded_str.toStyledString());
+    REQUIRE(scene_str == scene_loaded_str);
     REQUIRE(s_loaded.get_node<OutputNode>(o)->get() == state_t::TRUE);
 }
 
@@ -70,36 +73,13 @@ TEST_CASE("Save a complicated JSON, load and run the tests")
 
     // Taken from TEST_CASE("Full Adder")
     Scene s { "Save a complicated JSON, load and run the tests" };
-    auto a     = s.add_node<InputNode>();
-    auto b     = s.add_node<InputNode>();
-    auto c_in  = s.add_node<InputNode>();
-    auto c_out = s.add_node<OutputNode>();
-    auto sum   = s.add_node<OutputNode>();
+    _create_full_adder_io(s);
+    _create_full_adder(s);
 
-    auto g_xor       = s.add_node<GateNode>(gate_t::XOR);
-    auto g_xor_sum   = s.add_node<GateNode>(gate_t::XOR);
-    auto g_and_carry = s.add_node<GateNode>(gate_t::AND);
-    auto g_and       = s.add_node<GateNode>(gate_t::AND);
-    auto g_or        = s.add_node<GateNode>(gate_t::OR);
-
-    s.connect(g_xor, 0, a);
-    s.connect(g_xor, 1, b);
-    s.connect(g_xor_sum, 0, g_xor);
-    s.connect(g_xor_sum, 1, c_in);
-    s.connect(sum, 0, g_xor_sum);
-    s.connect(g_and, 0, c_in);
-    s.connect(g_and, 1, g_xor);
-    s.connect(g_and_carry, 0, a);
-    s.connect(g_and_carry, 1, b);
-    s.connect(g_or, 0, g_and);
-    s.connect(g_or, 1, g_and_carry);
-    s.connect(c_out, 0, g_or);
-    // Taken from TEST_CASE("Full Adder")
-
-    Json::Value s_str = parse::to_json(s);
+    std::string s_str = parse::to_json(s);
     Scene s_loaded {};
 
-    REQUIRE(parse::from_json(s_str, s_loaded) == parse::error_t::OK);
+    REQUIRE(parse::from_json(s_str, s_loaded) == lcs::error_t::OK);
 
     // Test cases from TEST_CASE("Full Adder")
     s_loaded.get_node<InputNode>(a)->set(true);
@@ -145,12 +125,12 @@ TEST_CASE("Save a component")
     REQUIRE(s.component_context->run(&s, 0b001) == 0);
     REQUIRE(s.component_context->run(&s, 0b000) == 0);
 
-    Json::Value s_str = parse::to_json(s);
+    std::string s_str = parse::to_json(s);
     Scene s_loaded {};
-    REQUIRE(parse::from_json(s_str, s_loaded) == parse::error_t::OK);
-    Json::Value scene_loaded_str = parse::to_json(s_loaded);
+    REQUIRE(parse::from_json(s_str, s_loaded) == lcs::error_t::OK);
+    std::string scene_loaded_str = parse::to_json(s_loaded);
 
-    REQUIRE(s_str.toStyledString() == scene_loaded_str.toStyledString());
+    REQUIRE(s_str == scene_loaded_str);
 
     REQUIRE(s.component_context->run(&s_loaded, 0b111) == 1);
     REQUIRE(s.component_context->run(&s_loaded, 0b110) == 0);
@@ -161,3 +141,99 @@ TEST_CASE("Save a component")
     REQUIRE(s.component_context->run(&s_loaded, 0b001) == 0);
     REQUIRE(s.component_context->run(&s_loaded, 0b000) == 0);
 }
+
+TEST_CASE("Save a simple component, and use it in a scene")
+{
+    // Taken from TEST_CASE("Full Adder")
+    Scene s { "Save a simple component, and use it in a scene" };
+    s.component_context = { 2, 1 };
+    node a              = s.component_context->get_input(1);
+    node b              = s.component_context->get_input(2);
+    node c_out          = s.component_context->get_output(1);
+    node g_and          = s.add_node<GateNode>(gate_t::AND);
+    s.connect(c_out, 0, g_and);
+    s.connect(g_and, 0, a);
+    s.connect(g_and, 1, b);
+
+    REQUIRE(s.component_context->run(&s, 0b11) == 1);
+    REQUIRE(s.component_context->run(&s, 0b10) == 0);
+    REQUIRE(s.component_context->run(&s, 0b01) == 0);
+    REQUIRE(s.component_context->run(&s, 0b00) == 0);
+    std::string dependency = s.meta.to_dependency_string();
+    REQUIRE(
+        sys::load_component(dependency, parse::to_json(s)) == lcs::error_t::OK);
+    REQUIRE(sys::get_dependency(dependency) != nullptr);
+
+    Scene s2 {};
+    s2.meta.dependencies.push_back(dependency);
+    s2.meta.load_dependencies();
+
+    node component = s2.add_node<ComponentNode>(dependency);
+    node i1        = s2.add_node<InputNode>();
+    node i2        = s2.add_node<InputNode>();
+    node o         = s2.add_node<OutputNode>();
+
+    REQUIRE(s2.connect(component, 0, i1) != 0);
+    L_INFO("OK");
+    REQUIRE(s2.connect(component, 1, i2) != 0);
+    L_INFO("OK");
+    REQUIRE(s2.connect(o, 0, component, 1) != 0);
+    L_INFO("OK");
+}
+
+/*
+TEST_CASE("Save a component, load it to a scene")
+{
+
+    // Taken from TEST_CASE("Full Adder")
+    Scene s { "Save a component, load it to a scene" };
+    s.component_context = { 3, 2 };
+    node a              = s.component_context->get_input(1);
+    node b              = s.component_context->get_input(2);
+    node c_in           = s.component_context->get_input(3);
+    node c_out          = s.component_context->get_output(1);
+    node sum            = s.component_context->get_output(2);
+    _create_full_adder(s);
+
+    std::string s_str = parse::to_json(s);
+    REQUIRE(sys::load_component(s.meta.to_dependency_string(), s_str)
+        == lcs::error_t::OK);
+
+    Scene s2 {};
+    s2.meta.dependencies.push_back(s.meta.to_dependency_string());
+    REQUIRE(s2.meta.load_dependencies() == lcs::error_t::OK);
+    REQUIRE(s2.meta.dependencies.size() > 0);
+
+    node cnode = s2.add_node<ComponentNode>(s.meta.to_dependency_string());
+    REQUIRE(cnode.id != 0);
+
+    node i1 = s2.add_node<InputNode>();
+    node i2 = s2.add_node<InputNode>();
+    node i3 = s2.add_node<InputNode>();
+
+    node o1 = s2.add_node<OutputNode>();
+    node o2 = s2.add_node<OutputNode>();
+
+    REQUIRE(s2.connect(cnode, 0, i1) != 0);
+    REQUIRE(s2.connect(cnode, 1, i2) != 0);
+
+    REQUIRE(s2.connect(cnode, 2, i3) != 0);
+
+    REQUIRE(s2.connect(o1, 0, cnode, 0) != 0);
+    REQUIRE(s2.connect(o2, 1, cnode, 1) != 0);
+
+    //  s.get_node<InputNode>(i1)->set(true);
+    //  s.get_node<InputNode>(i2)->set(false);
+    //  s.get_node<InputNode>(i3)->set(false);
+    //  REQUIRE(s.get_node<OutputNode>(o1)->get() == state_t::TRUE);
+    //  REQUIRE(s.get_node<OutputNode>(o2)->get() == state_t::FALSE);
+
+    //  s.get_node<InputNode>(i2)->set(true);
+    //  REQUIRE(s.get_node<OutputNode>(o1)->get() == state_t::FALSE);
+    //  REQUIRE(s.get_node<OutputNode>(o2)->get() == state_t::TRUE);
+
+    //  s.get_node<InputNode>(i3)->set(true);
+    //  REQUIRE(s.get_node<OutputNode>(o1)->get() == state_t::TRUE);
+    //  REQUIRE(s.get_node<OutputNode>(o2)->get() == state_t::TRUE);
+}
+*/

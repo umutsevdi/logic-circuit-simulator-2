@@ -1,3 +1,4 @@
+#include "common.h"
 #include "core.h"
 #include <algorithm>
 #include <utility>
@@ -91,13 +92,9 @@ NRef<Rel> Scene::get_rel(relid idx)
     return n != rel.end() ? &n->second : (S_ERROR("Rel not found", nullptr));
 }
 
-error_t Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
+error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
     node from_node, sockid from_sock) noexcept
 {
-    if (id == 0) {
-        last_rel++;
-        id = last_rel;
-    }
     if (from_node.type == node_t::OUTPUT
         || from_node.type == node_t::COMPONENT_OUTPUT) {
         return ERROR(error_t::INVALID_FROM_TYPE);
@@ -160,6 +157,7 @@ error_t Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
         break;
     case node_t::COMPONENT:
         get_node<ComponentNode>(from_node)->outputs[from_sock].push_back(id);
+        L_INFO(CLASS);
         get_node<ComponentNode>(from_node)->signal();
         break;
     case node_t::INPUT:
@@ -174,6 +172,7 @@ error_t Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
             }
             compin->second.push_back(id);
         }
+        component_context->run(this, 0);
         break;
     default: return ERROR(error_t::INVALID_TO_TYPE);
     }
@@ -183,7 +182,8 @@ error_t Scene::connect_with_id(relid& id, node to_node, sockid to_sock,
 relid Scene::connect(
     node to_node, sockid to_sock, node from_node, sockid from_sock) noexcept
 {
-    relid id = 0;
+    last_rel++;
+    relid id = last_rel;
     return connect_with_id(id, to_node, to_sock, from_node, from_sock) ? 0 : id;
 }
 
@@ -250,6 +250,7 @@ error_t Scene::disconnect(relid id)
         if (auto outitr = component_context->outputs.find(r->second.to_node.id);
             outitr != component_context->outputs.end()) {
             outitr->second = 0;
+            component_context->run(this, 0);
         } else {
             return ERROR(error_t::NOT_CONNECTED);
         }
@@ -268,28 +269,36 @@ void Scene::invoke_signal(const std::vector<relid>& output, state_t value)
     for (relid id : output) {
         if (id == 0) { continue; }
         if (auto r = rel.find(id); r != rel.end()) {
+            L_INFO(
+                CLASS "Sending " << state_t_str(value) << " to " << r->second);
             r->second.value = value;
             if (r->second.to_node.type != node_t::COMPONENT_OUTPUT) {
                 auto n = get_base(r->second.to_node);
-                if (n != nullptr) { n->signal(); }
+                if (n != nullptr) {
+                    L_INFO(CLASS "calling " << n);
+                    L_INFO(n);
+                    n->signal();
+                }
+            } else {
+                component_context->set_value(
+                    r->second.to_node.id, r->second.value);
             }
         }
     }
 }
 
-sys::error_t Scene::add_dependency(const std::string& name)
+std::ostream& operator<<(std::ostream& os, const Scene& s)
 {
-    sys::component_handle_t id = 0;
-    sys::error_t err           = sys::get_component(name, id);
-    if (err) return err;
-    meta.dependencies.push_back(id);
-
-    return sys::error_t::OK;
-}
-
-std::ostream& operator<<(std::ostream& os, const Scene&)
-{
-    os << "Scene[]";
+    std::string d_str { s.meta.to_dependency_string() };
+    if (d_str.length() > 10) {
+        d_str = std::string { d_str.begin(), d_str.begin() + 10 } + "...";
+    }
+    os << (s.component_context.has_value() ? "Component" : "Scene") << "(\""
+       << d_str << "\")";
+    if (s.component_context.has_value()) {
+        os << "[" << s.component_context->inputs.size() << ", "
+           << s.component_context->outputs.size() << "]" << "\t";
+    }
     return os;
 }
 

@@ -1,5 +1,6 @@
 #include "catch2/catch_test_macros.hpp"
 #include "core.h"
+#include "test_util.h"
 #include <catch2/catch_all.hpp>
 
 using namespace lcs;
@@ -129,11 +130,7 @@ TEST_CASE("1-Bit Adder Circuit")
 TEST_CASE("Full Adder")
 {
     Scene s;
-    auto a     = s.add_node<InputNode>();
-    auto b     = s.add_node<InputNode>();
-    auto c_in  = s.add_node<InputNode>();
-    auto c_out = s.add_node<OutputNode>();
-    auto sum   = s.add_node<OutputNode>();
+    _create_full_adder_io(s);
 
     auto g_xor       = s.add_node<GateNode>(gate_t::XOR);
     auto g_xor_sum   = s.add_node<GateNode>(gate_t::XOR);
