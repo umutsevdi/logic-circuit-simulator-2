@@ -98,22 +98,22 @@ state_t InputNode::get(sockid) const
 OutputNode::OutputNode(Scene* _scene, node _id)
     : BaseNode { _scene, { _id.id, node_t::OUTPUT } }
     , input { 0 }
-    , value { state_t::DISABLED } { };
+    , _value { state_t::DISABLED } { };
 
 std::ostream& operator<<(std::ostream& os, const OutputNode& g)
 {
-    os << g.id() << "{" << state_t_str(g.value) << " }";
+    os << g.id() << "{" << state_t_str(g._value) << " }";
     return os;
 };
 
-state_t OutputNode::get(sockid) const { return value; }
+state_t OutputNode::get(sockid) const { return _value; }
 
 bool OutputNode::is_connected() const { return input != 0; };
 
 void OutputNode::on_signal()
 {
-    value = input ? _scene->get_rel(input)->value : state_t::DISABLED;
-    L_INFO(CLASS "Received " << state_t_str(value) << " signal");
+    _value = input ? _scene->get_rel(input)->value : state_t::DISABLED;
+    L_INFO(CLASS "Received " << state_t_str(_value) << " signal");
 }
 
 /******************************************************************************

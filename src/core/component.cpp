@@ -1,6 +1,7 @@
 #include "common.h"
 #include "core.h"
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -58,20 +59,20 @@ void ComponentContext::setup(sockid input_s, sockid output_s)
     _execution_output = 0;
 }
 
-node ComponentContext::get_input(uint32_t id) const
+node ComponentContext::get_input(sockid id) const
 {
-    if (id != 0 && id <= inputs.size()) {
-        return node { id, node_t::COMPONENT_INPUT };
+    if (id < inputs.size()) {
+        return node { static_cast<uint32_t>(id + 1), node_t::COMPONENT_INPUT };
     }
-    return { 0 };
+    return {};
 }
 
-node ComponentContext::get_output(uint32_t id) const
+node ComponentContext::get_output(sockid id) const
 {
-    if (id != 0 && id <= outputs.size()) {
-        return node { id, node_t::COMPONENT_OUTPUT };
+    if (id < outputs.size()) {
+        return node { static_cast<uint32_t>(id + 1), node_t::COMPONENT_OUTPUT };
     }
-    return { 0 };
+    return {};
 }
 
 void ComponentContext::set_value(sockid sock, state_t value)
@@ -135,8 +136,6 @@ ComponentNode::ComponentNode(Scene* _s, node _id, const std::string& _path)
 
 error_t ComponentNode::set_component(const std::string& _path)
 {
-    // TODO When a component's input output size changes. It does not update
-    // individual scene's ComponentNode's input output sizes.
     if (_path == "") { return ERROR(error_t::INVALID_DEPENDENCY_FORMAT); }
     auto ref = sys::get_dependency(_path);
     if (ref == nullptr) { return ERROR(error_t::COMPONENT_NOT_FOUND); }

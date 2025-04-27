@@ -101,7 +101,9 @@ error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
         || from_node.type == node_t::COMPONENT_OUTPUT) {
         return ERROR(error_t::INVALID_FROM_TYPE);
     } else if (from_node.type == node_t::COMPONENT
-        && from_sock >= get_node<ComponentNode>(from_node)->inputs.size()) {
+        && from_sock
+            >= sys::get_dependency(get_node<ComponentNode>(from_node)->path)
+                ->component_context->outputs.size()) {
         return ERROR(error_t::INVALID_NODEID);
     }
     if (!component_context.has_value()

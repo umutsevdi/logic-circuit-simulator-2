@@ -82,7 +82,7 @@ namespace sys {
 /** id type for socket, sock_t = 0 means disconnected */
 typedef uint16_t sockid;
 
-/** Relationship identifier */
+/** Relationship identifier. Id is a non-zero identifier. */
 typedef uint32_t relid;
 
 enum node_t : uint8_t {
@@ -381,17 +381,23 @@ public:
     bool is_connected(void) const override;
     state_t get(sockid slot = 0) const override;
 
-    relid input;
-    state_t value;
-
     /* Serializable interface */
     Json::Value to_json(void) const override;
     error_t from_json(const Json::Value&) override;
+
+    relid input;
+
+private:
+    state_t _value;
 };
 
 /**
  * A component scene contains the ComponentContext, Component Context can
  * execute a scene with given parameters.
+ * NOTE: ComponentContext internally pushes ids by one to run shift
+ * calculations correctly. However to be compatible with ComponentNodes it is
+ * accessed via get_input(sockid) and get_output(sockid) methods where it is
+ * virtually increased by one.
  */
 struct ComponentContext final : public parse::Serializable {
     ComponentContext(Scene* parent, sockid input_s = 0, sockid output_s = 0);
@@ -412,11 +418,11 @@ struct ComponentContext final : public parse::Serializable {
      **/
     uint64_t run(uint64_t input);
 
-    /** Get node id for given input */
-    node get_input(uint32_t id) const;
-    /** Get node id for given output */
-    node get_output(uint32_t id) const;
-    /** Get value of the given node */
+    /** Get node id for given input socket */
+    node get_input(sockid id) const;
+    /** Get node id for given output socket */
+    node get_output(sockid id) const;
+    /** Get value of the given node socket */
     state_t get_value(node id) const;
     /** Update the value of an input slot */
     void set_value(sockid sock, state_t value);

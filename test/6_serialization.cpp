@@ -103,14 +103,14 @@ TEST_CASE("Save a component, reload and run")
     auto g_not   = s.add_node<GateNode>(gate_t::NOT);
     auto g_out   = s.add_node<GateNode>(gate_t::OR);
 
-    s.connect(g_and, 0, s.component_context->get_input(1));
-    s.connect(g_and_2, 0, s.component_context->get_input(2));
-    s.connect(g_and, 1, s.component_context->get_input(3));
-    s.connect(g_not, 0, s.component_context->get_input(3));
+    s.connect(g_and, 0, s.component_context->get_input(0));
+    s.connect(g_and_2, 0, s.component_context->get_input(1));
+    s.connect(g_and, 1, s.component_context->get_input(2));
+    s.connect(g_not, 0, s.component_context->get_input(2));
     s.connect(g_and_2, 1, g_not);
     s.connect(g_out, 0, g_and);
     s.connect(g_out, 1, g_and_2);
-    s.connect(s.component_context->get_output(1), 0, g_out);
+    s.connect(s.component_context->get_output(0), 0, g_out);
 
     REQUIRE_EQ(s.component_context->run(0b111), 1);
     REQUIRE_EQ(s.component_context->run(0b110), 0);
@@ -140,9 +140,9 @@ TEST_CASE("Save a simple component, and use it in a scene")
     Scene s { ComponentContext { &s, 2, 1 },
         "Save a simple component, and use it in a scene" };
     node g_and = s.add_node<GateNode>(gate_t::AND);
-    s.connect(s.component_context->get_output(1), 0, g_and);
-    s.connect(g_and, 0, s.component_context->get_input(1));
-    s.connect(g_and, 1, s.component_context->get_input(2));
+    s.connect(s.component_context->get_output(0), 0, g_and);
+    s.connect(g_and, 0, s.component_context->get_input(0));
+    s.connect(g_and, 1, s.component_context->get_input(1));
 
     REQUIRE_EQ(s.component_context->run(0b11), 1);
     REQUIRE_EQ(s.component_context->run(0b10), 0);
@@ -168,7 +168,7 @@ TEST_CASE("Save a simple component, and use it in a scene")
 
     REQUIRE(s2.connect(component, 0, i1));
     REQUIRE(s2.connect(component, 1, i2));
-    REQUIRE(s2.connect(o, 0, component, 1));
+    REQUIRE(s2.connect(o, 0, component, 0));
 }
 
 TEST_CASE("Save a component, load it to a scene")
@@ -177,11 +177,11 @@ TEST_CASE("Save a component, load it to a scene")
     // Taken from TEST_CASE("Full Adder")
     Scene s { "Save a component, load it to a scene" };
     s.component_context = { &s, 3, 2 };
-    node a              = s.component_context->get_input(1);
-    node b              = s.component_context->get_input(2);
-    node c_in           = s.component_context->get_input(3);
-    node sum            = s.component_context->get_output(1);
-    node c_out          = s.component_context->get_output(2);
+    node a              = s.component_context->get_input(0);
+    node b              = s.component_context->get_input(1);
+    node c_in           = s.component_context->get_input(2);
+    node sum            = s.component_context->get_output(0);
+    node c_out          = s.component_context->get_output(1);
     _create_full_adder(s);
 
     std::string dependency = s.meta.to_dependency_string();
@@ -236,19 +236,19 @@ TEST_CASE("Save a component, load it to a scene")
     }
 }
 
-TEST_CASE("Load a component to a scene, then update component")
+TEST_CASE("Load a component to a scene, then update component(out)")
 {
     Scene s { ComponentContext { &s, 2, 2 },
-        "Load a component to a scene, then update component" };
+        "Load a component to a scene, then update component(out)" };
 
     node g_and = s.add_node<GateNode>(gate_t::AND);
     node g_or  = s.add_node<GateNode>(gate_t::OR);
-    s.connect(g_and, 0, s.component_context->get_input(1));
-    s.connect(g_and, 1, s.component_context->get_input(2));
-    s.connect(g_or, 0, s.component_context->get_input(1));
-    s.connect(g_or, 1, s.component_context->get_input(2));
-    s.connect(s.component_context->get_output(1), 0, g_and);
-    s.connect(s.component_context->get_output(2), 0, g_or);
+    s.connect(g_and, 0, s.component_context->get_input(0));
+    s.connect(g_and, 1, s.component_context->get_input(1));
+    s.connect(g_or, 0, s.component_context->get_input(0));
+    s.connect(g_or, 1, s.component_context->get_input(1));
+    s.connect(s.component_context->get_output(0), 0, g_and);
+    s.connect(s.component_context->get_output(1), 0, g_or);
 
     sys::load_component(
         s.meta.to_dependency_string(), s.to_json().toStyledString());
@@ -291,9 +291,8 @@ TEST_CASE("Load a component to a scene, then update component")
 
     node g_not = s.add_node<GateNode>(gate_t::NOT);
     s.component_context->setup(2, 3);
-    REQUIRE(s.connect(g_not, 0, s.component_context->get_input(1)));
-    REQUIRE(s.connect(s.component_context->get_output(3), 0, g_not));
-    L_INFO(s.to_json().toStyledString());
+    REQUIRE(s.connect(g_not, 0, s.component_context->get_input(0)));
+    REQUIRE(s.connect(s.component_context->get_output(2), 0, g_not));
     REQUIRE_EQ(sys::load_component(
                    s.meta.to_dependency_string(), s.to_json().toStyledString()),
         0);
@@ -303,9 +302,6 @@ TEST_CASE("Load a component to a scene, then update component")
     {
         s2.get_node<InputNode>(i1)->set(true);
         s2.get_node<InputNode>(i2)->set(true);
-        L_INFO(state_t_str(s2.get_node<OutputNode>(o1)->get())
-            << state_t_str(s2.get_node<OutputNode>(o2)->get())
-            << state_t_str(s2.get_node<OutputNode>(o3)->get()));
         REQUIRE_EQ(s2.get_node<OutputNode>(o1)->get(), TRUE);
         REQUIRE_EQ(s2.get_node<OutputNode>(o2)->get(), TRUE);
         REQUIRE_EQ(s2.get_node<OutputNode>(o3)->get(), FALSE);
@@ -314,13 +310,13 @@ TEST_CASE("Load a component to a scene, then update component")
         s2.get_node<InputNode>(i2)->set(false);
         REQUIRE_EQ(s2.get_node<OutputNode>(o1)->get(), FALSE);
         REQUIRE_EQ(s2.get_node<OutputNode>(o2)->get(), TRUE);
-        REQUIRE_EQ(s2.get_node<OutputNode>(o3)->get(), FALSE);
+        REQUIRE_EQ(s2.get_node<OutputNode>(o3)->get(), TRUE);
 
         s2.get_node<InputNode>(i1)->set(false);
         s2.get_node<InputNode>(i2)->set(true);
         REQUIRE_EQ(s2.get_node<OutputNode>(o1)->get(), FALSE);
         REQUIRE_EQ(s2.get_node<OutputNode>(o2)->get(), TRUE);
-        REQUIRE_EQ(s2.get_node<OutputNode>(o3)->get(), TRUE);
+        REQUIRE_EQ(s2.get_node<OutputNode>(o3)->get(), FALSE);
 
         s2.get_node<InputNode>(i1)->set(false);
         s2.get_node<InputNode>(i2)->set(false);
