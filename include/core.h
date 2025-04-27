@@ -194,8 +194,6 @@ struct point_t final : public parse::Serializable {
     error_t from_json(const Json::Value&) override;
 };
 
-class Scene;
-
 class BaseNode : public parse::Serializable {
 public:
     explicit BaseNode(Scene*, node, direction_t _dir = direction_t::RIGHT,
@@ -396,34 +394,46 @@ public:
  * execute a scene with given parameters.
  */
 struct ComponentContext final : public parse::Serializable {
-    ComponentContext(sockid input_s = 0, sockid output_s = 0);
-    std::map<sockid, std::vector<relid>> inputs;
-    std::map<sockid, relid> outputs;
+    ComponentContext(Scene* parent, sockid input_s = 0, sockid output_s = 0);
 
+    /**
+     * Grows or shrinks input or output's size
+     * @param input_s new input size
+     * @param output_s new output size
+     */
     void setup(sockid input_s, sockid output_s);
+
     /**
      * Execute a scene using the given input.
-     * @param s to run
      * @param input binary encoded input. Starting from the lowest bit
-     * values are assigned to each input slot. Before running the method
+     * values are assigned to each input slot.
      * @returns binary encoded result
      *
      **/
-    uint64_t run(Scene* s, uint64_t input);
+    uint64_t run(uint64_t input);
+
+    /** Get node id for given input */
     node get_input(uint32_t id) const;
+    /** Get node id for given output */
     node get_output(uint32_t id) const;
+    /** Get value of the given node */
     state_t get_value(node id) const;
+    /** Update the value of an input slot */
     void set_value(sockid sock, state_t value);
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
     error_t from_json(const Json::Value&) override;
 
+    std::map<sockid, std::vector<relid>> inputs;
+    std::map<sockid, relid> outputs;
+
 private:
     /** Temporarily used input value */
     uint64_t _execution_input;
     /** Temporarily used output value */
     uint64_t _execution_output;
+    Scene* _parent;
 };
 
 class Scene final : public parse::Serializable {
@@ -434,7 +444,7 @@ public:
         const std::string& author = "", const std::string& description = "");
     Scene(Scene&&)                 = default;
     Scene(const Scene&)            = delete;
-    Scene& operator=(Scene&&)      = delete;
+    Scene& operator=(Scene&&)      = default;
     Scene& operator=(const Scene&) = delete;
     ~Scene()                       = default;
     friend std::ostream& operator<<(std::ostream& os, const Scene&);

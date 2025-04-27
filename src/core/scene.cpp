@@ -95,6 +95,8 @@ NRef<Rel> Scene::get_rel(relid idx)
 error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
     node from_node, sockid from_sock) noexcept
 {
+    L_INFO(id << ", " << to_node << ", " << to_sock << ", " << from_node << ", "
+              << from_sock);
     if (from_node.type == node_t::OUTPUT
         || from_node.type == node_t::COMPONENT_OUTPUT) {
         return ERROR(error_t::INVALID_FROM_TYPE);
@@ -173,7 +175,7 @@ error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
             }
             compin->second.push_back(id);
         }
-        component_context->run(this, 0);
+        component_context->run(0);
         break;
     default: return ERROR(error_t::INVALID_TO_TYPE);
     }
@@ -252,7 +254,7 @@ error_t Scene::disconnect(relid id)
         if (auto outitr = component_context->outputs.find(r->second.to_node.id);
             outitr != component_context->outputs.end()) {
             outitr->second = 0;
-            component_context->run(this, 0);
+            component_context->run(0);
         } else {
             return ERROR(error_t::NOT_CONNECTED);
         }

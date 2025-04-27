@@ -7,11 +7,13 @@
 
 namespace lcs {
 
-ComponentContext::ComponentContext(sockid input_s, sockid output_s)
+ComponentContext::ComponentContext(
+    Scene* parent, sockid input_s, sockid output_s)
     : inputs {}
     , outputs {}
     , _execution_input { 0 }
     , _execution_output { 0 }
+    , _parent { parent }
 {
     for (relid i = 1; i <= input_s; i++) {
         inputs[i] = {};
@@ -23,14 +25,35 @@ ComponentContext::ComponentContext(sockid input_s, sockid output_s)
 
 void ComponentContext::setup(sockid input_s, sockid output_s)
 {
-    if (!inputs.empty()) { inputs.clear(); }
-    if (!outputs.empty()) { outputs.clear(); }
-    for (relid i = 1; i <= input_s; i++) {
-        inputs[i] = {};
+    if (inputs.size() > input_s) {
+        for (auto& i : inputs) {
+            if (i.first > input_s) {
+                for (relid& id : i.second) {
+                    _parent->disconnect(id);
+                    id = 0;
+                }
+            }
+        }
+        inputs.erase(inputs.find(input_s), inputs.end());
+    } else if (inputs.size() < input_s) {
+        for (sockid i = inputs.size() + 1; i <= input_s; i++) {
+            inputs[i] = {};
+        }
     }
-    for (relid i = 1; i <= output_s; i++) {
-        outputs[i] = 0;
+    if (outputs.size() > output_s) {
+        for (auto& id : outputs) {
+            if (id.first > output_s) {
+                _parent->disconnect(id.second);
+                id.second = 0;
+            }
+        }
+        outputs.erase(outputs.find(output_s), outputs.end());
+    } else if (outputs.size() < output_s) {
+        for (sockid i = outputs.size() + 1; i <= output_s; i++) {
+            outputs[i] = 0;
+        }
     }
+
     _execution_input  = 0;
     _execution_output = 0;
 }
@@ -78,9 +101,8 @@ state_t ComponentContext::get_value(node id) const
     return state_t::DISABLED;
 }
 
-uint64_t ComponentContext::run(Scene* s, uint64_t v)
+uint64_t ComponentContext::run(uint64_t v)
 {
-    lcs_assert(s != nullptr);
     L_INFO("Execute component: " << v);
     v <<= 1;
     _execution_input  = v;
@@ -89,14 +111,15 @@ uint64_t ComponentContext::run(Scene* s, uint64_t v)
         state_t result
             = v & (1 << input.first) ? state_t::TRUE : state_t::FALSE;
         for (relid in : input.second) {
-            s->signal(in, result);
+            _parent->signal(in, result);
         }
     }
 
     for (auto output : outputs) {
         if (output.second != 0) {
-            _execution_output
-                |= s->get_rel(output.second)->value ? (1 << output.first) : 0;
+            _execution_output |= _parent->get_rel(output.second)->value
+                ? (1 << output.first)
+                : 0;
         }
     }
     L_INFO("Component result: " << (_execution_output >> 1));
@@ -112,6 +135,8 @@ ComponentNode::ComponentNode(Scene* _s, node _id, const std::string& _path)
 
 error_t ComponentNode::set_component(const std::string& _path)
 {
+    // TODO When a component's input output size changes. It does not update
+    // individual scene's ComponentNode's input output sizes.
     if (_path == "") { return ERROR(error_t::INVALID_DEPENDENCY_FORMAT); }
     auto ref = sys::get_dependency(_path);
     if (ref == nullptr) { return ERROR(error_t::COMPONENT_NOT_FOUND); }

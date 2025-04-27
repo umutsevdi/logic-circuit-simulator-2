@@ -20,8 +20,8 @@ error_t Scene::from_json(const Json::Value& doc)
     if (err) { return err; }
 
     if (doc["component"].isObject()) {
-        component_context = ComponentContext {};
-        err = component_context->from_json(doc["component"]);
+        component_context = ComponentContext { this };
+        err               = component_context->from_json(doc["component"]);
         if (err) { return err; }
     }
     const Json::Value& nodes = doc["nodes"];

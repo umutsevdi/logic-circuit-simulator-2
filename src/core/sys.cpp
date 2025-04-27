@@ -5,7 +5,7 @@
 
 namespace lcs {
 namespace sys {
-    static std::map<std::string, Scene> _loaded_components;
+    static std::map<std::string, Scene> COMPONENT_STORAGE;
 
     static error_t _parse_component(const std::string& name)
     {
@@ -29,8 +29,8 @@ namespace sys {
 
     error_t verify_component(const std::string& name)
     {
-        if (auto cmp = _loaded_components.find(name);
-            cmp != _loaded_components.end()) {
+        if (auto cmp = COMPONENT_STORAGE.find(name);
+            cmp != COMPONENT_STORAGE.end()) {
             return error_t::OK;
         }
         error_t err = _parse_component(name);
@@ -39,8 +39,8 @@ namespace sys {
             return err;
         }
 
-        if (auto cmp = _loaded_components.find(name);
-            cmp == _loaded_components.end()) {
+        if (auto cmp = COMPONENT_STORAGE.find(name);
+            cmp == COMPONENT_STORAGE.end()) {
             return ERROR(error_t::COMPONENT_NOT_FOUND);
         }
         return error_t::OK;
@@ -48,8 +48,8 @@ namespace sys {
 
     error_t load_component(const std::string name, std::string data)
     {
-        _loaded_components.emplace(name, "");
-        Scene& s    = _loaded_components[name];
+        COMPONENT_STORAGE.insert_or_assign(name, Scene {});
+        Scene& s    = COMPONENT_STORAGE[name];
         error_t err = parse::load_scene(data, s);
         if (err) { return err; }
         if (!s.component_context.has_value()) {
@@ -61,10 +61,10 @@ namespace sys {
     uint64_t run_component(const std::string& name, uint64_t input)
     {
         if (verify_component(name)) { return 0; }
-        if (auto cmp = _loaded_components.find(name);
-            cmp != _loaded_components.end()) {
-            uint64_t result = _loaded_components[name].component_context->run(
-                &_loaded_components.find(name)->second, input);
+        if (auto cmp = COMPONENT_STORAGE.find(name);
+            cmp != COMPONENT_STORAGE.end()) {
+            uint64_t result
+                = COMPONENT_STORAGE[name].component_context->run(input);
             return result;
         }
         return ERROR(error_t::COMPONENT_NOT_FOUND);
@@ -72,8 +72,8 @@ namespace sys {
 
     NRef<const Scene> get_dependency(const std::string& name)
     {
-        if (auto cmp = _loaded_components.find(name);
-            cmp != _loaded_components.end()) {
+        if (auto cmp = COMPONENT_STORAGE.find(name);
+            cmp != COMPONENT_STORAGE.end()) {
             return &cmp->second;
         }
         return nullptr;
@@ -101,7 +101,7 @@ namespace sys {
         for (const std::string& dep : dependencies) {
             error_t err = verify_component(dep);
             if (err) { return err; }
-            err = _loaded_components[dep].meta.load_dependencies(
+            err = COMPONENT_STORAGE[dep].meta.load_dependencies(
                 self_dependency);
             if (err) { return err; }
         }
