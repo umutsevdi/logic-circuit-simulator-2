@@ -8,22 +8,31 @@
 namespace lcs {
 
 ComponentContext::ComponentContext(sockid input_s, sockid output_s)
+    : inputs {}
+    , outputs {}
+    , _execution_input { 0 }
+    , _execution_output { 0 }
 {
-    setup(input_s, output_s);
-}
-
-void ComponentContext::setup(sockid input_s, sockid output_s)
-{
-    inputs.clear();
-    outputs.clear();
     for (relid i = 1; i <= input_s; i++) {
         inputs[i] = {};
     }
     for (relid i = 1; i <= output_s; i++) {
         outputs[i] = 0;
     }
-    execution_input  = 0;
-    execution_output = 0;
+}
+
+void ComponentContext::setup(sockid input_s, sockid output_s)
+{
+    if (!inputs.empty()) { inputs.clear(); }
+    if (!outputs.empty()) { outputs.clear(); }
+    for (relid i = 1; i <= input_s; i++) {
+        inputs[i] = {};
+    }
+    for (relid i = 1; i <= output_s; i++) {
+        outputs[i] = 0;
+    }
+    _execution_input  = 0;
+    _execution_output = 0;
 }
 
 node ComponentContext::get_input(uint32_t id) const
@@ -46,9 +55,9 @@ void ComponentContext::set_value(sockid sock, state_t value)
 {
     if (sock > 0 && sock < 64) {
         if (value == state_t::TRUE) {
-            execution_output |= 1 << sock;
+            _execution_output |= 1 << sock;
         } else {
-            execution_output &= ~(1 << sock);
+            _execution_output &= ~(1 << sock);
         }
     }
 }
@@ -57,13 +66,13 @@ state_t ComponentContext::get_value(node id) const
 {
     if (id.type == node_t::COMPONENT_INPUT) {
         if (auto in = inputs.find(id.id); in != inputs.end()) {
-            return execution_input & (1 << id.id) ? state_t::TRUE
-                                                  : state_t::FALSE;
+            return _execution_input & (1 << id.id) ? state_t::TRUE
+                                                   : state_t::FALSE;
         }
     } else {
         if (auto in = outputs.find(id.id); in != outputs.end()) {
-            return execution_output & (1 << id.id) ? state_t::TRUE
-                                                   : state_t::FALSE;
+            return _execution_output & (1 << id.id) ? state_t::TRUE
+                                                    : state_t::FALSE;
         }
     }
     return state_t::DISABLED;
@@ -71,22 +80,27 @@ state_t ComponentContext::get_value(node id) const
 
 uint64_t ComponentContext::run(Scene* s, uint64_t v)
 {
+    lcs_assert(s != nullptr);
     L_INFO("Execute component: " << v);
     v <<= 1;
-    s->component_context->execution_input  = v;
-    s->component_context->execution_output = 0;
-    for (auto input : s->component_context->inputs) {
-        s->invoke_signal(input.second,
-            v & (1 << input.first) ? state_t::TRUE : state_t::FALSE);
+    _execution_input  = v;
+    _execution_output = 0;
+    for (auto input : inputs) {
+        state_t result
+            = v & (1 << input.first) ? state_t::TRUE : state_t::FALSE;
+        for (relid in : input.second) {
+            s->signal(in, result);
+        }
     }
 
-    for (auto output : s->component_context->outputs) {
+    for (auto output : outputs) {
         if (output.second != 0) {
-            s->component_context->execution_output
+            _execution_output
                 |= s->get_rel(output.second)->value ? (1 << output.first) : 0;
         }
     }
-    return s->component_context->execution_output >> 1;
+    L_INFO("Component result: " << (_execution_output >> 1));
+    return _execution_output >> 1;
 }
 
 ComponentNode::ComponentNode(Scene* _s, node _id, const std::string& _path)
@@ -125,7 +139,7 @@ state_t ComponentNode::get(sockid id) const
     return _output_value & (1 << id) ? TRUE : FALSE;
 }
 
-void ComponentNode::signal()
+void ComponentNode::on_signal()
 {
     if (is_connected()) {
         uint64_t input = 0;
@@ -147,9 +161,11 @@ void ComponentNode::signal()
         _is_disabled = true;
     }
 
-    for (auto out : outputs) {
-        L_INFO(CLASS "Sending " << state_t_str(get(out.first)) << " signal");
-        _scene->invoke_signal(out.second, get(out.first));
+    for (auto sock : outputs) {
+        L_INFO(CLASS "Sending " << state_t_str(get(sock.first)) << " signal");
+        for (relid out : sock.second) {
+            _scene->signal(out, get(sock.first));
+        }
     }
 }
 

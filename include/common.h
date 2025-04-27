@@ -134,8 +134,7 @@ std::string read_component(const std::string& author, const std::string& name,
                                   LOGGING/
 ******************************************************************************/
 
-int __expect(std::function<bool(void)> expr, const char* msg) noexcept;
-int __expect_with_message(std::function<bool(void)> expr, const char* function,
+int __expect(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept;
 #define BOLD "\033[1m"
 #define UNDERLINE "\033[4m"
@@ -180,13 +179,15 @@ inline std::ostream& _log_pre(std::ostream& os, const char* status,
 #define L_INFO(...) LOG_PRE(__S_INFO) __VA_ARGS__ << std::endl
 #define lcs_assert(expr)                                                       \
     {                                                                          \
-        if (__expect_with_message([&]() mutable -> bool { return expr; },      \
-                __FUNCTION__, __FILE_NAME__, __LINE__, #expr))                 \
+        if (__expect([&]() mutable -> bool { return expr; }, __FUNCTION__,     \
+                __FILE_NAME__, __LINE__, #expr)) {                             \
             exit(1);                                                           \
+        }                                                                      \
     }
 #else
 #define L_INFO(...)
-#define lcs_assert(expr)
+#define lcs_assert(expr)                                                       \
+    if((expr)== 0){ L_ERROR(RED BOLD "Assertion " << #expr << " failed!" RESET); }
 #endif
 
 #define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__

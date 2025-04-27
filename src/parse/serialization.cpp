@@ -81,18 +81,18 @@ Json::Value Rel::to_json(void) const
 Json::Value GateNode::to_json(void) const
 {
     Json::Value out = this->BaseNode::to_json();
-    out["gate"]     = gate_to_str(type);
-    if (type != gate_t::NOT && max_in != 2) { out["size"] = max_in; }
+    out["gate"]     = gate_to_str(type());
+    if (type() != gate_t::NOT && _max_in != 2) { out["size"] = _max_in; }
     return out;
 }
 
 Json::Value InputNode::to_json(void) const
 {
     Json::Value out = this->BaseNode::to_json();
-    if (freq.has_value()) {
-        out["freq"] = freq.value();
+    if (_freq.has_value()) {
+        out["freq"] = _freq.value();
     } else {
-        out["data"] = value;
+        out["data"] = _value;
     }
     return out;
 }

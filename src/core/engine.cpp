@@ -15,6 +15,14 @@ Rel::Rel(relid _id, node _from_node, node _to_node, sockid _from_sock,
     , to_sock { _to_sock }
     , value { FALSE } { };
 
+Rel::Rel()
+    : id { 0 }
+    , from_node {}
+    , to_node {}
+    , from_sock { 0 }
+    , to_sock { 0 }
+    , value { FALSE } { };
+
 std::ostream& operator<<(std::ostream& os, const Rel& r)
 {
     os << "Rel[" << r.id << "]\t{ from: " << r.from_node << "[" << r.from_sock
@@ -33,47 +41,54 @@ std::ostream& operator<<(std::ostream& os, const BaseNode& g)
                                 InputNode
 *****************************************************************************/
 
-InputNode::InputNode(Scene* _scene, node _id)
+InputNode::InputNode(Scene* _scene, node _id, std::optional<uint32_t> freq)
     : BaseNode { _scene, { _id.id, node_t::INPUT } }
-    , value { false }
-    , freq { std::nullopt } { };
+    , _value { false }
+    , _freq { freq } { };
 
 std::ostream& operator<<(std::ostream& os, const InputNode& g)
 {
-
-    os << g.id() << "{" << state_t_str((state_t)g.value) << " }";
+    os << g.id() << "{value: " << state_t_str((state_t)g._value);
+    if (g._freq.has_value()) { os << ", freq:" << g._freq.value(); }
+    os << " }";
     return os;
 };
 
 void InputNode::set(bool v)
 {
-    value = v;
-    signal();
+    _value = v;
+    on_signal();
 }
 
 void InputNode::set_freq(uint32_t v)
 {
-    freq = v;
-    signal();
+    if (_freq.has_value() && v != 0) {
+        _freq = v;
+        on_signal();
+    }
 }
 
 void InputNode::toggle()
 {
-    value = !value;
-    signal();
+    _value = !_value;
+    on_signal();
 }
 
-void InputNode::signal()
+void InputNode::on_signal()
 {
-    L_INFO(CLASS "Sending " << state_t_str((state_t)value) << " signal");
-    _scene->invoke_signal(output, value ? state_t::TRUE : state_t::FALSE);
+    L_INFO(CLASS "Sending " << state_t_str((state_t)_value) << " signal");
+
+    state_t result = _value ? state_t::TRUE : state_t::FALSE;
+    for (relid& out : output) {
+        _scene->signal(out, result);
+    }
 }
 
 bool InputNode::is_connected() const { return true; };
 
 state_t InputNode::get(sockid) const
 {
-    return value ? state_t::TRUE : state_t::FALSE;
+    return _value ? state_t::TRUE : state_t::FALSE;
 };
 
 /******************************************************************************
@@ -95,7 +110,7 @@ state_t OutputNode::get(sockid) const { return value; }
 
 bool OutputNode::is_connected() const { return input != 0; };
 
-void OutputNode::signal()
+void OutputNode::on_signal()
 {
     value = input ? _scene->get_rel(input)->value : state_t::DISABLED;
     L_INFO(CLASS "Received " << state_t_str(value) << " signal");

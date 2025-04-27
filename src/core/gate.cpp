@@ -12,25 +12,28 @@ static bool _nor(const std::vector<bool>&);
 static bool _xnor(const std::vector<bool>&);
 static bool _not(const std::vector<bool>&);
 
-GateNode::GateNode(Scene* _scene, node _id, gate_t _type, sockid _max_in)
-    : BaseNode { _scene, { _id.id, node_t::GATE } }
-    , type { _type }
-    , max_in { _max_in }
-    , value { state_t::DISABLED }
+GateNode::GateNode(Scene* _scene, node id, gate_t type, sockid _max_in)
+    : BaseNode { _scene, { id.id, node_t::GATE } }
+    , inputs {}
+    , output {}
+    , _type { type }
+    , _value { state_t::DISABLED }
     , _is_disabled { true }
+    , _max_in { _max_in }
+
 {
-    if (type == gate_t::NOT) {
-        max_in = 1;
-    } else if (max_in < 2) {
-        max_in = 2;
+    if (_type == gate_t::NOT) {
+        _max_in = 1;
+    } else if (_max_in < 2) {
+        _max_in = 2;
     }
-    inputs.reserve(max_in);
-    for (size_t i = 0; i < max_in; i++) {
+    inputs.reserve(_max_in);
+    for (size_t i = 0; i < _max_in; i++) {
         inputs.push_back(0);
     }
     static bool (*__functions[])(const std::vector<bool>&)
         = { _not, _and, _or, _xor, _nand, _nor, _xnor, _not };
-    _apply = __functions[type];
+    _apply = __functions[_type];
 }
 
 bool GateNode::is_connected() const
@@ -41,23 +44,18 @@ bool GateNode::is_connected() const
 
 state_t GateNode::get(sockid) const
 {
-    return _is_disabled ? state_t::DISABLED : value;
+    return _is_disabled ? state_t::DISABLED : _value;
 }
 
-void GateNode::signal()
+void GateNode::on_signal()
 {
-    L_INFO(CLASS "Arrived");
-    value = state_t::DISABLED;
+    _value = state_t::DISABLED;
     if (is_connected()) {
-        L_INFO(CLASS "a");
         std::vector<bool> v {};
         v.reserve(inputs.size());
-        L_INFO(CLASS "b");
         _is_disabled = false;
         for (relid in : inputs) {
-            L_INFO(CLASS << in);
             auto rel = _scene->get_rel(in);
-            L_INFO(CLASS "rel" << rel);
             lcs_assert(rel != nullptr);
             if (rel->value == state_t::DISABLED) {
                 _is_disabled = true;
@@ -65,44 +63,44 @@ void GateNode::signal()
             }
             v.push_back(rel->value == TRUE ? TRUE : FALSE);
         }
-        L_INFO(CLASS "is disabled? " << _is_disabled);
         if (!_is_disabled) {
-            L_INFO(CLASS "_apply");
-            value = _apply(v) ? state_t::TRUE : state_t::FALSE;
+            _value = _apply(v) ? state_t::TRUE : state_t::FALSE;
         }
     } else {
         _is_disabled = true;
     }
     L_INFO(CLASS "Sending " << state_t_str(get()) << " signal ");
-    _scene->invoke_signal(output, get());
+    for (relid& out : output) {
+        _scene->signal(out, get());
+    }
 }
 
 bool GateNode::increment()
 {
-    if (type == gate_t::NOT) { return false; }
-    max_in++;
-    inputs.reserve(max_in);
+    if (_type == gate_t::NOT) { return false; }
+    _max_in++;
+    inputs.reserve(_max_in);
     inputs.push_back(0);
-    signal();
+    on_signal();
     return true;
 }
 
 bool GateNode::decrement()
 {
-    if (type == gate_t::NOT || max_in == 2) { return false; }
+    if (_type == gate_t::NOT || _max_in == 2) { return false; }
     if (inputs[inputs.size() - 1] != 0) {
         _scene->disconnect(inputs[inputs.size() - 1]);
     }
     inputs.pop_back();
-    signal();
+    on_signal();
     return true;
 }
 
 std::ostream& operator<<(std::ostream& os, const GateNode& g)
 {
 
-    os << g.id() << "{" << gate_to_str(g.type) << ", " << state_t_str(g.value)
-       << "}";
+    os << g.id() << "{" << gate_to_str(g.type()) << ", "
+       << state_t_str(g._value) << "}";
     return os;
 };
 

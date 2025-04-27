@@ -213,7 +213,7 @@ public:
     /**
      * Updates the internal data and send out signals to all connected nodes.
      */
-    virtual void signal(void) = 0;
+    virtual void on_signal(void) = 0;
     /** Returns whether all nodes are connected */
     virtual bool is_connected(void) const = 0;
     /** Get the current status */
@@ -240,7 +240,7 @@ protected:
 struct Rel final : public parse::Serializable {
     explicit Rel(relid _id, node _from_node, node _to_node, sockid _from_sock,
         sockid _to_sock);
-    Rel() { }
+    Rel();
     ~Rel() = default;
     friend std::ostream& operator<<(std::ostream& os, const Rel& r);
 
@@ -271,7 +271,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const GateNode& g);
 
-    void signal(void) override;
+    void on_signal(void) override;
     bool is_connected(void) const override;
     state_t get(sockid slot = 0) const override;
 
@@ -285,18 +285,19 @@ public:
     /** Removes an input socket */
     bool decrement(void);
 
-    gate_t type;
-    sockid max_in;
+    inline gate_t type(void) const { return _type; };
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
     error_t from_json(const Json::Value&) override;
 
 private:
+    gate_t _type;
     /** Gate specific calculation function */
     bool (*_apply)(const std::vector<bool>&);
-    state_t value;
+    state_t _value;
     bool _is_disabled;
+    sockid _max_in;
 };
 
 class ComponentNode final : public BaseNode {
@@ -311,14 +312,14 @@ public:
 
     error_t set_component(const std::string& path);
 
-    void signal(void) override;
-    bool is_connected(void) const override;
-    state_t get(sockid slot = 0) const override;
-
     std::map<sockid, std::vector<relid>> outputs;
     std::vector<relid> inputs;
 
     std::string path;
+
+    void on_signal(void) override;
+    bool is_connected(void) const override;
+    state_t get(sockid slot = 0) const override;
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
@@ -334,7 +335,8 @@ private:
  * changed. */
 class InputNode : public BaseNode {
 public:
-    InputNode(Scene* _scene, node _id);
+    InputNode(
+        Scene* _scene, node _id, std::optional<uint32_t> freq = std::nullopt);
     InputNode(const InputNode&)            = default;
     InputNode(InputNode&&)                 = default;
     InputNode& operator=(InputNode&&)      = default;
@@ -342,7 +344,7 @@ public:
     ~InputNode()                           = default;
     friend std::ostream& operator<<(std::ostream& os, const InputNode& g);
 
-    void signal(void) override;
+    void on_signal(void) override;
     bool is_connected(void) const override;
     state_t get(sockid slot = 0) const override;
 
@@ -357,12 +359,13 @@ public:
 
     std::vector<relid> output;
 
-    bool value;
-    std::optional<uint32_t> freq;
-
     /* Serializable interface */
     Json::Value to_json(void) const override;
     error_t from_json(const Json::Value&) override;
+
+private:
+    bool _value;
+    std::optional<uint32_t> _freq;
 };
 
 /** An output node that displays the result */
@@ -376,7 +379,7 @@ public:
     ~OutputNode()                            = default;
     friend std::ostream& operator<<(std::ostream& os, const OutputNode& g);
 
-    void signal(void) override;
+    void on_signal(void) override;
     bool is_connected(void) const override;
     state_t get(sockid slot = 0) const override;
 
@@ -393,8 +396,7 @@ public:
  * execute a scene with given parameters.
  */
 struct ComponentContext final : public parse::Serializable {
-    ComponentContext() = default;
-    ComponentContext(sockid input_s, sockid output_s);
+    ComponentContext(sockid input_s = 0, sockid output_s = 0);
     std::map<sockid, std::vector<relid>> inputs;
     std::map<sockid, relid> outputs;
 
@@ -419,9 +421,9 @@ struct ComponentContext final : public parse::Serializable {
 
 private:
     /** Temporarily used input value */
-    uint64_t execution_input;
+    uint64_t _execution_input;
     /** Temporarily used output value */
-    uint64_t execution_output;
+    uint64_t _execution_output;
 };
 
 class Scene final : public parse::Serializable {
@@ -431,9 +433,9 @@ public:
     Scene(ComponentContext ctx, const std::string& name = "",
         const std::string& author = "", const std::string& description = "");
     Scene(Scene&&)                 = default;
-    Scene(const Scene&)            = default;
-    Scene& operator=(Scene&&)      = default;
-    Scene& operator=(const Scene&) = default;
+    Scene(const Scene&)            = delete;
+    Scene& operator=(Scene&&)      = delete;
+    Scene& operator=(const Scene&) = delete;
     ~Scene()                       = default;
     friend std::ostream& operator<<(std::ostream& os, const Scene&);
 
@@ -538,10 +540,10 @@ public:
     /**
      * Update a series relationship to the value, and trigger signal for each
      * connected node
-     * @param ids - to update
+     * @param id - relationship id
      * @param value - to set
      */
-    void invoke_signal(const std::vector<relid>& ids, state_t value);
+    void signal(relid id, state_t value);
 
     void set_position(node, point_t);
 

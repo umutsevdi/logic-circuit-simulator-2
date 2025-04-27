@@ -99,7 +99,7 @@ error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
         || from_node.type == node_t::COMPONENT_OUTPUT) {
         return ERROR(error_t::INVALID_FROM_TYPE);
     } else if (from_node.type == node_t::COMPONENT
-        && from_sock >= get_node<ComponentNode>(from_node)->outputs.size()) {
+        && from_sock >= get_node<ComponentNode>(from_node)->inputs.size()) {
         return ERROR(error_t::INVALID_NODEID);
     }
     if (!component_context.has_value()
@@ -153,18 +153,19 @@ error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
     switch (from_node.type) {
     case node_t::GATE:
         get_node<GateNode>(from_node)->output.push_back(id);
-        get_node<GateNode>(from_node)->signal();
+        get_node<GateNode>(from_node)->on_signal();
         break;
     case node_t::COMPONENT:
         get_node<ComponentNode>(from_node)->outputs[from_sock].push_back(id);
-        L_INFO(CLASS);
-        get_node<ComponentNode>(from_node)->signal();
+        get_node<ComponentNode>(from_node)->on_signal();
         break;
     case node_t::INPUT:
         get_node<InputNode>(from_node)->output.push_back(id);
-        get_node<InputNode>(from_node)->signal();
+        get_node<InputNode>(from_node)->on_signal();
         break;
-    case node_t::COMPONENT_INPUT: /* Component input is not handled here. */
+    case node_t::COMPONENT_INPUT: /* Component input is not handled
+                                     here. */
+        lcs_assert(component_context.has_value());
         if (auto compin = component_context->inputs.find(from_node.id);
             compin != component_context->inputs.end()) {
             for (auto _id : compin->second) {
@@ -230,23 +231,24 @@ error_t Scene::disconnect(relid id)
         auto g = get_node<GateNode>(r->second.to_node);
 
         g->inputs[r->second.to_sock] = 0;
-        g->signal();
+        g->on_signal();
         break;
     }
     case node_t::COMPONENT: {
         auto c = get_node<ComponentNode>(r->second.to_node);
 
         c->inputs[r->second.to_sock] = 0;
-        c->signal();
+        c->on_signal();
         break;
     }
     case node_t::OUTPUT: {
         auto o   = get_node<OutputNode>(r->second.to_node);
         o->input = 0;
-        o->signal();
+        o->on_signal();
         break;
     }
     case node_t::COMPONENT_OUTPUT: {
+        lcs_assert(component_context.has_value());
         if (auto outitr = component_context->outputs.find(r->second.to_node.id);
             outitr != component_context->outputs.end()) {
             outitr->second = 0;
@@ -264,25 +266,17 @@ error_t Scene::disconnect(relid id)
 
 void Scene::set_position(node n, point_t p) { get_base(n)->point = p; }
 
-void Scene::invoke_signal(const std::vector<relid>& output, state_t value)
+void Scene::signal(relid id, state_t value)
 {
-    for (relid id : output) {
-        if (id == 0) { continue; }
-        if (auto r = rel.find(id); r != rel.end()) {
-            L_INFO(
-                CLASS "Sending " << state_t_str(value) << " to " << r->second);
-            r->second.value = value;
-            if (r->second.to_node.type != node_t::COMPONENT_OUTPUT) {
-                auto n = get_base(r->second.to_node);
-                if (n != nullptr) {
-                    L_INFO(CLASS "calling " << n);
-                    L_INFO(n);
-                    n->signal();
-                }
-            } else {
-                component_context->set_value(
-                    r->second.to_node.id, r->second.value);
-            }
+    if (id == 0) { return; }
+    if (auto r = rel.find(id); r != rel.end()) {
+        L_INFO(CLASS "Sending " << state_t_str(value) << " to " << r->second);
+        r->second.value = value;
+        if (r->second.to_node.type != node_t::COMPONENT_OUTPUT) {
+            auto n = get_base(r->second.to_node);
+            if (n != nullptr) { n->on_signal(); }
+        } else {
+            component_context->set_value(r->second.to_node.id, r->second.value);
         }
     }
 }

@@ -20,6 +20,7 @@ error_t Scene::from_json(const Json::Value& doc)
     if (err) { return err; }
 
     if (doc["component"].isObject()) {
+        component_context = ComponentContext {};
         err = component_context->from_json(doc["component"]);
         if (err) { return err; }
     }
@@ -108,7 +109,7 @@ error_t GateNode::from_json(const Json::Value& doc)
     if (doc["size"].isInt()) {
         int size  = doc["size"].asInt();
         bool pass = true;
-        while (max_in < size && pass) {
+        while (_max_in < size && pass) {
             pass = increment();
         }
     }
@@ -128,7 +129,8 @@ error_t ComponentNode::from_json(const Json::Value& doc)
 error_t InputNode::from_json(const Json::Value& doc)
 {
     if (doc["freq"].isInt()) {
-        set_freq(doc["freq"].isInt());
+        _freq = doc["freq"].isInt();
+        if (_freq == 0) { _freq = std::nullopt; }
     } else if (doc["data"].isBool()) {
         set(doc["data"].asBool());
     } else {

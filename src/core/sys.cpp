@@ -15,9 +15,6 @@ namespace sys {
             std::string n { name };
             std::vector<std::string> tokens = split(n, '/');
             if (tokens.size() != 3) {
-                for (auto t : tokens) {
-                    L_INFO("TOK: " << t);
-                }
                 return ERROR(error_t::INVALID_DEPENDENCY_FORMAT);
             }
             if (is_available(tokens[0], tokens[1], tokens[2])) {
@@ -51,26 +48,24 @@ namespace sys {
 
     error_t load_component(const std::string name, std::string data)
     {
-        Scene s;
-
+        _loaded_components.emplace(name, "");
+        Scene& s    = _loaded_components[name];
         error_t err = parse::load_scene(data, s);
         if (err) { return err; }
         if (!s.component_context.has_value()) {
             return ERROR(error_t::NOT_A_COMPONENT);
         }
-        _loaded_components[name] = s;
         return error_t::OK;
     }
 
     uint64_t run_component(const std::string& name, uint64_t input)
     {
         if (verify_component(name)) { return 0; }
-
         if (auto cmp = _loaded_components.find(name);
             cmp != _loaded_components.end()) {
-            L_INFO(_loaded_components[name]);
-            return _loaded_components[name].component_context->run(
+            uint64_t result = _loaded_components[name].component_context->run(
                 &_loaded_components.find(name)->second, input);
+            return result;
         }
         return ERROR(error_t::COMPONENT_NOT_FOUND);
     }
