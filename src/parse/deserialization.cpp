@@ -7,9 +7,7 @@ namespace lcs {
 /** Reads a JSON document and writes its values to a map */
 template <typename T>
 static error_t _json_to_map(
-    Scene* s, const Json::Value& doc, std::map<node, T>& m);
-/** Connects existing nodes to each other according to the document */
-static error_t _connect_all(Scene* s, const Json::Value& rel);
+    Scene* s, const Json::Value& doc, std::map<node, T>& m, node& last_node);
 
 error_t Scene::from_json(const Json::Value& doc)
 {
@@ -20,29 +18,45 @@ error_t Scene::from_json(const Json::Value& doc)
     if (err) { return err; }
 
     if (doc["component"].isObject()) {
-        component_context = ComponentContext {};
-        err = component_context->from_json(doc["component"]);
+        component_context = ComponentContext { this };
+        err               = component_context->from_json(doc["component"]);
         if (err) { return err; }
     }
     const Json::Value& nodes = doc["nodes"];
     if (nodes["gates"].isObject()) {
-        err = _json_to_map<GateNode>(this, nodes["gates"], gates);
+        err = _json_to_map<GateNode>(
+            this, nodes["gates"], gates, _last_node[node_t::GATE]);
         if (err) { return err; }
     }
     if (nodes["comp"].isObject()) {
-        err = _json_to_map<ComponentNode>(this, nodes["comp"], components);
+        err = _json_to_map<ComponentNode>(
+            this, nodes["comp"], components, _last_node[node_t::COMPONENT]);
         if (err) { return err; }
     }
     if (nodes["inputs"].isObject()) {
-        err = _json_to_map<InputNode>(this, nodes["inputs"], inputs);
+        err = _json_to_map<InputNode>(
+            this, nodes["inputs"], inputs, _last_node[node_t::INPUT]);
         if (err) { return err; }
     }
     if (nodes["outputs"].isObject()) {
-        err = _json_to_map<OutputNode>(this, nodes["outputs"], outputs);
+        err = _json_to_map<OutputNode>(
+            this, nodes["outputs"], outputs, _last_node[node_t::OUTPUT]);
         if (err) { return err; }
     }
     if (doc["rel"].isObject()) {
-        err = _connect_all(this, doc["rel"]);
+        for (Json::Value::const_iterator iter = doc["rel"].begin();
+            iter != doc["rel"].end(); iter++) {
+            relid id = std::atol(iter.key().asCString());
+            Rel r;
+            r.id        = id;
+            error_t err = r.from_json(*iter);
+            if (err) { return err; }
+            if (id > _last_rel) { _last_rel = id; }
+            if (_connect_with_id(
+                    r.id, r.to_node, r.to_sock, r.from_node, r.from_sock)) {
+                return ERROR(error_t::REL_CONNECT_ERROR);
+            }
+        }
         if (err) { return err; }
     }
 
@@ -174,7 +188,8 @@ error_t ComponentContext::from_json(const Json::Value& doc)
 }
 
 template <typename T>
-error_t _json_to_map(Scene* s, const Json::Value& doc, std::map<node, T>& m)
+error_t _json_to_map(
+    Scene* s, const Json::Value& doc, std::map<node, T>& m, node& last_node)
 {
     node last_id = 0;
     error_t err  = error_t::OK;
@@ -209,25 +224,7 @@ error_t _json_to_map(Scene* s, const Json::Value& doc, std::map<node, T>& m)
             m.emplace(id, t);
         }
     }
-    s->last_node[last_id.type] = last_id;
-    return error_t::OK;
-}
-
-error_t _connect_all(Scene* s, const Json::Value& rel)
-{
-    for (Json::Value::const_iterator iter = rel.begin(); iter != rel.end();
-        iter++) {
-        relid id = std::atol(iter.key().asCString());
-        Rel r;
-        r.id        = id;
-        error_t err = r.from_json(*iter);
-        if (err) { return err; }
-        if (id > s->last_rel) { s->last_rel = id; }
-        if (s->connect_with_id(
-                r.id, r.to_node, r.to_sock, r.from_node, r.from_sock)) {
-            return ERROR(error_t::REL_CONNECT_ERROR);
-        }
-    }
+    last_node = last_id;
     return error_t::OK;
 }
 

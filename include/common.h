@@ -78,38 +78,39 @@ enum error_t {
  * within a scene. Can not be stored, copied or assigned.
  *
  * Intended use case:
- * get_node<lcs::Gate>(id)->signal();
- * get_node<lcs::Input>(id)->toggle();
+ * get_node<lcs::GateNode>(id)->signal();
+ * get_node<lcs::InputNode>(id)->toggle();
  */
 template <typename T> class NRef {
 public:
-    NRef(T* _v)
-        : v(_v) { };
+    NRef(T* v)
+        : _v(v) { };
     NRef(NRef&&)                 = default;
     NRef(const NRef&)            = delete;
     NRef& operator=(NRef&&)      = delete;
     NRef& operator=(const NRef&) = delete;
     ~NRef() { }
 
-    bool operator==(void* t) const { return v == t; };
-    bool operator!=(void* t) const { return v != t; };
-    T* operator->() { return v; }
-    const T* operator->() const { return v; }
-    const T* raw(void) const { return v; }
-    T* raw(void) { return v; }
+    bool operator==(void* t) const { return _v == t; };
+    bool operator!=(void* t) const { return _v != t; };
+
+    T* operator->() { return _v; }
+    const T* operator->() const { return _v; }
 
     friend std::ostream& operator<<(std::ostream& os, const NRef<T>& g)
     {
-        if (g.v != nullptr) {
-            os << "NRef(" << (*g.v) << ")";
+        os << "NRef(";
+        if (g._v != nullptr) {
+            os << *g._v;
         } else {
-            os << "NRef(null)";
+            os << "null";
         }
+        os << ")";
         return os;
     }
 
 private:
-    T* v;
+    T* _v;
 };
 
 } // namespace lcs
@@ -134,6 +135,8 @@ std::string read_component(const std::string& author, const std::string& name,
                                   LOGGING/
 ******************************************************************************/
 
+/** Runs an assertion, displays an error message on failure. Intended for
+ * macros. */
 int __expect(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept;
 #define BOLD "\033[1m"
@@ -153,6 +156,8 @@ inline std::string strlimit(const std::string& input, size_t limit)
     if (len > limit) { return "..." + input.substr(len - limit + 3, len); }
     return input;
 }
+
+/** Generates the logger prefix, Intended for macros. */
 inline std::ostream& _log_pre(std::ostream& os, const char* status,
     const char* file_name, int line, const char* function)
 {
@@ -177,6 +182,8 @@ inline std::ostream& _log_pre(std::ostream& os, const char* status,
 
 #ifndef NDEBUG
 #define L_INFO(...) LOG_PRE(__S_INFO) __VA_ARGS__ << std::endl
+/** Runs an assertion. Displays an error message on failure. In debug builds
+ * also crashes the application. */
 #define lcs_assert(expr)                                                       \
     {                                                                          \
         if (__expect([&]() mutable -> bool { return expr; }, __FUNCTION__,     \
@@ -187,7 +194,9 @@ inline std::ostream& _log_pre(std::ostream& os, const char* status,
 #else
 #define L_INFO(...)
 #define lcs_assert(expr)                                                       \
-    if((expr)== 0){ L_ERROR(RED BOLD "Assertion " << #expr << " failed!" RESET); }
+    if ((expr) == 0) {                                                         \
+        L_ERROR(RED BOLD "Assertion " << #expr << " failed!" RESET);           \
+    }
 #endif
 
 #define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__

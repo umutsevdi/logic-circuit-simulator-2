@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13.2)
 
 set(PRJ LogicCircuitSimulator)
 
@@ -38,7 +38,7 @@ set(__DEPENDS ui ${__CORE})
 message("Build Type: ${CMAKE_BUILD_TYPE}")
 add_compile_options(-Wall -Wextra)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options(-g -O0)
+    add_compile_options(-g -O0 -Werror -Wpedantic)
 else()
     add_compile_options(-O3)
 endif()

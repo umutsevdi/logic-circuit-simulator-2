@@ -6,37 +6,34 @@
 namespace lcs {
 
 Scene::Scene(const std::string& _name, const std::string& _author , const std::string& _description)
-    : last_node {
+    :     meta {_name,_author,_description}
+    , component_context{std::nullopt} ,_last_node {
         node { 0, node_t::GATE },
         node { 0, node_t::COMPONENT },
         node { 0, node_t::INPUT },
         node { 0, node_t::OUTPUT },
-    }, last_rel{0}
-    , meta {_name,_author,_description}
-    , component_context{std::nullopt}
-
+    }  ,_last_rel{0}
 {
 }
 
 Scene::Scene(ComponentContext ctx, const std::string& _name, const std::string& _author , const std::string& _description)
-    : last_node {
-        node { 0, node_t::GATE },
-        node { 0, node_t::COMPONENT },
-        node { 0, node_t::INPUT },
-        node { 0, node_t::OUTPUT },
-    }, last_rel{0}
-    , meta {_name,_author,_description}
+    : meta {_name,_author,_description}
     , component_context{ctx}
-
+    , _last_node {
+            node { 0, node_t::GATE },
+            node { 0, node_t::COMPONENT },
+            node { 0, node_t::INPUT },
+            node { 0, node_t::OUTPUT },
+      }
+    , _last_rel{0}
 {
 }
-
 void Scene::remove_node(node id)
 {
     if (id.id == 0) { lcs_assert(id.id != 0); }
     switch (id.type) {
     case node_t::GATE: {
-        lcs_assert(id.id <= last_node[node_t::GATE].id);
+        lcs_assert(id.id <= _last_node[node_t::GATE].id);
         auto g = gates.find(id);
         lcs_assert(g != gates.end());
         for (auto r : g->second.output) {
@@ -49,7 +46,7 @@ void Scene::remove_node(node id)
         break;
     }
     case node_t::COMPONENT: {
-        lcs_assert(id.id <= last_node[node_t::COMPONENT].id);
+        lcs_assert(id.id <= _last_node[node_t::COMPONENT].id);
         auto c = components.find(id);
         lcs_assert(c != components.end());
         for (auto s : c->second.outputs) {
@@ -64,7 +61,7 @@ void Scene::remove_node(node id)
         break;
     }
     case node_t::INPUT: {
-        lcs_assert(id.id <= last_node[node_t::INPUT].id);
+        lcs_assert(id.id <= _last_node[node_t::INPUT].id);
         auto i = inputs.find(id);
         lcs_assert(i != inputs.end());
         for (auto r : i->second.output) {
@@ -74,7 +71,7 @@ void Scene::remove_node(node id)
         break;
     }
     case node_t::OUTPUT: {
-        lcs_assert(id.id <= last_node[node_t::OUTPUT].id);
+        lcs_assert(id.id <= _last_node[node_t::OUTPUT].id);
         auto o = outputs.find(id);
         lcs_assert(o != outputs.end());
         if (o->second.input != 0) { disconnect(o->second.input); }
@@ -87,19 +84,21 @@ void Scene::remove_node(node id)
 
 NRef<Rel> Scene::get_rel(relid idx)
 {
-    if (idx == 0 || idx > last_rel) { return nullptr; }
+    if (idx == 0 || idx > _last_rel) { return nullptr; }
     auto n = rel.find(idx);
     return n != rel.end() ? &n->second : (S_ERROR("Rel not found", nullptr));
 }
 
-error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
-    node from_node, sockid from_sock) noexcept
+error_t Scene::_connect_with_id(
+    relid id, node to_node, sockid to_sock, node from_node, sockid from_sock)
 {
     if (from_node.type == node_t::OUTPUT
         || from_node.type == node_t::COMPONENT_OUTPUT) {
         return ERROR(error_t::INVALID_FROM_TYPE);
     } else if (from_node.type == node_t::COMPONENT
-        && from_sock >= get_node<ComponentNode>(from_node)->inputs.size()) {
+        && from_sock
+            >= sys::get_dependency(get_node<ComponentNode>(from_node)->path)
+                ->component_context->outputs.size()) {
         return ERROR(error_t::INVALID_NODEID);
     }
     if (!component_context.has_value()
@@ -173,7 +172,7 @@ error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
             }
             compin->second.push_back(id);
         }
-        component_context->run(this, 0);
+        component_context->run(0);
         break;
     default: return ERROR(error_t::INVALID_TO_TYPE);
     }
@@ -181,16 +180,17 @@ error_t Scene::connect_with_id(relid id, node to_node, sockid to_sock,
 }
 
 relid Scene::connect(
-    node to_node, sockid to_sock, node from_node, sockid from_sock) noexcept
+    node to_node, sockid to_sock, node from_node, sockid from_sock)
 {
-    last_rel++;
-    relid id = last_rel;
-    return connect_with_id(id, to_node, to_sock, from_node, from_sock) ? 0 : id;
+    _last_rel++;
+    relid id = _last_rel;
+    return _connect_with_id(id, to_node, to_sock, from_node, from_sock) ? 0
+                                                                        : id;
 }
 
 error_t Scene::disconnect(relid id)
 {
-    if (id == 0 || id > last_rel) { return ERROR(error_t::INVALID_RELID); }
+    if (id == 0 || id > _last_rel) { return ERROR(error_t::INVALID_RELID); }
     auto remove_fn = [id](relid i) { return i == id; };
     auto r         = rel.find(id);
     if (r == rel.end()) { return ERROR(error_t::REL_NOT_FOUND); }
@@ -252,7 +252,7 @@ error_t Scene::disconnect(relid id)
         if (auto outitr = component_context->outputs.find(r->second.to_node.id);
             outitr != component_context->outputs.end()) {
             outitr->second = 0;
-            component_context->run(this, 0);
+            component_context->run(0);
         } else {
             return ERROR(error_t::NOT_CONNECTED);
         }
@@ -263,8 +263,6 @@ error_t Scene::disconnect(relid id)
     rel.erase(id);
     return error_t::OK;
 }
-
-void Scene::set_position(node n, point_t p) { get_base(n)->point = p; }
 
 void Scene::signal(relid id, state_t value)
 {
