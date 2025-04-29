@@ -10,3 +10,10 @@
 [submodule "external/doctest"]
 	path = external/doctest
 	url = https://github.com/doctest/doctest.git
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking
+[submodule "external/ImNodeFlow"]
+	path = external/ImNodeFlow
+	url = https://github.com/Fattorino/ImNodeFlow.git

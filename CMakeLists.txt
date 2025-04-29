@@ -48,7 +48,7 @@ if(LCS_GUI)
     add_executable(${PROJECT_NAME} ${SOURCES})
 endif()
 
-include(cmake/Gtkmm.cmake)
+include(cmake/ImGui.cmake)
 include(cmake/Tfd.cmake)
 include(cmake/Json.cmake)
 include(cmake/Tests.cmake)
