@@ -1,23 +1,31 @@
-#include "common.h"
-#include "core.h"
+#include <base64.h>
+
 #include <algorithm>
 #include <utility>
 
+#include "common.h"
+#include "core.h"
+
 namespace lcs {
 
-Scene::Scene(const std::string& _name, const std::string& _author , const std::string& _description)
-    :     meta {_name,_author,_description}
+Scene::Scene(const std::string& _name, const std::string& _author , const 
+std::string& _description, int _version)
+    :     name{_name},description{_description},author{_author}, 
+version{_version}
     , component_context{std::nullopt} ,_last_node {
         node { 0, node_t::GATE },
         node { 0, node_t::COMPONENT },
         node { 0, node_t::INPUT },
         node { 0, node_t::OUTPUT },
-    }  ,_last_rel{0}
+    }  ,
+        _last_rel{0}
 {
 }
 
-Scene::Scene(ComponentContext ctx, const std::string& _name, const std::string& _author , const std::string& _description)
-    : meta {_name,_author,_description}
+Scene::Scene(ComponentContext ctx, const std::string& _name, const std::string& 
+_author , const std::string& _description, int _version)
+    :     name{_name},description{_description},author{_author}, 
+version{_version}
     , component_context{ctx}
     , _last_node {
             node { 0, node_t::GATE },
@@ -28,27 +36,74 @@ Scene::Scene(ComponentContext ctx, const std::string& _name, const std::string& 
     , _last_rel{0}
 {
 }
+
+Scene::Scene(Scene&& other)
+{
+    if (this != &other) { _move_from(std::move(other)); }
+}
+
+Scene& Scene::operator=(Scene&& other)
+{
+    if (this != &other) { _move_from(std::move(other)); }
+    return *this;
+}
+
+void Scene::_move_from(Scene&& other)
+{
+
+    name              = std::move(other.name);
+    description       = std::move(other.description);
+    author            = std::move(other.author);
+    version           = other.version;
+    dependencies      = std::move(other.dependencies);
+    timer_sub_vec     = std::move(other.timer_sub_vec);
+    _gates            = std::move(other._gates);
+    _components       = std::move(other._components);
+    _inputs           = std::move(other._inputs);
+    _outputs          = std::move(other._outputs);
+    _relations        = std::move(other._relations);
+    component_context = std::move(other.component_context);
+    for (size_t i = 0; i < node_t::NODE_S; i++) {
+        _last_node[i] = other._last_node[i];
+    }
+    _last_rel = other._last_rel;
+
+    for (auto& gate : _gates) {
+        gate.second.reload(this);
+    }
+    for (auto& comp : _components) {
+        comp.second.reload(this);
+    }
+    for (auto& input : _inputs) {
+        input.second.reload(this);
+    }
+    for (auto& output : _outputs) {
+        output.second.reload(this);
+    }
+    if (component_context.has_value()) { component_context->reload(this); }
+}
+
 void Scene::remove_node(node id)
 {
     if (id.id == 0) { lcs_assert(id.id != 0); }
     switch (id.type) {
     case node_t::GATE: {
         lcs_assert(id.id <= _last_node[node_t::GATE].id);
-        auto g = gates.find(id);
-        lcs_assert(g != gates.end());
+        auto g = _gates.find(id);
+        lcs_assert(g != _gates.end());
         for (auto r : g->second.output) {
             if (r != 0) { disconnect(r); }
         }
         for (auto r : g->second.inputs) {
             if (r != 0) { disconnect(r); }
         }
-        gates.erase(gates.find(id));
+        _gates.erase(_gates.find(id));
         break;
     }
     case node_t::COMPONENT: {
         lcs_assert(id.id <= _last_node[node_t::COMPONENT].id);
-        auto c = components.find(id);
-        lcs_assert(c != components.end());
+        auto c = _components.find(id);
+        lcs_assert(c != _components.end());
         for (auto s : c->second.outputs) {
             for (auto r : s.second) {
                 if (r != 0) { disconnect(r); }
@@ -57,25 +112,25 @@ void Scene::remove_node(node id)
         for (auto r : c->second.inputs) {
             if (r != 0) { disconnect(r); }
         }
-        components.erase(components.find(id));
+        _components.erase(_components.find(id));
         break;
     }
     case node_t::INPUT: {
         lcs_assert(id.id <= _last_node[node_t::INPUT].id);
-        auto i = inputs.find(id);
-        lcs_assert(i != inputs.end());
+        auto i = _inputs.find(id);
+        lcs_assert(i != _inputs.end());
         for (auto r : i->second.output) {
             if (r != 0) { disconnect(r); }
         }
-        inputs.erase(inputs.find(id));
+        _inputs.erase(_inputs.find(id));
         break;
     }
     case node_t::OUTPUT: {
         lcs_assert(id.id <= _last_node[node_t::OUTPUT].id);
-        auto o = outputs.find(id);
-        lcs_assert(o != outputs.end());
+        auto o = _outputs.find(id);
+        lcs_assert(o != _outputs.end());
         if (o->second.input != 0) { disconnect(o->second.input); }
-        outputs.erase(outputs.find(id));
+        _outputs.erase(_outputs.find(id));
         break;
     }
     default: break;
@@ -85,8 +140,9 @@ void Scene::remove_node(node id)
 NRef<Rel> Scene::get_rel(relid idx)
 {
     if (idx == 0 || idx > _last_rel) { return nullptr; }
-    auto n = rel.find(idx);
-    return n != rel.end() ? &n->second : (S_ERROR("Rel not found", nullptr));
+    auto n = _relations.find(idx);
+    return n != _relations.end() ? &n->second
+                                 : (S_ERROR("Rel not found", nullptr));
 }
 
 error_t Scene::_connect_with_id(
@@ -97,7 +153,7 @@ error_t Scene::_connect_with_id(
         return ERROR(error_t::INVALID_FROM_TYPE);
     } else if (from_node.type == node_t::COMPONENT
         && from_sock
-            >= sys::get_dependency(get_node<ComponentNode>(from_node)->path)
+            >= io::component::get(get_node<ComponentNode>(from_node)->path)
                 ->component_context->outputs.size()) {
         return ERROR(error_t::INVALID_NODEID);
     }
@@ -147,7 +203,7 @@ error_t Scene::_connect_with_id(
     default: return ERROR(error_t::INVALID_TO_TYPE);
     }
     if (!is_connected) { return ERROR(error_t::ALREADY_CONNECTED); }
-    rel.emplace(id, Rel { id, from_node, to_node, from_sock, to_sock });
+    _relations.emplace(id, Rel { id, from_node, to_node, from_sock, to_sock });
 
     switch (from_node.type) {
     case node_t::GATE:
@@ -192,8 +248,8 @@ error_t Scene::disconnect(relid id)
 {
     if (id == 0 || id > _last_rel) { return ERROR(error_t::INVALID_RELID); }
     auto remove_fn = [id](relid i) { return i == id; };
-    auto r         = rel.find(id);
-    if (r == rel.end()) { return ERROR(error_t::REL_NOT_FOUND); }
+    auto r         = _relations.find(id);
+    if (r == _relations.end()) { return ERROR(error_t::REL_NOT_FOUND); }
 
     switch (r->second.from_node.type) {
     case node_t::GATE: {
@@ -219,7 +275,7 @@ error_t Scene::disconnect(relid id)
             auto& v = inputitr->second;
             v.erase(std::remove_if(v.begin(), v.end(), remove_fn));
         } else {
-            return ERROR(NOT_CONNECTED);
+            return ERROR(error_t::NOT_CONNECTED);
         }
         break;
     }
@@ -260,16 +316,16 @@ error_t Scene::disconnect(relid id)
     }
     default: lcs_assert(r->second.from_node.type == node_t::INPUT); break;
     }
-    rel.erase(id);
+    _relations.erase(id);
     return error_t::OK;
 }
 
 void Scene::signal(relid id, state_t value)
 {
     if (id == 0) { return; }
-    if (auto r = rel.find(id); r != rel.end()) {
-        L_INFO(CLASS "Sending " << state_t_str(value) << " to " << r->second);
+    if (auto r = _relations.find(id); r != _relations.end()) {
         r->second.value = value;
+        L_INFO(r->second);
         if (r->second.to_node.type != node_t::COMPONENT_OUTPUT) {
             auto n = get_base(r->second.to_node);
             if (n != nullptr) { n->on_signal(); }
@@ -282,8 +338,8 @@ void Scene::signal(relid id, state_t value)
 std::ostream& operator<<(std::ostream& os, const Scene& s)
 {
     std::string d_str {};
-    os << "SCENE" << (s.component_context.has_value() ? "[C]" : "[S]") << "{"
-       << strlimit(s.meta.to_dependency_string(), 15) << "}";
+    os << "scene" << (s.component_context.has_value() ? "[C]" : "[S]") << "("
+       << strlimit(s.to_dependency(), 15) << ")";
     if (s.component_context.has_value()) {
         os << "[" << s.component_context->inputs.size() << ", "
            << s.component_context->outputs.size() << "]" << "\t";
@@ -301,6 +357,43 @@ NRef<BaseNode> Scene::get_base(node id)
     default: break;
     }
     return nullptr;
+}
+
+std::string Scene::to_dependency() const
+{
+    std::string dep_str = "";
+    if (author == "sys") {
+        dep_str = '@';
+    } else if (author == "") {
+        dep_str = "local/";
+    } else {
+        dep_str = author + '/';
+    }
+    return dep_str + name + '/' + std::to_string(version);
+}
+
+error_t Scene::load_dependencies(void)
+{
+    for (const std::string& dep : dependencies) {
+        error_t err = io::component::fetch(dep);
+        if (err) { return err; }
+    }
+    return error_t::OK;
+}
+
+std::string Scene::to_filepath(void) const
+{
+    std::filesystem::path p;
+    if (author == "" || author == "local") {
+        p = io::LOCAL
+            / (base64_encode(name + "/" + std::to_string(version), true)
+                + ".json");
+    } else {
+        p = io::LIBRARY / author
+            / (base64_encode(name + "/" + std::to_string(version), true)
+                + ".json");
+    }
+    return p;
 }
 
 } // namespace lcs

@@ -10,80 +10,16 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "common.h"
-#include "parse.h"
-#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include "common.h"
+#include "io.h"
+
 namespace lcs {
 class Scene;
-namespace sys {
-
-    struct Metadata final : parse::Serializable {
-        Metadata(std::string _name, std::string _description,
-            std::string _author, int _version = VERSION)
-            : name { _name }
-            , description { _description }
-            , author { _author }
-            , version { _version } { };
-        Metadata() { };
-
-        std::string to_dependency_string(void) const;
-        error_t load_dependencies(void);
-        error_t load_dependencies(const std::string& self_dependency);
-
-        /* Serializable interface */
-        Json::Value to_json(void) const override;
-        error_t from_json(const Json::Value&) override;
-
-        std::string name;
-        std::string description;
-        std::string author;
-        int version;
-        std::vector<std::string> dependencies;
-    };
-
-    /**
-     * Attempts to obtain a component. If it hasn't been loaded yet, also
-     * loads the component and returns it's handle.
-     *
-     * @param name component name
-     * @returns - error on failure.
-     */
-    error_t verify_component(const std::string& name);
-
-    /**
-     * Parse a component from given string data, if it's a valid component
-     * insert it to _loaded_components
-     *
-     * @param name to save as
-     * @param data to parse
-     * @returns - error on failure
-     */
-    error_t load_component(const std::string name, std::string data);
-
-    /**
-     * Executes the component with given id with provided input, returning
-     * it's result.
-     *
-     * @param name component name
-     * @param input binary encoded input value
-     * @returns - binary encoded result
-     */
-    uint64_t run_component(const std::string& name, uint64_t input);
-
-    /**
-     * Returns a reference to a dependency. Dependency has to be loaded to
-     * use this method.
-     * @param name of the component
-     * @returns Constant reference to a component or nullptr
-     */
-    NRef<const Scene> get_dependency(const std::string& name);
-
-} // namespace sys
 
 /** id type for socket, sock_t = 0 means disconnected */
 typedef uint16_t sockid;
@@ -101,10 +37,9 @@ enum node_t : uint8_t {
     INPUT,
     /** An output node. */
     OUTPUT,
-    /** Input slot of a component. NOTE: Only available for Component Scenes. */
+    /** Input slot of a component. NOTE: Only available in Component Scenes. */
     COMPONENT_INPUT,
-    /** Output slot of a component. NOTE: Only available for Component Scenes.
-     */
+    /** Output slot of a component. NOTE: Only available in Component Scenes. */
     COMPONENT_OUTPUT,
 
     NODE_S
@@ -113,13 +48,13 @@ enum node_t : uint8_t {
 constexpr const char* node_to_str(node_t s)
 {
     switch (s) {
-    case node_t::GATE: return "GATE";
-    case node_t::COMPONENT: return "COMPONENT";
-    case node_t::INPUT: return "INPUT";
-    case node_t::OUTPUT: return "OUTPUT";
-    case node_t::COMPONENT_INPUT: return "COMPIN";
-    case node_t::COMPONENT_OUTPUT: return "COMPOUT";
-    default: return "UNKNOWN";
+    case node_t::GATE: return "gate";
+    case node_t::COMPONENT: return "comp";
+    case node_t::INPUT: return "in";
+    case node_t::OUTPUT: return "out";
+    case node_t::COMPONENT_INPUT: return "cin";
+    case node_t::COMPONENT_OUTPUT: return "cout";
+    default: return "unknown";
     }
 }
 
@@ -130,7 +65,7 @@ node_t str_to_node(const std::string&);
  * id is a non-zero identifier. Together with the type, represents a unique
  * node.
  * */
-struct node final : public parse::Serializable {
+struct node final : public io::Serializable {
     node(uint32_t _id = 0, node_t _type = GATE);
     node(node&&)                 = default;
     node(const node&)            = default;
@@ -154,8 +89,7 @@ enum state_t {
     /** Socket evaluated to true. */
     TRUE,
     /** The socket provides no valuable information
-     * due to the disconnection of at least one prior socket.
-     */
+     * due to the disconnection of at least one prior socket. */
     DISABLED,
 };
 
@@ -205,7 +139,7 @@ constexpr const char* gate_to_str(gate_t g)
 gate_t str_to_gate(const std::string&);
 
 /** Position of a node or a curve in the surface */
-struct point_t final : public parse::Serializable {
+struct point_t final : public io::Serializable {
     point_t(int _x = 0, int _y = 0)
         : x { _x }
         , y { _y } { };
@@ -218,7 +152,7 @@ struct point_t final : public parse::Serializable {
     int y;
 };
 
-class BaseNode : public parse::Serializable {
+class BaseNode : public io::Serializable {
 public:
     explicit BaseNode(Scene*, node, direction_t _dir = direction_t::RIGHT,
         point_t _p = { 0, 0 });
@@ -229,6 +163,7 @@ public:
     virtual ~BaseNode()                  = default;
     friend std::ostream& operator<<(std::ostream& os, const BaseNode& r);
 
+    inline void reload(Scene* s) { _parent = s; }
     BaseNode* get_base(void) { return dynamic_cast<BaseNode*>(this); };
     inline node id(void) const { return _id; }
 
@@ -248,7 +183,7 @@ public:
     point_t point;
 
 protected:
-    Scene* _scene;
+    Scene* _parent;
     node _id;
 };
 
@@ -259,7 +194,7 @@ protected:
  * the connected output is a Component, since components
  * can have multiple output sockets.
  */
-struct Rel final : public parse::Serializable {
+struct Rel final : public io::Serializable {
     explicit Rel(relid _id, node _from_node, node _to_node, sockid _from_sock,
         sockid _to_sock);
     Rel();
@@ -353,8 +288,8 @@ private:
 };
 
 /**
- * An input node where it's value can be arbitrarily changed. If InputNode::freq
- * is defined, it will be toggled automatically.  */
+ * An input node where it's value can be arbitrarily changed. If
+ * InputNode::_freq is defined, it will be toggled automatically.  */
 class InputNode : public BaseNode {
 public:
     InputNode(
@@ -422,11 +357,14 @@ private:
  * execute a scene with given parameters.
  * NOTE: ComponentContext internally pushes ids by one to run shift
  * calculations correctly. However to be compatible with ComponentNodes it is
- * accessed via get_input(sockid) and get_output(sockid) methods where it is
+ * accessed via ComponentContext::get_input(sockid) and
+ * ComponentContext::get_output(sockid) methods where it is
  * virtually increased by one.
  */
-struct ComponentContext final : public parse::Serializable {
+struct ComponentContext final : public io::Serializable {
     ComponentContext(Scene* parent, sockid input_s = 0, sockid output_s = 0);
+
+    inline void reload(Scene* parent) { _parent = parent; }
 
     /**
      * Grows or shrinks input or output's size
@@ -446,10 +384,13 @@ struct ComponentContext final : public parse::Serializable {
 
     /** Get node id for given input socket */
     node get_input(sockid id) const;
+
     /** Get node id for given output socket */
     node get_output(sockid id) const;
+
     /** Get value of the given node socket */
     state_t get_value(node id) const;
+
     /** Update the value of an output slot */
     void set_value(sockid sock, state_t value);
 
@@ -468,15 +409,16 @@ private:
     Scene* _parent;
 };
 
-class Scene final : public parse::Serializable {
+class Scene final : public io::Serializable {
 public:
     Scene(const std::string& name = "", const std::string& author = "",
-        const std::string& description = "");
+        const std::string& description = "", int _version = 1);
     Scene(ComponentContext ctx, const std::string& name = "",
-        const std::string& author = "", const std::string& description = "");
-    Scene(Scene&&)                 = default;
+        const std::string& author = "", const std::string& description = "",
+        int _version = 1);
+    Scene(Scene&&);
+    Scene& operator=(Scene&&);
     Scene(const Scene&)            = delete;
-    Scene& operator=(Scene&&)      = default;
     Scene& operator=(const Scene&) = delete;
     ~Scene()                       = default;
     friend std::ostream& operator<<(std::ostream& os, const Scene&);
@@ -495,26 +437,26 @@ public:
 
         if constexpr (is_gate) {
             _last_node[node_t::GATE].id++;
-            return gates
+            return _gates
                 .emplace(_last_node[node_t::GATE],
                     GateNode { this, _last_node[node_t::GATE].id, args... })
                 .first->first;
         } else if constexpr (is_component) {
             _last_node[node_t::COMPONENT].id++;
-            return components
+            return _components
                 .emplace(_last_node[node_t::COMPONENT],
                     ComponentNode {
                         this, _last_node[node_t::COMPONENT].id, args... })
                 .first->first;
         } else if constexpr (is_input) {
             _last_node[node_t::INPUT].id++;
-            return inputs
+            return _inputs
                 .emplace(_last_node[node_t::INPUT],
                     InputNode { this, _last_node[node_t::INPUT].id, args... })
                 .first->first;
         } else if constexpr (is_output) {
             _last_node[node_t::OUTPUT].id++;
-            return outputs
+            return _outputs
                 .emplace(_last_node[node_t::OUTPUT],
                     OutputNode { this, _last_node[node_t::OUTPUT].id, args... })
                 .first->first;
@@ -539,24 +481,24 @@ public:
         constexpr bool is_input     = std::is_same<T, InputNode>::value;
         constexpr bool is_output    = std::is_same<T, OutputNode>::value;
         if constexpr (is_gate) {
-            auto g = gates.find(id);
+            auto g = _gates.find(id);
             lcs_assert(
-                id.id != 0 && g != gates.end() && id.type == node_t::GATE);
+                id.id != 0 && g != _gates.end() && id.type == node_t::GATE);
             return &g->second;
         } else if constexpr (is_component) {
-            auto g = components.find(id);
-            lcs_assert(id.id != 0 && g != components.end()
+            auto g = _components.find(id);
+            lcs_assert(id.id != 0 && g != _components.end()
                 && id.type == node_t::COMPONENT);
             return &g->second;
         } else if constexpr (is_input) {
-            auto g = inputs.find(id);
+            auto g = _inputs.find(id);
             lcs_assert(
-                id.id != 0 && g != inputs.end() && id.type == node_t::INPUT);
+                id.id != 0 && g != _inputs.end() && id.type == node_t::INPUT);
             return &g->second;
         } else if constexpr (is_output) {
-            auto g = outputs.find(id);
+            auto g = _outputs.find(id);
             lcs_assert(
-                id.id != 0 && g != outputs.end() && id.type == node_t::OUTPUT);
+                id.id != 0 && g != _outputs.end() && id.type == node_t::OUTPUT);
             return &g->second;
         }
         return nullptr;
@@ -597,16 +539,33 @@ public:
     /**
      * Safely disconnects a node relationship.
      * @param id relid to disconnect
-     * @returns error on failure
+     * @returns Error on failure:
+     *
+     * - error_t::INVALID_RELID
+     * - error_t::REL_NOT_FOUND
+     * - error_t::NOT_CONNECTED
      */
     error_t disconnect(relid id);
 
     /**
-     * Trigger a signal for the given relation while updating it's value
+     * Trigger a signal for the given relation while updating it's value.
      * @param id relationship id
      * @param value to set
      */
     void signal(relid id, state_t value);
+
+    /** Returns a dependency string. */
+    std::string to_dependency(void) const;
+    /** Returns file path to save. */
+    std::string to_filepath(void) const;
+    /**
+     * Loads dependencies according to the internal list.
+     * @returns Error on failure:
+     *
+     * - io::component::fetch
+     *
+     */
+    error_t load_dependencies(void);
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
@@ -614,18 +573,45 @@ public:
 
     // [id][period] map for timer inputs
     std::map<node, int> timer_sub_vec;
-    std::map<node, GateNode> gates;
-    std::map<node, ComponentNode> components;
-    std::map<node, InputNode> inputs;
-    std::map<node, OutputNode> outputs;
-    std::map<relid, Rel> rel;
-    sys::Metadata meta;
+
+    std::string name;
+    std::string description;
+    std::string author;
+    int version;
+    std::vector<std::string> dependencies;
     std::optional<ComponentContext> component_context;
 
 private:
+    /** The helper method for move constructor and move assignment */
+    void _move_from(Scene&&);
+
+    /**
+     * Attempts to connect two nodes from their given sockets. On success
+     * relationship with given id is inserted.
+     *
+     * NOTE: Leave from_sock empty if from is not a Component.
+     *
+     * @param id of relationship
+     * @param to_node target node
+     * @param to_sock socket of the target node
+     * @param from_node source node
+     * @param from_sock socket of the source node
+     * @returns Error on failure:
+     *
+     * - error_t::INVALID_FROM_TYPE
+     * - error_t::INVALID_NODEID
+     * - error_t::NOT_A_COMPONENT
+     * - error_t::ALREADY_CONNECTED
+     * - error_t::INVALID_TO_TYPE
+     */
     error_t _connect_with_id(relid id, node to_node, sockid to_sock,
         node from_node, sockid from_sock = 0);
 
+    std::map<node, GateNode> _gates;
+    std::map<node, ComponentNode> _components;
+    std::map<node, InputNode> _inputs;
+    std::map<node, OutputNode> _outputs;
+    std::map<relid, Rel> _relations;
     node _last_node[node_t::NODE_S];
     relid _last_rel;
 };

@@ -32,7 +32,7 @@ message("Build Tests: ${LCS_BUILD_TESTS}")
 message("Doxygen: ${LCS_ENABLE_DOXYGEN}")
 message("GUI: ${LCS_GUI}")
 
-set(__CORE core common parse jsoncpp_static)
+set(__CORE core common io jsoncpp_static base64)
 set(__DEPENDS ui ${__CORE})
 
 message("Build Type: ${CMAKE_BUILD_TYPE}")
@@ -48,11 +48,12 @@ if(LCS_GUI)
     add_executable(${PROJECT_NAME} ${SOURCES})
 endif()
 
-include(cmake/Gtkmm.cmake)
+include(cmake/ImGui.cmake)
 include(cmake/Tfd.cmake)
 include(cmake/Json.cmake)
 include(cmake/Tests.cmake)
 include(cmake/Doxygen.cmake)
+include(cmake/Others.cmake)
 
 include_directories(include)
 
@@ -61,7 +62,7 @@ add_subdirectory(src/core)
 if(LCS_GUI)
 add_subdirectory(src/ui)
 endif()
-add_subdirectory(src/parse)
+add_subdirectory(src/io)
 
 if(LCS_GUI)
     target_link_libraries(${PRJ} ${__DEPENDS})

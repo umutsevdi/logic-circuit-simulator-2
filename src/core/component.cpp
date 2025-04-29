@@ -1,10 +1,11 @@
-#include "common.h"
-#include "core.h"
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <string>
+
+#include "common.h"
+#include "core.h"
 
 namespace lcs {
 
@@ -137,13 +138,22 @@ ComponentNode::ComponentNode(Scene* _s, node _id, const std::string& _path)
 error_t ComponentNode::set_component(const std::string& _path)
 {
     if (_path == "") { return ERROR(error_t::INVALID_DEPENDENCY_FORMAT); }
-    auto ref = sys::get_dependency(_path);
+    auto ref = io::component::get(_path);
     if (ref == nullptr) { return ERROR(error_t::COMPONENT_NOT_FOUND); }
-    // TODO add disconnect by relid
+    for (relid id : inputs) {
+        _parent->disconnect(id);
+    }
+    for (auto out : outputs) {
+        for (relid id : out.second) {
+            _parent->disconnect(id);
+        }
+    }
+    inputs.clear();
+    outputs.clear();
+
     for (size_t i = 0; i < ref->component_context->inputs.size(); i++) {
         inputs.push_back(0);
     }
-    // TODO add disconnect by relid
     for (size_t i = 0; i < ref->component_context->outputs.size(); i++) {
         outputs[i] = {};
     }
@@ -170,7 +180,7 @@ void ComponentNode::on_signal()
         _is_disabled   = false;
         for (relid in : inputs) {
             if (in != 0) {
-                auto rel = _scene->get_rel(in);
+                auto rel = _parent->get_rel(in);
                 lcs_assert(rel != nullptr);
                 if (rel->value == state_t::DISABLED) {
                     _is_disabled = true;
@@ -180,22 +190,23 @@ void ComponentNode::on_signal()
                 if (rel->value == TRUE) { input++; }
             }
         }
-        if (!_is_disabled) { _output_value = sys::run_component(path, input); }
+        if (!_is_disabled) { _output_value = io::component::run(path, input); }
     } else {
         _is_disabled = true;
     }
 
     for (auto sock : outputs) {
-        L_INFO(CLASS "Sending " << state_t_str(get(sock.first)) << " signal");
         for (relid out : sock.second) {
-            _scene->signal(out, get(sock.first));
+            L_INFO(CLASS "Sending " << state_t_str(get(sock.first))
+                                    << " signal to rel@" << out);
+            _parent->signal(out, get(sock.first));
         }
     }
 }
 
 std::ostream& operator<<(std::ostream& os, const ComponentNode& g)
 {
-    os << g._id << "{" << strlimit(g.path, 15) << "}";
+    os << g._id << "( " << strlimit(g.path, 15) << " )";
     return os;
 }
 

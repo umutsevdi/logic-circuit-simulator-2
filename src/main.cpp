@@ -1,8 +1,8 @@
-#include "common.h"
-#include "ui/Application.h"
+#include "io.h"
+#include "ui.h"
 
 int main(int argc, char* argv[])
 {
-    init_paths();
-    return lcs::ui::start(argc, argv);
+    lcs::io::init_paths();
+    return lcs::ui::main(argc, argv);
 }

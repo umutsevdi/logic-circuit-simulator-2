@@ -1,3 +1,4 @@
+#include "common.h"
 #include "core.h"
 
 namespace lcs {
@@ -25,15 +26,24 @@ Rel::Rel()
 
 std::ostream& operator<<(std::ostream& os, const Rel& r)
 {
-    os << "Rel[" << r.id << "]\t{ from: " << r.from_node << "[" << r.from_sock
-       << "],\tto: " << r.to_node << "[" << r.to_sock
-       << "],\tvalue: " << state_t_str(r.value) << "}";
+    if (is_color_enabled()) { os << F_GREEN F_BOLD; }
+    os << "rel@" << r.id;
+    if (is_color_enabled()) { os << F_RESET; }
+    os << "( from: " << r.from_node;
+    if (is_color_enabled()) { os << F_BLUE; }
+    os << "::" << r.from_sock;
+    if (is_color_enabled()) { os << F_RESET; }
+    os << ",\tto: " << r.to_node;
+    if (is_color_enabled()) { os << F_BLUE; }
+    os << "::" << r.to_sock;
+    if (is_color_enabled()) { os << F_RESET; }
+    os << ",\tvalue: " << state_t_str(r.value) << ")";
     return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const BaseNode& g)
 {
-    os << g._id << "{}";
+    os << g._id;
     return os;
 }
 
@@ -48,9 +58,9 @@ InputNode::InputNode(Scene* _scene, node _id, std::optional<uint32_t> freq)
 
 std::ostream& operator<<(std::ostream& os, const InputNode& g)
 {
-    os << g.id() << "{value: " << state_t_str((state_t)g._value);
+    os << g.id() << "( value: " << state_t_str((state_t)g._value);
     if (g._freq.has_value()) { os << ", freq:" << g._freq.value(); }
-    os << " }";
+    os << " )";
     return os;
 };
 
@@ -76,11 +86,11 @@ void InputNode::toggle()
 
 void InputNode::on_signal()
 {
-    L_INFO(CLASS "Sending " << state_t_str((state_t)_value) << " signal");
-
     state_t result = _value ? state_t::TRUE : state_t::FALSE;
     for (relid& out : output) {
-        _scene->signal(out, result);
+        L_INFO(CLASS "Sending " << state_t_str((state_t)_value)
+                                << " signal to rel@" << out);
+        _parent->signal(out, result);
     }
 }
 
@@ -102,7 +112,7 @@ OutputNode::OutputNode(Scene* _scene, node _id)
 
 std::ostream& operator<<(std::ostream& os, const OutputNode& g)
 {
-    os << g.id() << "{" << state_t_str(g._value) << " }";
+    os << g.id() << "( " << state_t_str(g._value) << " )";
     return os;
 };
 
@@ -112,7 +122,7 @@ bool OutputNode::is_connected() const { return input != 0; };
 
 void OutputNode::on_signal()
 {
-    _value = input ? _scene->get_rel(input)->value : state_t::DISABLED;
+    _value = input ? _parent->get_rel(input)->value : state_t::DISABLED;
     L_INFO(CLASS "Received " << state_t_str(_value) << " signal");
 }
 
@@ -123,7 +133,7 @@ void OutputNode::on_signal()
 BaseNode::BaseNode(Scene* scene, node id, direction_t _dir, point_t _p)
     : dir { _dir }
     , point { _p }
-    , _scene { scene }
+    , _parent { scene }
     , _id { id }
 {
 }
@@ -140,7 +150,9 @@ node::node(uint32_t _id, node_t _type)
 
 std::ostream& operator<<(std::ostream& os, const node& r)
 {
-    os << node_to_str(r.type) << "[" << r.id << "]";
+    if (is_color_enabled()) { os << F_GREEN F_BOLD; }
+    os << node_to_str(r.type) << "@" << r.id;
+    if (is_color_enabled()) { os << F_RESET; }
     return os;
 }
 
@@ -178,17 +190,17 @@ direction_t str_to_dir(const std::string& dir)
 node_t str_to_node(const std::string& n)
 {
 
-    if (n == "GATE") {
+    if (n == "gate") {
         return node_t::GATE;
-    } else if (n == "COMPONENT") {
+    } else if (n == "comp") {
         return node_t::COMPONENT;
-    } else if (n == "INPUT") {
+    } else if (n == "in") {
         return node_t::INPUT;
-    } else if (n == "OUTPUT") {
+    } else if (n == "out") {
         return node_t::OUTPUT;
-    } else if (n == "COMPIN") {
+    } else if (n == "cin") {
         return node_t::COMPONENT_INPUT;
-    } else if (n == "COMPOUT") {
+    } else if (n == "cout") {
         return node_t::COMPONENT_OUTPUT;
     }
     return node_t::NODE_S;
