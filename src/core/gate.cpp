@@ -1,7 +1,7 @@
+#include <algorithm>
+
 #include "common.h"
 #include "core.h"
-#include "parse.h"
-#include <algorithm>
 
 namespace lcs {
 static bool _and(const std::vector<bool>&);
@@ -55,7 +55,7 @@ void GateNode::on_signal()
         v.reserve(inputs.size());
         _is_disabled = false;
         for (relid in : inputs) {
-            auto rel = _scene->get_rel(in);
+            auto rel = _parent->get_rel(in);
             lcs_assert(rel != nullptr);
             if (rel->value == state_t::DISABLED) {
                 _is_disabled = true;
@@ -69,9 +69,10 @@ void GateNode::on_signal()
     } else {
         _is_disabled = true;
     }
-    L_INFO(CLASS "Sending " << state_t_str(get()) << " signal ");
     for (relid& out : output) {
-        _scene->signal(out, get());
+        L_INFO(
+            CLASS "Sending " << state_t_str(get()) << " signal to rel@" << out);
+        _parent->signal(out, get());
     }
 }
 
@@ -89,7 +90,7 @@ bool GateNode::decrement()
 {
     if (_type == gate_t::NOT || _max_in == 2) { return false; }
     if (inputs[inputs.size() - 1] != 0) {
-        _scene->disconnect(inputs[inputs.size() - 1]);
+        _parent->disconnect(inputs[inputs.size() - 1]);
     }
     inputs.pop_back();
     on_signal();
@@ -99,8 +100,8 @@ bool GateNode::decrement()
 std::ostream& operator<<(std::ostream& os, const GateNode& g)
 {
 
-    os << g.id() << "{" << gate_to_str(g.type()) << ", "
-       << state_t_str(g._value) << "}";
+    os << g.id() << "( " << gate_to_str(g.type()) << ", "
+       << state_t_str(g._value) << " )";
     return os;
 };
 

@@ -1,7 +1,10 @@
-#include "core.h"
-#include "parse.h"
 #include <json/json.h>
+
 #include <map>
+
+#include "common.h"
+#include "core.h"
+#include "io.h"
 
 namespace lcs {
 /** Reads a JSON document and writes its values to a map */
@@ -11,36 +14,54 @@ static error_t _json_to_map(
 
 error_t Scene::from_json(const Json::Value& doc)
 {
-    if (!doc["meta"].isObject() || !doc["nodes"].isObject()) {
+    static constexpr const char* _component = node_to_str(node_t::COMPONENT);
+    static constexpr const char* _gate      = node_to_str(node_t::GATE);
+    static constexpr const char* _input     = node_to_str(node_t::INPUT);
+    static constexpr const char* _output    = node_to_str(node_t::OUTPUT);
+    if (!(doc.isObject() && doc["nodes"].isObject() && doc["name"].isString()
+            && doc["author"].isString() && doc["version"].isInt())) {
         return ERROR(error_t::INVALID_SCENE);
     }
-    error_t err = meta.from_json(doc["meta"]);
-    if (err) { return err; }
+    name   = doc["name"].asString();
+    author = doc["author"].asString();
+    if (doc["description"].isString()) {
+        description = doc["description"].asString();
+    }
+    version = doc["version"].asInt();
+    if (doc["dependencies"].isArray()) {
+        return error_t::OK;
+        for (const auto& j : doc["dependencies"]) {
+            error_t err = io::component::fetch(j.asString());
+            if (err) { return err; }
+            dependencies.push_back(j.asString());
+        }
+    }
 
+    error_t err = error_t::OK;
     if (doc["component"].isObject()) {
         component_context = ComponentContext { this };
         err               = component_context->from_json(doc["component"]);
         if (err) { return err; }
     }
     const Json::Value& nodes = doc["nodes"];
-    if (nodes["gates"].isObject()) {
+    if (nodes[_gate].isObject()) {
         err = _json_to_map<GateNode>(
-            this, nodes["gates"], gates, _last_node[node_t::GATE]);
+            this, nodes[_gate], _gates, _last_node[node_t::GATE]);
         if (err) { return err; }
     }
-    if (nodes["comp"].isObject()) {
-        err = _json_to_map<ComponentNode>(
-            this, nodes["comp"], components, _last_node[node_t::COMPONENT]);
+    if (nodes[_component].isObject()) {
+        err = _json_to_map<ComponentNode>(this, nodes[_component], _components,
+            _last_node[node_t::COMPONENT]);
         if (err) { return err; }
     }
-    if (nodes["inputs"].isObject()) {
+    if (nodes[_input].isObject()) {
         err = _json_to_map<InputNode>(
-            this, nodes["inputs"], inputs, _last_node[node_t::INPUT]);
+            this, nodes[_input], _inputs, _last_node[node_t::INPUT]);
         if (err) { return err; }
     }
-    if (nodes["outputs"].isObject()) {
+    if (nodes[_output].isObject()) {
         err = _json_to_map<OutputNode>(
-            this, nodes["outputs"], outputs, _last_node[node_t::OUTPUT]);
+            this, nodes[_output], _outputs, _last_node[node_t::OUTPUT]);
         if (err) { return err; }
     }
     if (doc["rel"].isObject()) {
@@ -60,9 +81,9 @@ error_t Scene::from_json(const Json::Value& doc)
         if (err) { return err; }
     }
 
-    for (auto& comp : components) {
+    for (auto& comp : _components) {
         bool found = false;
-        for (const auto& dep : meta.dependencies) {
+        for (const auto& dep : dependencies) {
             if (comp.second.path == dep) {
                 found = true;
                 break;
@@ -82,13 +103,20 @@ error_t point_t::from_json(const Json::Value& doc)
 
 error_t node::from_json(const Json::Value& doc)
 {
-
     if (doc["id"].isString()) {
-        id = std::atol(doc["id"].asCString());
+        std::string idstr = doc["id"].asString();
+        size_t at_idx     = idstr.find("@");
+        if (at_idx == std::string::npos) {
+            return ERROR(error_t::INVALID_NODE);
+        }
+        type = str_to_node(std::string(idstr.begin(), idstr.begin() + at_idx));
+        id   = std::atol(
+            std::string { idstr.begin() + at_idx + 1, idstr.end() }.c_str());
     } else if (doc["id"].isInt()) {
         id = doc["id"].asInt();
+    } else {
+        return ERROR(error_t::INVALID_NODE);
     }
-    if (doc["type"].isString()) { type = str_to_node(doc["type"].asString()); }
     if (type >= node_t::NODE_S) { return ERROR(error_t::INVALID_NODE); }
     return error_t::OK;
 }
@@ -133,10 +161,8 @@ error_t GateNode::from_json(const Json::Value& doc)
 
 error_t ComponentNode::from_json(const Json::Value& doc)
 {
-    if (!doc["depends"].isString()) {
-        return ERROR(error_t::INVALID_COMPONENT);
-    }
-    set_component(doc["depends"].asString());
+    if (!doc["use"].isString()) { return ERROR(error_t::INVALID_COMPONENT); }
+    set_component(doc["use"].asString());
     return error_t::OK;
 }
 
@@ -154,29 +180,6 @@ error_t InputNode::from_json(const Json::Value& doc)
 }
 
 error_t OutputNode::from_json(const Json::Value&) { return error_t::OK; }
-
-error_t sys::Metadata::from_json(const Json::Value& doc)
-{
-    if (!(doc["name"].isString() && doc["author"].isString()
-            && doc["version"].isInt())) {
-        return ERROR(error_t::INVALID_SCENE);
-    }
-    name   = doc["name"].asString();
-    author = doc["author"].asString();
-    if (doc["description"].isString()) {
-        description = doc["description"].asString();
-    }
-    version = doc["version"].asInt();
-    if (doc["dependencies"].isArray()) {
-        return error_t::OK;
-        for (const auto& j : doc["dependencies"]) {
-            error_t err = sys::verify_component(j.asString());
-            if (err) { return err; }
-            dependencies.push_back(j.asString());
-        }
-    }
-    return error_t::OK;
-}
 
 error_t ComponentContext::from_json(const Json::Value& doc)
 {

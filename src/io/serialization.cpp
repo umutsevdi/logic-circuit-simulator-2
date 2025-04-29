@@ -1,7 +1,10 @@
-#include "core.h"
-#include "parse.h"
-#include "json/value.h"
+#include <json/value.h>
+
 #include <string>
+
+#include "core.h"
+#include "io.h"
+
 namespace lcs {
 
 template <typename T> Json::Value _to_json(const std::map<node, T>& m)
@@ -17,21 +20,38 @@ template <typename T> Json::Value _to_json(const std::map<node, T>& m)
 Json::Value Scene::to_json(void) const
 {
     Json::Value out { Json::objectValue };
-    out["meta"] = meta.to_json();
-    if (!gates.empty()) { out["nodes"]["gates"] = _to_json<GateNode>(gates); }
-    if (!inputs.empty()) {
-        out["nodes"]["inputs"] = _to_json<InputNode>(inputs);
-    }
-    if (!outputs.empty()) {
-        out["nodes"]["outputs"] = _to_json<OutputNode>(outputs);
-    }
-    if (!components.empty()) {
-        out["nodes"]["comp"] = _to_json<ComponentNode>(components);
+    out["name"]   = name;
+    out["author"] = author;
+    if (description != "") { out["description"] = description; }
+    out["version"] = version;
+    if (!dependencies.empty()) {
+        Json::Value dep { Json::arrayValue };
+        for (const auto& d : dependencies) {
+            if (auto d_meta = io::component::get(d); d_meta != nullptr) {
+                dep.append(d_meta->to_dependency());
+            }
+        }
+        out["dependencies"] = dep;
     }
 
-    if (!rel.empty()) {
+    if (!_gates.empty()) {
+        out["nodes"][node_to_str(node_t::GATE)] = _to_json<GateNode>(_gates);
+    }
+    if (!_inputs.empty()) {
+        out["nodes"][node_to_str(node_t::INPUT)] = _to_json<InputNode>(_inputs);
+    }
+    if (!_outputs.empty()) {
+        out["nodes"][node_to_str(node_t::OUTPUT)]
+            = _to_json<OutputNode>(_outputs);
+    }
+    if (!_components.empty()) {
+        out["nodes"][node_to_str(node_t::COMPONENT)]
+            = _to_json<ComponentNode>(_components);
+    }
+
+    if (!_relations.empty()) {
         Json::Value doc { Json::objectValue };
-        for (const auto& c : rel) {
+        for (const auto& c : _relations) {
             doc[std::to_string(c.first)] = c.second.to_json();
         }
         out["rel"] = doc;
@@ -44,9 +64,8 @@ Json::Value Scene::to_json(void) const
 
 Json::Value node::to_json(void) const
 {
-    Json::Value out { Json::objectValue };
-    out["id"]   = id;
-    out["type"] = node_to_str(type);
+    Json::Value out;
+    out["id"] = std::string { node_to_str(type) } + "@" + std::to_string(id);
     return out;
 }
 
@@ -99,34 +118,13 @@ Json::Value InputNode::to_json(void) const
 Json::Value ComponentNode::to_json(void) const
 {
     Json::Value out = this->BaseNode::to_json();
-    out["depends"]  = path;
+    out["use"]      = path;
     return out;
 }
 
 Json::Value OutputNode::to_json(void) const
 {
     return this->BaseNode::to_json();
-}
-
-Json::Value sys::Metadata::to_json(void) const
-{
-    Json::Value out { Json::objectValue };
-    out["name"]   = name;
-    out["author"] = author;
-    if (description != "") { out["description"] = description; }
-    out["version"] = version;
-    if (!dependencies.empty()) {
-        Json::Value dep { Json::arrayValue };
-        for (const auto& d : dependencies) {
-            if (auto d_meta = sys::get_dependency(d); d_meta != nullptr) {
-                dep.append(d_meta->meta.to_dependency_string());
-            } else {
-                return ERROR(error_t::INVALID_COMPONENT);
-            }
-        }
-        out["dependencies"] = dep;
-    }
-    return out;
 }
 
 Json::Value ComponentContext::to_json(void) const

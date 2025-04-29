@@ -11,20 +11,11 @@
  ******************************************************************************/
 
 #include <functional>
-#include <iomanip>
 #include <iostream>
-#include <sstream>
+#include <optional>
 
 #define APPNAME "LCS"
 #define APPNAME_LONG "LogicCircuitSimulator"
-
-#ifdef _WIN32
-#define SEP '\\'
-#else
-#define SEP '/'
-#endif
-
-#define VERSION 1
 
 namespace lcs {
 
@@ -70,6 +61,12 @@ enum error_t {
     UNDEFINED_DEPENDENCY,
     /** Not a valid JSON document. */
     INVALID_JSON_FORMAT,
+    /** Invalid file format */
+    NOT_A_JSON,
+    /** No such file or directory in given path */
+    NOT_FOUND,
+    /** Failed to save file*/
+    FAILED_TO_SAVE,
     CYCLIC_DEPENDENCY,
 };
 
@@ -91,11 +88,11 @@ public:
     NRef& operator=(const NRef&) = delete;
     ~NRef() { }
 
-    bool operator==(void* t) const { return _v == t; };
-    bool operator!=(void* t) const { return _v != t; };
-
-    T* operator->() { return _v; }
-    const T* operator->() const { return _v; }
+    inline bool operator==(void* t) const { return _v == t; };
+    inline bool operator!=(void* t) const { return _v != t; };
+    inline T* operator->() { return _v; }
+    inline const T* operator->() const { return _v; }
+    inline T* operator&() { return _v; }
 
     friend std::ostream& operator<<(std::ostream& os, const NRef<T>& g)
     {
@@ -118,70 +115,60 @@ private:
 std::vector<std::string> split(std::string& s, const std::string& delimiter);
 std::vector<std::string> split(std::string& s, const char delimiter);
 
-extern std::string TMP;
-extern std::string USER_DATA;
-extern std::string LIBRARY;
-extern std::string INSTALL_PATH;
-void init_paths(void);
-
-bool is_available(const std::string& author, const std::string& name,
-    const std::string& version);
-bool write_component(const std::string& author, const std::string& name,
-    const std::string& version, const std::string& data);
-std::string read_component(const std::string& author, const std::string& name,
-    const std::string& version);
-
 /******************************************************************************
                                   LOGGING/
 ******************************************************************************/
+
+#include <fstream>
+extern std::optional<std::ofstream> TESTLOG;
+/** Returns whether the logging target supports colors or not. */
+bool is_color_enabled(void);
 
 /** Runs an assertion, displays an error message on failure. Intended for
  * macros. */
 int __expect(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept;
-#define BOLD "\033[1m"
-#define UNDERLINE "\033[4m"
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define BLUE "\033[34m"
-#define RESET "\033[0m"
-#define __S_INFO GREEN "INFO  | " RESET
-#define __S_WARN GREEN "WARN  | " RESET
-#define __S_ERROR RED "ERROR | " RESET
-#define __S_FATAL RED "FATAL | " RESET
-
-inline std::string strlimit(const std::string& input, size_t limit)
-{
-    size_t len = input.length();
-    if (len > limit) { return "..." + input.substr(len - limit + 3, len); }
-    return input;
-}
-
 /** Generates the logger prefix, Intended for macros. */
-inline std::ostream& _log_pre(std::ostream& os, const char* status,
-    const char* file_name, int line, const char* function)
-{
-    std::ostringstream oss {};
-    oss << strlimit(file_name, 20) << ":" << std::left << std::setw(3) << line;
-    std::ostringstream oss2 {};
-    oss2 << UNDERLINE BLUE << strlimit(function, 20) << "()" << RESET;
-    os << BOLD << status << std::left << std::setw(24) << oss.str()
-       << GREEN " | " RESET << std::setw(35) << oss2.str() << GREEN " | " RESET;
-    return os;
-}
+std::ostream& _log_pre(std::ostream& stream, const char* status,
+    const char* file_name, int line, const char* function);
+/** Generates the logger prefix for tests, Intended for macros. */
+std::ostream& _log_pre_f(
+    const char* status, const char* file_name, int line, const char* function);
 
-#define LOG_PRE(STATUS)                                                        \
-    _log_pre(std::cout, (STATUS), __FILE_NAME__, __LINE__, __FUNCTION__) <<
+#define F_BOLD "\033[1m"
+#define F_UNDERLINE "\033[4m"
+#define F_RED "\033[31m"
+#define F_GREEN "\033[32m"
+#define F_BLUE "\033[34m"
+#define F_RESET "\033[0m"
 
-#define CLASS BOLD GREEN << *this << RESET "\t"
+#define _INFO "INFO  | "
+#define _WARN "WARN  | "
+#define _ERROR "ERROR | "
+#define _FATAL "FATAL | "
+#define __F_INFO F_GREEN _INFO F_RESET
+#define __F_WARN F_GREEN _WARN F_RESET
+#define __F_ERROR F_RED _ERROR F_RESET
+#define __F_FATAL F_RED _FATAL F_RESET
 
-#define L_WARN(...) LOG_PRE(__S_WARN) __VA_ARGS__ << std::endl
-#define L_ERROR(...) LOG_PRE(__S_ERROR) __VA_ARGS__ << std::endl
-#define L_FATAL(...)                                                           \
-    LOG_PRE(__S_FATAL) RED BOLD << __VA_ARGS__ << RESET << std::endl
+#define __LLOG_CUSTOM__(status, stream, file, line, function, ...)             \
+    ((_log_pre(stream, (__F_##status), file, line, function)                   \
+         << __VA_ARGS__ << std::endl),                                         \
+        (_log_pre_f((_##status), file, line, function)                         \
+            << __VA_ARGS__ << std::endl))
+
+#define __LLOG__(STATUS, _STREAM, ...)                                         \
+    __LLOG_CUSTOM__(                                                           \
+        STATUS, _STREAM, __FILE_NAME__, __LINE__, __FUNCTION__, __VA_ARGS__)
+
+#define CLASS *this << "\t"
+
+#define L_WARN(...) __LLOG__(WARN, std::cout, __VA_ARGS__)
+#define L_ERROR(...) __LLOG__(ERROR, std::cerr, __VA_ARGS__)
 
 #ifndef NDEBUG
-#define L_INFO(...) LOG_PRE(__S_INFO) __VA_ARGS__ << std::endl
+#define C_INFO()
+#define L_INFO(...) __LLOG__(INFO, std::cout, __VA_ARGS__)
 /** Runs an assertion. Displays an error message on failure. In debug builds
  * also crashes the application. */
 #define lcs_assert(expr)                                                       \
@@ -195,7 +182,7 @@ inline std::ostream& _log_pre(std::ostream& os, const char* status,
 #define L_INFO(...)
 #define lcs_assert(expr)                                                       \
     if ((expr) == 0) {                                                         \
-        L_ERROR(RED BOLD "Assertion " << #expr << " failed!" RESET);           \
+        L_ERROR(F_RED F_BOLD "Assertion " << #expr << " failed!" F_RESET);     \
     }
 #endif
 
@@ -209,3 +196,10 @@ inline std::ostream& _log_pre(std::ostream& os, const char* status,
 /******************************************************************************
                                   /LOGGING
 ******************************************************************************/
+
+inline std::string strlimit(const std::string& input, size_t limit)
+{
+    size_t len = input.length();
+    if (len > limit) { return "..." + input.substr(len - limit + 3, len); }
+    return input;
+}
