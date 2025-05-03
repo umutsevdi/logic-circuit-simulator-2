@@ -17,16 +17,20 @@ template <typename T> Json::Value _to_json(const std::map<node, T>& m)
 Json::Value Scene::to_json(void) const
 {
     Json::Value out { Json::objectValue };
-    out["meta"] = meta.to_json();
-    if (!gates.empty()) { out["nodes"]["gates"] = _to_json<GateNode>(gates); }
+    out = meta.to_json();
+    if (!gates.empty()) {
+        out["nodes"][node_to_str(node_t::GATE)] = _to_json<GateNode>(gates);
+    }
     if (!inputs.empty()) {
-        out["nodes"]["inputs"] = _to_json<InputNode>(inputs);
+        out["nodes"][node_to_str(node_t::INPUT)] = _to_json<InputNode>(inputs);
     }
     if (!outputs.empty()) {
-        out["nodes"]["outputs"] = _to_json<OutputNode>(outputs);
+        out["nodes"][node_to_str(node_t::OUTPUT)]
+            = _to_json<OutputNode>(outputs);
     }
     if (!components.empty()) {
-        out["nodes"]["comp"] = _to_json<ComponentNode>(components);
+        out["nodes"][node_to_str(node_t::COMPONENT)]
+            = _to_json<ComponentNode>(components);
     }
 
     if (!rel.empty()) {
@@ -44,9 +48,8 @@ Json::Value Scene::to_json(void) const
 
 Json::Value node::to_json(void) const
 {
-    Json::Value out { Json::objectValue };
-    out["id"]   = id;
-    out["type"] = node_to_str(type);
+    Json::Value out;
+    out["id"] = std::string { node_to_str(type) } + "@" + std::to_string(id);
     return out;
 }
 
@@ -99,7 +102,7 @@ Json::Value InputNode::to_json(void) const
 Json::Value ComponentNode::to_json(void) const
 {
     Json::Value out = this->BaseNode::to_json();
-    out["depends"]  = path;
+    out["use"]      = path;
     return out;
 }
 

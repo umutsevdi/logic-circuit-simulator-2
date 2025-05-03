@@ -18,16 +18,16 @@ int __expect(std::function<bool(void)> expr, const char* function,
             return 0;
         } else {
             tinyfd_messageBox(_title, s.str().c_str(), "ok", "error", 1);
-            _log_pre(std::cerr, __S_FATAL, file, line, function) << RED BOLD
-                "Assertion " << str_expr << " failed!" RESET << std::endl;
+            _log_pre(std::cerr, __S_FATAL, file, line, function) << F_RED F_BOLD
+                "Assertion " << str_expr << " failed!" F_RESET << std::endl;
         }
     } catch (const std::exception& ex) {
-        _log_pre(std::cerr, __S_FATAL, file, line, function) << RED BOLD
-            "Assertion " << str_expr << " failed!" RESET << std::endl;
+        _log_pre(std::cerr, __S_FATAL, file, line, function) << F_RED F_BOLD
+            "Assertion " << str_expr << " failed!" F_RESET << std::endl;
         tinyfd_messageBox(_title, ex.what(), "ok", "error", 0);
     } catch (const std::string& ex) {
-        _log_pre(std::cerr, __S_FATAL, file, line, function) << RED BOLD
-            "Assertion " << str_expr << " failed!" RESET << std::endl;
+        _log_pre(std::cerr, __S_FATAL, file, line, function) << F_RED F_BOLD
+            "Assertion " << str_expr << " failed!" F_RESET << std::endl;
         tinyfd_messageBox(_title, ex.c_str(), "ok", "error", 0);
     }
     return 1;

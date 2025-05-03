@@ -178,17 +178,17 @@ direction_t str_to_dir(const std::string& dir)
 node_t str_to_node(const std::string& n)
 {
 
-    if (n == "GATE") {
+    if (n == "gate") {
         return node_t::GATE;
-    } else if (n == "COMPONENT") {
+    } else if (n == "comp") {
         return node_t::COMPONENT;
-    } else if (n == "INPUT") {
+    } else if (n == "in") {
         return node_t::INPUT;
-    } else if (n == "OUTPUT") {
+    } else if (n == "out") {
         return node_t::OUTPUT;
-    } else if (n == "COMPIN") {
+    } else if (n == "cin") {
         return node_t::COMPONENT_INPUT;
-    } else if (n == "COMPOUT") {
+    } else if (n == "cout") {
         return node_t::COMPONENT_OUTPUT;
     }
     return node_t::NODE_S;

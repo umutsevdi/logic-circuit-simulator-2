@@ -113,13 +113,13 @@ enum node_t : uint8_t {
 constexpr const char* node_to_str(node_t s)
 {
     switch (s) {
-    case node_t::GATE: return "GATE";
-    case node_t::COMPONENT: return "COMPONENT";
-    case node_t::INPUT: return "INPUT";
-    case node_t::OUTPUT: return "OUTPUT";
-    case node_t::COMPONENT_INPUT: return "COMPIN";
-    case node_t::COMPONENT_OUTPUT: return "COMPOUT";
-    default: return "UNKNOWN";
+    case node_t::GATE: return "gate";
+    case node_t::COMPONENT: return "comp";
+    case node_t::INPUT: return "in";
+    case node_t::OUTPUT: return "out";
+    case node_t::COMPONENT_INPUT: return "cin";
+    case node_t::COMPONENT_OUTPUT: return "cout";
+    default: return "unknown";
     }
 }
 

@@ -282,7 +282,7 @@ void Scene::signal(relid id, state_t value)
 std::ostream& operator<<(std::ostream& os, const Scene& s)
 {
     std::string d_str {};
-    os << "SCENE" << (s.component_context.has_value() ? "[C]" : "[S]") << "{"
+    os << "scene" << (s.component_context.has_value() ? "[C]" : "[S]") << "{"
        << strlimit(s.meta.to_dependency_string(), 15) << "}";
     if (s.component_context.has_value()) {
         os << "[" << s.component_context->inputs.size() << ", "

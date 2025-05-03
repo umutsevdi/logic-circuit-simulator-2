@@ -139,16 +139,16 @@ std::string read_component(const std::string& author, const std::string& name,
  * macros. */
 int __expect(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept;
-#define BOLD "\033[1m"
-#define UNDERLINE "\033[4m"
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define BLUE "\033[34m"
-#define RESET "\033[0m"
-#define __S_INFO GREEN "INFO  | " RESET
-#define __S_WARN GREEN "WARN  | " RESET
-#define __S_ERROR RED "ERROR | " RESET
-#define __S_FATAL RED "FATAL | " RESET
+#define F_BOLD "\033[1m"
+#define F_UNDERLINE "\033[4m"
+#define F_RED "\033[31m"
+#define F_GREEN "\033[32m"
+#define F_BLUE "\033[34m"
+#define F_RESET "\033[0m"
+#define __S_INFO F_GREEN "INFO  | " F_RESET
+#define __S_WARN F_GREEN "WARN  | " F_RESET
+#define __S_ERROR F_RED "ERROR | " F_RESET
+#define __S_FATAL F_RED "FATAL | " F_RESET
 
 inline std::string strlimit(const std::string& input, size_t limit)
 {
@@ -164,21 +164,22 @@ inline std::ostream& _log_pre(std::ostream& os, const char* status,
     std::ostringstream oss {};
     oss << strlimit(file_name, 20) << ":" << std::left << std::setw(3) << line;
     std::ostringstream oss2 {};
-    oss2 << UNDERLINE BLUE << strlimit(function, 20) << "()" << RESET;
-    os << BOLD << status << std::left << std::setw(24) << oss.str()
-       << GREEN " | " RESET << std::setw(35) << oss2.str() << GREEN " | " RESET;
+    oss2 << F_UNDERLINE F_BLUE << strlimit(function, 20) << "()" << F_RESET;
+    os << F_BOLD << status << std::left << std::setw(24) << oss.str()
+       << F_GREEN " | " F_RESET << std::setw(35) << oss2.str()
+       << F_GREEN " | " F_RESET;
     return os;
 }
 
 #define LOG_PRE(STATUS)                                                        \
     _log_pre(std::cout, (STATUS), __FILE_NAME__, __LINE__, __FUNCTION__) <<
 
-#define CLASS BOLD GREEN << *this << RESET "\t"
+#define CLASS F_BOLD F_GREEN << *this << F_RESET "\t"
 
 #define L_WARN(...) LOG_PRE(__S_WARN) __VA_ARGS__ << std::endl
 #define L_ERROR(...) LOG_PRE(__S_ERROR) __VA_ARGS__ << std::endl
 #define L_FATAL(...)                                                           \
-    LOG_PRE(__S_FATAL) RED BOLD << __VA_ARGS__ << RESET << std::endl
+    LOG_PRE(__S_FATAL) F_RED F_BOLD << __VA_ARGS__ << F_RESET << std::endl
 
 #ifndef NDEBUG
 #define L_INFO(...) LOG_PRE(__S_INFO) __VA_ARGS__ << std::endl
@@ -195,7 +196,7 @@ inline std::ostream& _log_pre(std::ostream& os, const char* status,
 #define L_INFO(...)
 #define lcs_assert(expr)                                                       \
     if ((expr) == 0) {                                                         \
-        L_ERROR(RED BOLD "Assertion " << #expr << " failed!" RESET);           \
+        L_ERROR(F_RED F_BOLD "Assertion " << #expr << " failed!" F_RESET);     \
     }
 #endif
 
