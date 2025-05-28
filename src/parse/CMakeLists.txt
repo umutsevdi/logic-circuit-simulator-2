@@ -1,5 +1,0 @@
-file(GLOB PARSE_RES ./*.cpp)
-include_directories(../include/)
-include_directories(external/jsoncpp/include)
-add_library(parse ${PARSE_RES})
-target_link_libraries(parse core common jsoncpp_static)

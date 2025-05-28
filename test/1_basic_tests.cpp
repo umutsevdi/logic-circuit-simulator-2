@@ -1,6 +1,6 @@
+#include "common.h"
 #include "core.h"
 #include "test_util.h"
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 using namespace lcs;
 

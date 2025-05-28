@@ -1,13 +1,14 @@
 #include "core.h"
+#include "io.h"
 #include "test_util.h"
 #include <doctest.h>
 #include <json/json.h>
 
 using namespace lcs;
 
-TEST_CASE("Parse JSON subnodes")
+TEST_CASE("parse JSON subnodes")
 {
-    Scene s { "Parse JSON subnodes" };
+    Scene s { "parse JSON subnodes" };
 
     auto g_or  = s.add_node<GateNode>(gate_t::OR);
     auto g_and = s.add_node<GateNode>(gate_t::AND);
@@ -28,9 +29,9 @@ TEST_CASE("Parse JSON subnodes")
     REQUIRE(!v.empty());
 }
 
-TEST_CASE("Parse non-zero context")
+TEST_CASE("parse non-zero context")
 {
-    Scene s { "Parse non-zero context" };
+    Scene s { "parse non-zero context" };
 
     auto g_and = s.add_node<GateNode>(gate_t::AND);
     auto v1    = s.add_node<InputNode>();
@@ -58,7 +59,7 @@ TEST_CASE("Save, load and compare")
 
     std::string scene_str = s.to_json().toStyledString();
     Scene s_loaded;
-    REQUIRE_EQ(parse::load_scene(scene_str, s_loaded), lcs::error_t::OK);
+    REQUIRE_EQ(io::load(scene_str, s_loaded), lcs::error_t::OK);
 
     std::string scene_loaded_str = s_loaded.to_json().toStyledString();
 
@@ -77,7 +78,7 @@ TEST_CASE("Save a complicated JSON, load and run the tests")
     Scene s_loaded {};
 
     Json::Value doc;
-    REQUIRE_EQ(parse::load_scene(s_str, s_loaded), lcs::error_t::OK);
+    REQUIRE_EQ(io::load(s_str, s_loaded), lcs::error_t::OK);
     s_loaded.get_node<InputNode>(a)->set(true);
     s_loaded.get_node<InputNode>(b)->set(false);
     s_loaded.get_node<InputNode>(c_in)->set(false);
@@ -123,7 +124,7 @@ TEST_CASE("Save a component, reload and run")
 
     std::string s_str = s.to_json().toStyledString();
     Scene s_loaded {};
-    REQUIRE_EQ(parse::load_scene(s_str, s_loaded), lcs::error_t::OK);
+    REQUIRE_EQ(io::load(s_str, s_loaded), lcs::error_t::OK);
     REQUIRE_EQ(s_str, s_loaded.to_json().toStyledString());
     REQUIRE_EQ(s_loaded.component_context->run(0b111), 1);
     REQUIRE_EQ(s_loaded.component_context->run(0b110), 0);
@@ -148,18 +149,18 @@ TEST_CASE("Save a simple component, and use it in a scene")
     REQUIRE_EQ(s.component_context->run(0b10), 0);
     REQUIRE_EQ(s.component_context->run(0b01), 0);
     REQUIRE_EQ(s.component_context->run(0b00), 0);
-    std::string dependency = s.meta.to_dependency_string();
-    REQUIRE_EQ(sys::load_component(dependency, s.to_json().toStyledString()),
+    std::string dependency = s.to_dependency();
+    REQUIRE_EQ(io::component::fetch(dependency, s.to_json().toStyledString()),
         lcs::error_t::OK);
-    REQUIRE(sys::get_dependency(dependency) != nullptr);
-    REQUIRE_EQ(sys::run_component(dependency, 0b11), 1);
-    REQUIRE_EQ(sys::run_component(dependency, 0b10), 0);
-    REQUIRE_EQ(sys::run_component(dependency, 0b01), 0);
-    REQUIRE_EQ(sys::run_component(dependency, 0b00), 0);
+    REQUIRE(io::component::get(dependency) != nullptr);
+    REQUIRE_EQ(io::component::run(dependency, 0b11), 1);
+    REQUIRE_EQ(io::component::run(dependency, 0b10), 0);
+    REQUIRE_EQ(io::component::run(dependency, 0b01), 0);
+    REQUIRE_EQ(io::component::run(dependency, 0b00), 0);
 
     Scene s2 {};
-    s2.meta.dependencies.push_back(dependency);
-    s2.meta.load_dependencies();
+    s2.dependencies.push_back(dependency);
+    s2.load_dependencies();
 
     node component = s2.add_node<ComponentNode>(dependency);
     node i1        = s2.add_node<InputNode>();
@@ -184,18 +185,18 @@ TEST_CASE("Save a component, load it to a scene")
     node c_out          = s.component_context->get_output(1);
     _create_full_adder(s);
 
-    std::string dependency = s.meta.to_dependency_string();
-    REQUIRE_EQ(sys::load_component(dependency, s.to_json().toStyledString()),
+    std::string dependency = s.to_dependency();
+    REQUIRE_EQ(io::component::fetch(dependency, s.to_json().toStyledString()),
         lcs::error_t::OK);
 
     Scene s2 {};
-    s2.meta.dependencies.push_back(s.meta.to_dependency_string());
-    REQUIRE(s2.meta.load_dependencies() == lcs::error_t::OK);
-    REQUIRE(s2.meta.dependencies.size() > 0);
+    s2.dependencies.push_back(s.to_dependency());
+    REQUIRE(s2.load_dependencies() == lcs::error_t::OK);
+    REQUIRE(s2.dependencies.size() > 0);
 
-    node cnode = s2.add_node<ComponentNode>(s.meta.to_dependency_string());
+    node cnode = s2.add_node<ComponentNode>(s.to_dependency());
     REQUIRE_GT(cnode.id, 0);
-    REQUIRE_EQ(sys::run_component(dependency, 0b011), 0b10);
+    REQUIRE_EQ(io::component::run(dependency, 0b011), 0b10);
 
     node i1 = s2.add_node<InputNode>();
     node i2 = s2.add_node<InputNode>();
@@ -249,14 +250,14 @@ TEST_CASE("Load a component to a scene, then update component(out)")
     s.connect(g_or, 1, s.component_context->get_input(1));
     s.connect(s.component_context->get_output(0), 0, g_and);
     s.connect(s.component_context->get_output(1), 0, g_or);
+    std::string component_name = s.to_dependency();
+    io::component::fetch(component_name, s.to_json().toStyledString());
 
-    sys::load_component(
-        s.meta.to_dependency_string(), s.to_json().toStyledString());
     Scene s2 {};
-    s2.meta.dependencies.push_back(s.meta.to_dependency_string());
-    s2.meta.load_dependencies();
+    s2.dependencies.push_back(component_name);
+    s2.load_dependencies();
 
-    node c  = s2.add_node<ComponentNode>(s.meta.to_dependency_string());
+    node c  = s2.add_node<ComponentNode>(component_name);
     node i1 = s2.add_node<InputNode>();
     node i2 = s2.add_node<InputNode>();
     node o1 = s2.add_node<OutputNode>();
@@ -293,8 +294,8 @@ TEST_CASE("Load a component to a scene, then update component(out)")
     s.component_context->setup(2, 3);
     REQUIRE(s.connect(g_not, 0, s.component_context->get_input(0)));
     REQUIRE(s.connect(s.component_context->get_output(2), 0, g_not));
-    REQUIRE_EQ(sys::load_component(
-                   s.meta.to_dependency_string(), s.to_json().toStyledString()),
+    REQUIRE_EQ(io::component::fetch(
+                   component_name, s.to_json().toStyledString(), true),
         0);
     node o3 = s2.add_node<OutputNode>();
     REQUIRE(s2.connect(o3, 0, c, 2));
