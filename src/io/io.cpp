@@ -156,6 +156,21 @@ namespace scene {
         return error_t::OK;
     }
 
+    void notify_change(size_t idx)
+    {
+        if (idx == SIZE_MAX) { idx = active_scene; }
+        lcs_assert(idx < SCENE_STORAGE.size());
+        Inode& inode   = SCENE_STORAGE[idx];
+        inode.is_saved = false;
+    }
+
+    bool is_saved(size_t idx)
+    {
+        if (idx == SIZE_MAX) { idx = active_scene; }
+        lcs_assert(idx < SCENE_STORAGE.size());
+        return SCENE_STORAGE[idx].is_saved;
+    }
+
     error_t save(size_t idx)
     {
         if (idx == SIZE_MAX) { idx = active_scene; }
@@ -171,7 +186,7 @@ namespace scene {
         }
 
         if (!write(inode.path, inode.scene.to_json().toStyledString())) {
-            return ERROR(error_t::FAILED_TO_SAVE);
+            return ERROR(error_t::NO_SAVE_PATH_DEFINED);
         }
         inode.is_saved = true;
         // Reload component storage if saved scene is a component
@@ -203,7 +218,8 @@ namespace scene {
     NRef<Scene> get(size_t idx)
     {
         if (idx == SIZE_MAX) { idx = active_scene; }
-        lcs_assert(idx < SCENE_STORAGE.size());
+        if (idx >= SCENE_STORAGE.size()) { return nullptr; }
+        active_scene = idx;
         return &SCENE_STORAGE[idx].scene;
     }
 
@@ -211,6 +227,20 @@ namespace scene {
     {
         SCENE_STORAGE.emplace_back(false, "", Scene { name });
         return SCENE_STORAGE.size() - 1;
+    }
+
+    void iterate(std::function<bool(
+            size_t idx, const std::string& path, bool is_saved, bool is_active)>
+            run)
+    {
+        size_t updated_scene = active_scene;
+        for (size_t i = 0; i < SCENE_STORAGE.size(); i++) {
+            if (run(i, SCENE_STORAGE[i].path, SCENE_STORAGE[i].is_saved,
+                    i == active_scene)) {
+                updated_scene = i;
+            };
+        }
+        active_scene = updated_scene;
     }
 
 } // namespace scene

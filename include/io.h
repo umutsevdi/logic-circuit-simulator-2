@@ -107,11 +107,19 @@ namespace io {
         error_t open(const std::string& path, size_t& idx);
 
         /**
+         * Alerts the component cache about changes in a scene.
+         * @param idx to update
+         */
+        void notify_change(size_t idx = SIZE_MAX);
+
+        bool is_saved(size_t idx = SIZE_MAX);
+
+        /**
          * Updates the contents of given scene.
          * @param idx index of the scene, active scene if not provided
          * @returns Error on failure:
          *
-         * - error_t::FAILED_TO_SAVE
+         * - error_t::NO_SAVE_PATH_DEFINED
          */
         error_t save(size_t idx = SIZE_MAX);
 
@@ -121,7 +129,7 @@ namespace io {
          * @param idx index of the scene, active scene if not provided
          * @returns Error on failure:
          *
-         * - error_t::FAILED_TO_SAVE
+         * - error_t::NO_SAVE_PATH_DEFINED
          */
         error_t save_as(const std::string& new_path, size_t idx = SIZE_MAX);
 
@@ -145,6 +153,19 @@ namespace io {
          * @returns scene index
          */
         size_t create(const std::string& name);
+
+        /**
+         * Iterate over all opened scenes and perform an action
+         * @param run method to execute
+         *  > idx - index of the scene
+         *  > path - path to the scene, empty string if unsaved
+         *  > is_saved - whether the scene is saved or not
+         *  > is_active - whether current scene is active
+         *  > returns true current scene should be active
+         */
+        void iterate(std::function<bool(size_t idx, const std::string& path,
+                bool is_saved, bool is_active)>
+                run);
 
     } // namespace scene
 

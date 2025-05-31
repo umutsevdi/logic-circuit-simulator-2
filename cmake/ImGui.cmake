@@ -20,6 +20,7 @@ if(LCS_GUI)
     )
     target_link_libraries(imgui glfw OpenGL::GL)
 
-
-
+    set(IMNODES_IMGUI_TARGET_NAME imgui)
+    include_directories(external/imnodes)
+    add_subdirectory(external/imnodes)
 endif()

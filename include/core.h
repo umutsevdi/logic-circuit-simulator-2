@@ -22,7 +22,7 @@ namespace lcs {
 class Scene;
 
 /** id type for socket, sock_t = 0 means disconnected */
-typedef uint16_t sockid;
+typedef uint8_t sockid;
 
 /** Relationship identifier. Id is a non-zero identifier. */
 typedef uint32_t relid;
@@ -78,8 +78,9 @@ struct node final : public io::Serializable {
     /* Serializable interface */
     Json::Value to_json(void) const override;
     error_t from_json(const Json::Value&) override;
+    inline uint32_t numeric(void) const { return id | (type << 16); }
 
-    uint32_t id : 24;
+    uint32_t id : 16;
     node_t type : 8;
 };
 
@@ -581,6 +582,12 @@ public:
     std::vector<std::string> dependencies;
     std::optional<ComponentContext> component_context;
 
+    std::map<node, GateNode> _gates;
+    std::map<node, ComponentNode> _components;
+    std::map<node, InputNode> _inputs;
+    std::map<node, OutputNode> _outputs;
+    std::map<relid, Rel> _relations;
+
 private:
     /** The helper method for move constructor and move assignment */
     void _move_from(Scene&&);
@@ -607,11 +614,6 @@ private:
     error_t _connect_with_id(relid id, node to_node, sockid to_sock,
         node from_node, sockid from_sock = 0);
 
-    std::map<node, GateNode> _gates;
-    std::map<node, ComponentNode> _components;
-    std::map<node, InputNode> _inputs;
-    std::map<node, OutputNode> _outputs;
-    std::map<relid, Rel> _relations;
     node _last_node[node_t::NODE_S];
     relid _last_rel;
 };

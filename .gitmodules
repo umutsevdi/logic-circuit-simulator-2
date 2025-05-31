@@ -20,3 +20,6 @@
 [submodule "external/cpp-base64"]
 	path = external/cpp-base64
 	url = https://github.com/ReneNyffenegger/cpp-base64.git
+[submodule "external/imnodes"]
+	path = external/imnodes
+	url = https://github.com/Nelarius/imnodes.git
