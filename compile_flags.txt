@@ -16,3 +16,5 @@ external/imgui
 external/imgui/backends
 -I
 external/cpp-base64
+-I
+external/imnodes/

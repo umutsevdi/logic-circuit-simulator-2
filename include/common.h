@@ -66,7 +66,7 @@ enum error_t {
     /** No such file or directory in given path */
     NOT_FOUND,
     /** Failed to save file*/
-    FAILED_TO_SAVE,
+    NO_SAVE_PATH_DEFINED,
     CYCLIC_DEPENDENCY,
 };
 

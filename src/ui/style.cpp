@@ -1,3 +1,4 @@
+#include "imnodes.h"
 #include "ui.h"
 
 #include "common.h"
@@ -135,5 +136,9 @@ void set_style(ImGuiIO& io, int alpha, bool& is_dark)
         }
     }
     _init_fonts(io);
+    ImNodes::PushColorStyle(
+        ImNodesCol_LinkSelected, IM_COL32(255, 255, 255, 255));
+    ImNodes::PushColorStyle(
+        ImNodesCol_LinkHovered, IM_COL32(200, 200, 200, 255));
 }
 } // namespace lcs::ui
