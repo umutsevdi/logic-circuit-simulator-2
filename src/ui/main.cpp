@@ -95,6 +95,7 @@ namespace ui {
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         (void)io;
+        ui::before(io);
         io.ConfigFlags
             |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
         io.ConfigFlags
@@ -213,6 +214,7 @@ namespace ui {
 #ifdef __EMSCRIPTEN__
         EMSCRIPTEN_MAINLOOP_END;
 #endif
+        ui::after(io);
 
         // Cleanup
         ImGui_ImplOpenGL3_Shutdown();

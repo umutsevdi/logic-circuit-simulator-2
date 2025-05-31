@@ -107,6 +107,14 @@ namespace io {
         error_t open(const std::string& path, size_t& idx);
 
         /**
+         * Alerts the component cache about changes in a scene.
+         * @param idx to update
+         */
+        void notify_change(size_t idx = SIZE_MAX);
+
+        bool is_saved(size_t idx = SIZE_MAX);
+
+        /**
          * Updates the contents of given scene.
          * @param idx index of the scene, active scene if not provided
          * @returns Error on failure:

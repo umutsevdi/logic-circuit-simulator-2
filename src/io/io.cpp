@@ -156,6 +156,21 @@ namespace scene {
         return error_t::OK;
     }
 
+    void notify_change(size_t idx)
+    {
+        if (idx == SIZE_MAX) { idx = active_scene; }
+        lcs_assert(idx < SCENE_STORAGE.size());
+        Inode& inode   = SCENE_STORAGE[idx];
+        inode.is_saved = false;
+    }
+
+    bool is_saved(size_t idx)
+    {
+        if (idx == SIZE_MAX) { idx = active_scene; }
+        lcs_assert(idx < SCENE_STORAGE.size());
+        return SCENE_STORAGE[idx].is_saved;
+    }
+
     error_t save(size_t idx)
     {
         if (idx == SIZE_MAX) { idx = active_scene; }
@@ -203,7 +218,7 @@ namespace scene {
     NRef<Scene> get(size_t idx)
     {
         if (idx == SIZE_MAX) { idx = active_scene; }
-        lcs_assert(idx < SCENE_STORAGE.size());
+        if (idx >= SCENE_STORAGE.size()) { return nullptr; }
         return &SCENE_STORAGE[idx].scene;
     }
 
