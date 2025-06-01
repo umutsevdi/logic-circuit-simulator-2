@@ -10,14 +10,13 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "core.h"
-#include "imnodes.h"
-#include "io.h"
 #include <cmath>
 #include <cstdint>
-namespace lcs::ui {
+#include <imnodes.h>
 
-extern bool _first_time;
+#include "core.h"
+#include "io.h"
+namespace lcs::ui {
 
 int _hash_node_sock_pair(node node, sockid sock);
 
@@ -28,11 +27,11 @@ public:
     NodeView(NodeView&&) = default;
     NodeView() { }
 
-    void show_node(void)
+    void show_node(bool first_time)
     {
         uint32_t node_id = node->id().numeric();
         ImNodes::BeginNode(node_id);
-        if (_first_time) {
+        if (first_time) {
             ImNodes::SetNodeGridSpacePos(
                 node_id, { (float)node->point.x, (float)node->point.y });
         } else {

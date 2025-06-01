@@ -2,18 +2,15 @@
 #include <imnodes.h>
 #include <tinyfiledialogs.h>
 
-#include "core.h"
-#include "io.h"
-#include "nodes.hpp"
 #include "ui.h"
+#include "ui/layout.h"
+#include "ui/nodes.h"
 
 static bool show_demo_window = true;
 ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 float f;
 
-static const char* _PATH_FILTER[1] = { "*.json" };
 namespace lcs::ui {
-bool _first_time = true;
 
 constexpr ImVec4 node_to_color(node_t type)
 {
@@ -82,39 +79,37 @@ void before(ImGuiIO&) { ImNodes::CreateContext(); }
 
 bool loop(ImGuiIO& io)
 {
-    NRef<Scene> scene = io::scene::get();
-    if (scene == nullptr) {
-        const char* path = tinyfd_openFileDialog("Select a scene",
-            io::LIBRARY.c_str(), 1, _PATH_FILTER, "LCS Scene File", 0);
-
-        if (path != nullptr) {
-            size_t idx;
-            error_t err = io::scene::open(path, idx);
-            if (err) { ERROR(err); }
-        }
-        return true;
-    }
+    ImGui::PushFont(get_font(font_flags_t::NORMAL));
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse
         | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings
-        | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing;
-    flags |= io::scene::is_saved() ? 0 : ImGuiWindowFlags_UnsavedDocument;
+        | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing
+        | ImGuiWindowFlags_NoTitleBar;
+    MenuBar();
     ImVec2 app_size = io.DisplaySize;
-    ImGui::Begin(scene->name.c_str(), nullptr, flags);
+    ImGui::Begin("Node Editor", nullptr, flags);
     ImGui::SetWindowSize(ImVec2 { app_size.x * 0.85f, app_size.y * 0.85f });
-    ImGui::SetWindowPos(ImVec2 { app_size.x * 0.0f, app_size.y * 0.0f });
-
+    ImGui::SetWindowPos(
+        ImVec2 { app_size.x * 0.0f, app_size.y * 0.0f + 20.0f });
+    bool scene_changed = TabWindow();
     ImNodes::BeginNodeEditor();
+    NRef<Scene> scene = io::scene::get();
+    if (scene == nullptr) {
+        ImNodes::EndNodeEditor();
+        ImGui::End();
+        ImGui::PopFont();
+        return true;
+    }
     for (auto& out : scene->_inputs) {
-        NodeView<InputNode>(&out.second).show_node();
+        NodeView<InputNode>(&out.second).show_node(scene_changed);
     }
     for (auto& out : scene->_outputs) {
-        NodeView<OutputNode>(&out.second).show_node();
+        NodeView<OutputNode>(&out.second).show_node(scene_changed);
     }
     for (auto& out : scene->_gates) {
-        NodeView<GateNode>(&out.second).show_node();
+        NodeView<GateNode>(&out.second).show_node(scene_changed);
     }
     for (auto& out : scene->_components) {
-        NodeView<ComponentNode>(&out.second).show_node();
+        NodeView<ComponentNode>(&out.second).show_node(scene_changed);
     }
     for (auto& r : scene->_relations) {
         ImNodes::PushColorStyle(ImNodesCol_Link,
@@ -199,6 +194,7 @@ bool loop(ImGuiIO& io)
     }
 
     ImGui::End();
+    ImGui::PopFont();
 
     ImGui::Begin("Font Window");
     ImGui::PushFont(get_font(SMALL | ITALIC));
@@ -232,7 +228,6 @@ bool loop(ImGuiIO& io)
         1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
 
-    _first_time = false;
     return show_demo_window;
 }
 

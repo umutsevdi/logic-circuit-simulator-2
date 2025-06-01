@@ -10,7 +10,6 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "core.h"
 #include <imgui.h>
 
 namespace lcs {

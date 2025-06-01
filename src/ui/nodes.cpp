@@ -1,6 +1,7 @@
-#include "nodes.hpp"
-#include "ui.h"
 #include <imgui.h>
+
+#include "ui/nodes.h"
+#include "ui.h"
 
 namespace lcs::ui {
 
@@ -80,20 +81,16 @@ template <> void NodeView<ComponentNode>::_set_outputs(void) { }
 
 template <> void NodeView<ComponentNode>::_show_node_window(void) { }
 template <> void NodeView<GateNode>::_show_node_window(void) { }
-template <> void NodeView<OutputNode>::_show_node_window(void) {
-
-
-}
+template <> void NodeView<OutputNode>::_show_node_window(void) { }
 template <> void NodeView<InputNode>::_show_node_window(void)
 {
-    ImGuiIO& io   = ImGui::GetIO();
+    ImGuiIO& io     = ImGui::GetIO();
     ImVec2 app_size = io.DisplaySize;
     ImGui::Begin("ShowSelectDisplay", nullptr,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
             | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings
             | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing);
-    ImGui::SetWindowSize(
-        ImVec2 { app_size.x * 0.15f, app_size.y * 0.2f });
+    ImGui::SetWindowSize(ImVec2 { app_size.x * 0.15f, app_size.y * 0.2f });
     ImGui::SetWindowPos(ImVec2 { app_size.x * 0.85f, app_size.y * 0.8f });
     ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::LARGE));
     ImGui::Text("Node %s@%ul", node_to_str(node->id().type), node->id().id);
@@ -121,4 +118,6 @@ template <> void NodeView<InputNode>::_show_node_window(void)
     //  node_to_title(r->to_node, r->to_sock);
     ImGui::End();
 }
+
 } // namespace lcs::ui
+  //
