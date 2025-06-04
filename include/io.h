@@ -37,19 +37,19 @@ namespace io {
          * Reads contents of the document and updates its fields.
          * @returns Error on failure:
          *
-         *  - error_t::INVALID_SCENE
-         *  - error_t::REL_CONNECT_ERROR
-         *  - error_t::UNDEFINED_DEPENDENCY
-         *  - error_t::INVALID_NODE
-         *  - error_t::INVALID_NODE
-         *  - error_t::INVALID_NODE
-         *  - error_t::INVALID_COMPONENT
-         *  - error_t::INVALID_INPUT
-         *  - error_t::INVALID_COMPONENT
-         *  - error_t::INVALID_GATE
-         *  - error_t::INVALID_JSON_FORMAT
+         *  - Error::INVALID_SCENE
+         *  - Error::REL_CONNECT_ERROR
+         *  - Error::UNDEFINED_DEPENDENCY
+         *  - Error::INVALID_NODE
+         *  - Error::INVALID_NODE
+         *  - Error::INVALID_NODE
+         *  - Error::INVALID_COMPONENT
+         *  - Error::INVALID_INPUT
+         *  - Error::INVALID_COMPONENT
+         *  - Error::INVALID_GATE
+         *  - Error::INVALID_JSON_FORMAT
          */
-        virtual error_t from_json(const Json::Value&) = 0;
+        virtual Error from_json(const Json::Value&) = 0;
     };
 
     /**
@@ -82,12 +82,12 @@ namespace io {
      * @param scene to update
      * @returns Error on failure:
      *
-     * - error_t::NOT_FOUND
-     * - error_t::INVALID_JSON_FORMAT
+     * - Error::NOT_FOUND
+     * - Error::INVALID_JSON_FORMAT
      * - Serializable::from_json
      *
      */
-    error_t load(const std::string& data, Scene& scene);
+    Error load(const std::string& data, Scene& scene);
 
     /***************************************************************************
                                         Scene
@@ -104,7 +104,7 @@ namespace io {
          *
          * - io::load
          */
-        error_t open(const std::string& path, size_t& idx);
+        Error open(const std::string& path, size_t& idx);
 
         /**
          * Alerts the component cache about changes in a scene.
@@ -119,9 +119,9 @@ namespace io {
          * @param idx index of the scene, active scene if not provided
          * @returns Error on failure:
          *
-         * - error_t::NO_SAVE_PATH_DEFINED
+         * - Error::NO_SAVE_PATH_DEFINED
          */
-        error_t save(size_t idx = SIZE_MAX);
+        Error save(size_t idx = SIZE_MAX);
 
         /**
          * Updates the contents of given scene.
@@ -129,16 +129,16 @@ namespace io {
          * @param idx index of the scene, active scene if not provided
          * @returns Error on failure:
          *
-         * - error_t::NO_SAVE_PATH_DEFINED
+         * - Error::NO_SAVE_PATH_DEFINED
          */
-        error_t save_as(const std::string& new_path, size_t idx = SIZE_MAX);
+        Error save_as(const std::string& new_path, size_t idx = SIZE_MAX);
 
         /**
          * Closes the scene with selected path, erasing from memory.
          * @param idx index of the scene, active scene if not provided
-         * @returns error_t::OK
+         * @returns Error::OK
          */
-        error_t close(size_t idx = SIZE_MAX);
+        Error close(size_t idx = SIZE_MAX);
 
         /**
          * Selects a scene as current.
@@ -148,25 +148,38 @@ namespace io {
         NRef<Scene> get(size_t idx = SIZE_MAX);
 
         /**
+         * Runs a single frame to update values of selected scene and it's
+         * dependency's clocks.
+         * @param idx to select
+         */
+        void run_frame(size_t idx = SIZE_MAX);
+
+        /**
          * Creates an empty scene with given name
-         * @name Scene name
+         * @param name Scene name
+         * @param author Scene author
+         * @param description Scene description
+         * @param version Scene version
          * @returns scene index
          */
-        size_t create(const std::string& name);
+        size_t create(const std::string& name = "",
+            const std::string& author = "", const std::string& description = "",
+            int version = 1);
 
         /**
          * Iterate over all opened scenes and perform an action
          * @param run method to execute
-         *  > idx - index of the scene
+         *  > name - name of the scene
          *  > path - path to the scene, empty string if unsaved
          *  > is_saved - whether the scene is saved or not
          *  > is_active - whether current scene is active
          *  > returns true current scene should be active
          */
-        void iterate(std::function<bool(size_t idx, const std::string& path,
-                bool is_saved, bool is_active)>
+        void iterate(std::function<bool(std::string_view name,
+                std::string_view path, bool is_saved, bool is_active)>
                 run);
 
+        bool first_frame(void);
     } // namespace scene
 
     /***************************************************************************
@@ -182,10 +195,10 @@ namespace io {
          * @param invalidate whether it should invalidate cache or not
          * @returns Error on failure:
          *
-         * - error_t::NOT_A_COMPONENT
+         * - Error::NOT_A_COMPONENT
          * - io::load
          */
-        error_t fetch(const std::string& name, bool invalidate = false);
+        Error fetch(const std::string& name, bool invalidate = false);
 
         /**
          * Fetches a component from given JSON document.
@@ -194,10 +207,10 @@ namespace io {
          * @param invalidate whether it should invalidate cache or not
          * @returns Error on failure:
          *
-         * - error_t::NOT_A_COMPONENT
+         * - Error::NOT_A_COMPONENT
          * - io::load
          */
-        error_t fetch(const std::string& name, const std::string& data,
+        Error fetch(const std::string& name, const std::string& data,
             bool invalidate = false);
 
         /**

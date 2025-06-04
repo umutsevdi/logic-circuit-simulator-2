@@ -10,11 +10,11 @@ TEST_CASE("Basic Connect/Disconnect/Reconnect Test")
     auto r = s.connect(o, 0, v);
     REQUIRE(r);
     s.get_node<InputNode>(v)->set(true);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
     s.disconnect(r);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::DISABLED);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
     REQUIRE(s.connect(o, 0, v) != 0);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
 }
 
 TEST_CASE("Early Disconnect Test")
@@ -23,7 +23,7 @@ TEST_CASE("Early Disconnect Test")
     auto v     = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto o     = s.add_node<OutputNode>();
-    auto g_and = s.add_node<GateNode>(gate_t::AND);
+    auto g_and = s.add_node<GateNode>(GateType::AND);
 
     auto r = s.connect(g_and, 0, v);
     REQUIRE(r);
@@ -31,18 +31,18 @@ TEST_CASE("Early Disconnect Test")
     REQUIRE(s.connect(o, 0, g_and));
     s.get_node<InputNode>(v)->set(true);
     s.get_node<InputNode>(v2)->set(true);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
     s.disconnect(r);
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::DISABLED);
-    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), state_t::DISABLED);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
+    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), State::DISABLED);
 }
 
 TEST_CASE("Gate State Change After Disconnect")
 {
     Scene s;
-    auto g_or  = s.add_node<GateNode>(gate_t::OR);
-    auto g_and = s.add_node<GateNode>(gate_t::AND);
+    auto g_or  = s.add_node<GateNode>(GateType::OR);
+    auto g_and = s.add_node<GateNode>(GateType::AND);
     auto v1    = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto v3    = s.add_node<InputNode>();
@@ -58,12 +58,12 @@ TEST_CASE("Gate State Change After Disconnect")
     s.get_node<InputNode>(v2)->set(false);
     s.get_node<InputNode>(v3)->set(true);
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
 
     s.disconnect(s.connect(g_or, 0, v1));
     s.get_node<InputNode>(v1)->set(false);
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::FALSE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::FALSE);
 }
 
 TEST_CASE("Invalid Connection Attempt")
@@ -82,7 +82,7 @@ TEST_CASE("Invalid Connection Attempt")
 TEST_CASE("Reconnect After Multiple Disconnections")
 {
     Scene s;
-    auto g_and = s.add_node<GateNode>(gate_t::AND);
+    auto g_and = s.add_node<GateNode>(GateType::AND);
     auto v1    = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto o     = s.add_node<OutputNode>();
@@ -96,21 +96,21 @@ TEST_CASE("Reconnect After Multiple Disconnections")
 
     s.get_node<InputNode>(v1)->set(true);
     s.get_node<InputNode>(v2)->set(true);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
 
     s.disconnect(r1);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::DISABLED);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
     s.disconnect(r2);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::DISABLED);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
 
     REQUIRE(s.connect(g_and, 0, v1));
     REQUIRE(s.connect(g_and, 1, v2));
-    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), State::TRUE);
 
     s.disconnect(r3);
-    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), state_t::TRUE);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::DISABLED);
+    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
 
     REQUIRE(s.connect(o, 0, g_and));
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
 }

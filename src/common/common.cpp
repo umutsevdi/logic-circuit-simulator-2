@@ -50,7 +50,9 @@ int __expect(std::function<bool(void)> expr, const char* function,
     s << "ERROR " << file << " : " << line << "\t" << function
       << "(...) Assertion " << str_expr << " failed!" << std::endl;
     try {
-        if (expr()) { return 0; }
+        if (expr()) {
+            return 0;
+        }
         tinyfd_messageBox(_title, s.str().c_str(), "ok", "error", 1);
 
     } catch (const std::exception& ex) {

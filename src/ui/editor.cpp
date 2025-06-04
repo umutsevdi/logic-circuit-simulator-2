@@ -1,10 +1,15 @@
+#include <algorithm>
+#include <cstring>
 #include <imgui.h>
 #include <imnodes.h>
 #include <tinyfiledialogs.h>
 
+#include "common.h"
+#include "core.h"
+#include "io.h"
 #include "ui.h"
 #include "ui/layout.h"
-#include "ui/nodes.h"
+#include "ui/util.h"
 
 static bool show_demo_window = true;
 ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -12,29 +17,86 @@ float f;
 
 namespace lcs::ui {
 
-constexpr ImVec4 node_to_color(node_t type)
+void _new_flow(bool& show)
 {
-    switch (type) {
-    case node_t::GATE: return ImVec4(0, 1, 1, 1);
-    case node_t::INPUT: return ImVec4(0.3, 0.3, 0.7, 1);
-    case node_t::OUTPUT: return ImVec4(0.6, 0.0, 0.6, 1);
-    case node_t::COMPONENT: return ImVec4(0.3, 0.7, 0.3, 1);
-    default: return ImVec4(0.8, 0.6, 0.1, 1);
+    if (!show) {
+        return;
+    }
+    if (ImGui::BeginPopupModal(
+            "PopupNewScene", &show, ImGuiWindowFlags_NoTitleBar)) {
+        static bool is_scene         = true;
+        static char author[60]       = "local";
+        static char name[128]        = { 0 };
+        static char description[512] = { 0 };
+        static size_t input_size     = 0;
+        static size_t output_size    = 0;
+
+        ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+        ImGui::TextColored(ImVec4(200, 200, 0, 255), "Scene Name");
+        ImGui::PopFont();
+        ImGui::InputText(
+            "##SceneCreateName", name, 128, ImGuiInputTextFlags_CharsNoBlank);
+        ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+        ImGui::TextColored(ImVec4(200, 200, 0, 255), "Author");
+        ImGui::PopFont();
+        ImGui::PushFont(get_font(font_flags_t::ITALIC | font_flags_t::NORMAL));
+        ImGui::InputText(
+            "##SceneCreateAuthor", author, 60, ImGuiInputTextFlags_ReadOnly);
+        ImGui::PopFont();
+        ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+        ImGui::TextColored(ImVec4(200, 200, 0, 255), "Description");
+        ImGui::PopFont();
+        ImGui::InputTextMultiline("##SceneDescInputText", description, 512,
+            ImVec2(ImGui::GetWindowWidth(), ImGui::CalcTextSize("\n\n\n").y));
+        if (ImGui::RadioButton("IsScene", is_scene)) {
+            is_scene = true;
+        }
+        if (ImGui::RadioButton("IsComponent", !is_scene)) {
+            is_scene = false;
+        }
+        if (!is_scene) {
+            ImGui::Separator();
+            ImGui::PushFont(
+                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Input Size");
+            ImGui::PopFont();
+            ImGui::InputInt("##CompInputSize", (int*)&input_size);
+            ImGui::PushFont(
+                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Output Size");
+            ImGui::PopFont();
+            ImGui::InputInt("##CompOutputSize", (int*)&output_size);
+        }
+        if (ImGui::Button("Create")) {
+            NRef<Scene> scene
+                = io::scene::get(io::scene::create(name, author, description));
+            if (!is_scene) {
+                scene->component_context.emplace(
+                    &scene, input_size, output_size);
+            }
+            show = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            ImGui::CloseCurrentPopup();
+            show = false;
+        }
+        ImGui::EndPopup();
     }
 }
 
-void _value_tooltip(state_t s)
+void _value_tooltip(State s)
 {
     switch (s) {
-    case state_t::TRUE:
+    case State::TRUE:
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
         ImGui::Text("TRUE");
         break;
-    case state_t::FALSE:
+    case State::FALSE:
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
         ImGui::Text("FALSE");
         break;
-    case state_t::DISABLED:
+    case State::DISABLED:
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
         ImGui::Text("DISABLED");
         break;
@@ -43,156 +105,147 @@ void _value_tooltip(state_t s)
     ImGui::PopStyleColor();
 }
 
-void node_to_title(node n)
-{
-    ImGui::TextColored(node_to_color(n.type), "%s", node_to_str(n.type));
-    ImGui::SameLine();
-    ImGui::Text("@");
-    ImGui::SameLine();
-    ImGui::TextColored(
-        ImVec4(0, 1.0, 0, 1), "%s", std::to_string(n.id).c_str());
-}
-
-void node_to_title(node n, sockid sock)
-{
-    ImGui::PushFont(get_font(font_flags_t::REGULAR | font_flags_t::NORMAL));
-    node_to_title(n);
-    ImGui::SameLine();
-    ImGui::Text("sock:");
-    ImGui::SameLine();
-    ImGui::TextColored(
-        ImVec4(0.5f, 0.5f, 1.0f, 1.00f), "%s", std::to_string(sock).c_str());
-    ImGui::PopFont();
-}
-
-int _hash_node_sock_pair(node node, sockid sock)
-{
-    // WARN: I hope you never reach 24 bit id.
-    int x = node.id;
-    lcs_assert(node.id < 0xFFFF);
-    x |= node.type << 16;
-    x |= sock << 24;
-    return x;
-}
-
 void before(ImGuiIO&) { ImNodes::CreateContext(); }
 
+bool show = false;
 bool loop(ImGuiIO& io)
 {
     ImGui::PushFont(get_font(font_flags_t::NORMAL));
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse
         | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings
         | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing
-        | ImGuiWindowFlags_NoTitleBar;
+        | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus;
     MenuBar();
     ImVec2 app_size = io.DisplaySize;
     ImGui::Begin("Node Editor", nullptr, flags);
-    ImGui::SetWindowSize(ImVec2 { app_size.x * 0.85f, app_size.y * 0.85f });
+    ImGui::SetWindowSize(ImVec2 { app_size.x, app_size.y - 20.0f });
     ImGui::SetWindowPos(
         ImVec2 { app_size.x * 0.0f, app_size.y * 0.0f + 20.0f });
-    bool scene_changed = TabWindow();
-    ImNodes::BeginNodeEditor();
+    TabWindow();
+    if (show) {
+        ImGui::OpenPopup("PopupNewScene");
+    }
+    _new_flow(show);
     NRef<Scene> scene = io::scene::get();
+    io::scene::run_frame();
     if (scene == nullptr) {
-        ImNodes::EndNodeEditor();
         ImGui::End();
         ImGui::PopFont();
         return true;
     }
-    for (auto& out : scene->_inputs) {
-        NodeView<InputNode>(&out.second).show_node(scene_changed);
-    }
-    for (auto& out : scene->_outputs) {
-        NodeView<OutputNode>(&out.second).show_node(scene_changed);
-    }
-    for (auto& out : scene->_gates) {
-        NodeView<GateNode>(&out.second).show_node(scene_changed);
-    }
-    for (auto& out : scene->_components) {
-        NodeView<ComponentNode>(&out.second).show_node(scene_changed);
-    }
-    for (auto& r : scene->_relations) {
-        ImNodes::PushColorStyle(ImNodesCol_Link,
-            r.second.value == state_t::TRUE        ? IM_COL32(0, 255, 100, 255)
-                : r.second.value == state_t::FALSE ? IM_COL32(255, 0, 100, 255)
-                                                   : IM_COL32(55, 55, 55, 255)
 
-        );
-        ImNodes::Link(r.first,
-            _hash_node_sock_pair(r.second.from_node, r.second.from_sock),
-            _hash_node_sock_pair(r.second.to_node, r.second.to_sock));
-        ImNodes::PopColorStyle();
-    }
+    float left_width = app_size.x * 0.3f;
+    if (ImGui::BeginChild("LeftMenu", ImVec2 { left_width, app_size.y * 0.85f },
+            ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoTitleBar)) {
+        if (ImGui::BeginChild(
+                "SceneInfo", ImVec2 { left_width, app_size.y * 0.85f / 2 })) {
+            ImGui::PushFont(
+                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Scene Name");
+            ImGui::PopFont();
+            if (ImGui::InputText("##SceneNameInputText", scene->name.data(),
+                    scene->name.max_size(), ImGuiInputTextFlags_CharsNoBlank)) {
+                io::scene::notify_change();
+            };
+            ImGui::PushFont(
+                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Description");
+            ImGui::PopFont();
+            if (ImGui::InputTextMultiline("##SceneDescInputText",
+                    scene->description.data(), scene->description.max_size(),
+                    ImVec2(ImGui::GetWindowWidth(),
+                        ImGui::CalcTextSize("\n\n\n").y))) {
+                io::scene::notify_change();
+            };
+            ImGui::PushFont(
+                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Version");
+            ImGui::PopFont();
+            if (ImGui::InputInt("##SceneVersion", &scene->version)) {
+                scene->version = std::max(scene->version, 0);
+                io::scene::notify_change();
+            };
 
-    ImNodes::EndNodeEditor();
-
-    {
-        int linkid = 0;
-        if (ImNodes::IsLinkHovered(&linkid)) {
-            if (auto r = scene->get_rel(linkid);
-                ImGui::BeginTooltip() && r != nullptr) {
+            if (scene->component_context.has_value()) {
                 ImGui::PushFont(
                     get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-                ImGui::Text("%s",
-                    std::string { "Relation " + std::to_string(linkid) }
-                        .c_str());
+                ImGui::TextColored(
+                    ImVec4(200, 200, 0, 255), "Component Attributes");
                 ImGui::Separator();
+                ImGui::TextColored(ImVec4(200, 200, 0, 255), "Input Size");
                 ImGui::PopFont();
-                ImGui::PushFont(get_font(font_flags_t::NORMAL));
-                ImGui::TextColored(ImVec4(200, 200, 0, 255), "From:");
-                ImGui::SameLine();
-                node_to_title(r->from_node, r->from_sock);
-                ImGui::TextColored(ImVec4(200, 200, 0, 255), "To:");
-                ImGui::SameLine();
-                node_to_title(r->to_node, r->to_sock);
-                ImGui::TextColored(ImVec4(200, 200, 0, 255), "Value:");
-                ImGui::SameLine();
-                _value_tooltip(r->value);
-                ImGui::PopFont();
-                ImGui::EndTooltip();
-            }
-        }
+                size_t input_size  = scene->component_context->inputs.size();
+                size_t output_size = scene->component_context->outputs.size();
 
-        int nodeid_encoded = 0;
-        if (ImNodes::IsNodeHovered(&nodeid_encoded)) {
-            node nodeid { 0x0FFFF & (uint32_t)nodeid_encoded,
-                (node_t)(nodeid_encoded >> 16) };
-
-            if (NRef<BaseNode> n = scene->get_base(nodeid);
-                ImGui::BeginTooltip() && n != nullptr) {
+                ImGui::InputInt("##CompInputSize", (int*)&input_size);
                 ImGui::PushFont(
                     get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-                node_to_title((node)nodeid);
-                ImGui::Separator();
+                ImGui::TextColored(ImVec4(200, 200, 0, 255), "Output Size");
                 ImGui::PopFont();
-                ImGui::PushFont(get_font(font_flags_t::NORMAL));
-                ImGui::TextColored(ImVec4(200, 200, 0, 255), "Position:");
-                ImGui::SameLine();
-                ImGui::Text("(%d, %d)", n->point.x, n->point.y);
-                ImGui::TextColored(ImVec4(200, 200, 0, 255), "Connected:");
-                ImGui::SameLine();
-                ImGui::Text("%s", n->is_connected() ? "true" : "false");
-                if (nodeid.type != node_t::COMPONENT) {
-                    ImGui::TextColored(ImVec4(200, 200, 0, 255), "Value:");
-                    ImGui::SameLine();
-                    _value_tooltip(n->get());
-                } else {
-                    auto comp = scene->get_node<ComponentNode>(nodeid);
-                    ImGui::Text("(");
-                    ImGui::SameLine();
-                    for (size_t i = 0; i < comp->inputs.size(); i++) {
-                        _value_tooltip(comp->get(i));
-                        ImGui::SameLine();
-                    }
-                    ImGui::Text(")");
+                ImGui::InputInt("##CompOutputSize", (int*)&output_size);
+
+                if (input_size != scene->component_context->inputs.size()
+                    || output_size
+                        != scene->component_context->outputs.size()) {
+                    scene->component_context->setup(input_size, output_size);
+                    io::scene::notify_change();
                 }
-
-                ImGui::PopFont();
-                ImGui::EndTooltip();
             }
+            ImGui::EndChild();
         }
+        if (ImGui::BeginChild("ObjectInspector",
+                ImVec2 { left_width, app_size.y * 0.85f / 2 })) {
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Object Inspector");
+            ImGui::EndChild();
+        }
+        ImGui::EndChild();
     }
+    ImGui::SameLine();
+    NodeEditor(&scene);
+    ImGui::SameLine();
+    ImGui::BeginChild("List",
+        ImVec2 { ImGui::CalcTextSize("COMPONENT").x, app_size.y * 0.85f },
+        ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoTitleBar);
+    {
+        Node dragged_node;
+        if (scene == nullptr) {
+            ImGui::BeginDisabled();
+        }
+        if (ImGui::Button("Input")) {
+            dragged_node = scene->add_node<InputNode>();
+        }
+        if (ImGui::Button("Output")) {
+            dragged_node = scene->add_node<OutputNode>();
+        }
+        if (ImGui::Button("Timer")) {
+            dragged_node = scene->add_node<InputNode>(1.0f);
+        }
+        if (ImGui::Button("NOT Gate")) {
+            dragged_node = scene->add_node<GateNode>(GateType::NOT);
+        }
+        if (ImGui::Button("AND Gate")) {
+            dragged_node = scene->add_node<GateNode>(GateType::AND);
+        }
+        if (ImGui::Button("OR Gate")) {
+            dragged_node = scene->add_node<GateNode>(GateType::OR);
+        }
+        if (ImGui::Button("XOR Gate")) {
+            dragged_node = scene->add_node<GateNode>(GateType::XOR);
+        }
+        if (ImGui::Button("NAND Gate")) {
+            dragged_node = scene->add_node<GateNode>(GateType::NAND);
+        }
+        if (ImGui::Button("NOR Gate")) {
+            dragged_node = scene->add_node<GateNode>(GateType::NOR);
+        }
+        if (ImGui::Button("XNOR Gate")) {
+            dragged_node = scene->add_node<GateNode>(GateType::XNOR);
+        }
+        ImGui::EndChild();
+    }
+    Inspector(&scene);
 
+    Palette();
     ImGui::End();
     ImGui::PopFont();
 
@@ -234,8 +287,17 @@ bool loop(ImGuiIO& io)
 void after(ImGuiIO&)
 {
     if (io::scene::get() != nullptr) {
-        io::scene::save();
-        io::scene::close();
+        if (io::scene::is_saved()) {
+            io::scene::close();
+        } else {
+            int option = tinyfd_messageBox("Close Scene",
+                "You have unsaved changes. Would you like to save your changes "
+                "before closing?",
+                "yesno", "question", 0);
+            if (!option || save_as_flow("Save scene")) {
+                io::scene::close();
+            }
+        }
     }
     ImNodes::DestroyContext();
 }

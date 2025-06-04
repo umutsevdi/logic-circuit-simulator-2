@@ -28,7 +28,7 @@ typedef uint8_t sockid;
 typedef uint32_t relid;
 
 /** Type of a node in a scene. */
-enum node_t : uint8_t {
+enum NodeType : uint8_t {
     /** Logic gate. */
     GATE,
     /** A component that has been loaded externally. */
@@ -45,46 +45,44 @@ enum node_t : uint8_t {
     NODE_S
 };
 
-constexpr const char* node_to_str(node_t s)
+constexpr const char* NodeType_to_str(NodeType s)
 {
     switch (s) {
-    case node_t::GATE: return "gate";
-    case node_t::COMPONENT: return "comp";
-    case node_t::INPUT: return "in";
-    case node_t::OUTPUT: return "out";
-    case node_t::COMPONENT_INPUT: return "cin";
-    case node_t::COMPONENT_OUTPUT: return "cout";
+    case NodeType::GATE: return "Gate";
+    case NodeType::COMPONENT: return "Comp";
+    case NodeType::INPUT: return "In";
+    case NodeType::OUTPUT: return "Out";
+    case NodeType::COMPONENT_INPUT: return "Cin";
+    case NodeType::COMPONENT_OUTPUT: return "Cout";
     default: return "unknown";
     }
 }
-
-node_t str_to_node(const std::string&);
 
 /**
  * Node is a handler that represents the index.
  * id is a non-zero identifier. Together with the type, represents a unique
  * node.
  * */
-struct node final : public io::Serializable {
-    node(uint32_t _id = 0, node_t _type = GATE);
-    node(node&&)                 = default;
-    node(const node&)            = default;
-    node& operator=(node&&)      = default;
-    node& operator=(const node&) = default;
+struct Node final : public io::Serializable {
+    Node(uint16_t _id = 0, NodeType _type = GATE);
+    Node(Node&&)                 = default;
+    Node(const Node&)            = default;
+    Node& operator=(Node&&)      = default;
+    Node& operator=(const Node&) = default;
 
-    friend std::ostream& operator<<(std::ostream& os, const node& r);
-    bool operator<(const node& n) const { return this->id < n.id; }
+    friend std::ostream& operator<<(std::ostream& os, const Node& r);
+    bool operator<(const Node& n) const { return this->id < n.id; }
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
     inline uint32_t numeric(void) const { return id | (type << 16); }
 
-    uint32_t id : 16;
-    node_t type : 8;
+    uint16_t id : 16;
+    NodeType type : 4;
 };
 
-enum state_t {
+enum State {
     /** Socket evaluated to false. */
     FALSE,
     /** Socket evaluated to true. */
@@ -94,26 +92,14 @@ enum state_t {
     DISABLED,
 };
 
-constexpr const char* state_t_str(state_t s)
+constexpr const char* State_to_str(State s)
 {
-    return (s) == state_t::DISABLED ? "DISABLED"
-        : (s) == state_t::TRUE      ? "TRUE"
-                                    : "FALSE";
+    return (s) == State::DISABLED ? "DISABLED"
+        : (s) == State::TRUE      ? "TRUE"
+                                  : "FALSE";
 }
 
-state_t str_to_state(const std::string&);
-
-/** Direction of the node, defaults to direction_t::RIGHT. */
-enum direction_t { RIGHT, DOWN, LEFT, UP };
-
-constexpr const char* direction_to_str(direction_t s)
-{
-    return s == RIGHT ? "r" : s == DOWN ? "d" : s == LEFT ? "l" : "d";
-}
-
-direction_t str_to_dir(const std::string&);
-
-enum gate_t {
+enum GateType {
     NOT,
     AND,
     OR,
@@ -125,7 +111,7 @@ enum gate_t {
     GATE_S
 };
 
-constexpr const char* gate_to_str(gate_t g)
+constexpr const char* GateType_to_str(GateType g)
 {
     return g == NOT ? "NOT"
         : g == AND  ? "AND"
@@ -137,17 +123,15 @@ constexpr const char* gate_to_str(gate_t g)
                     : "NaN";
 }
 
-gate_t str_to_gate(const std::string&);
-
 /** Position of a node or a curve in the surface */
-struct point_t final : public io::Serializable {
-    point_t(int _x = 0, int _y = 0)
+struct Point final : public io::Serializable {
+    Point(int _x = 0, int _y = 0)
         : x { _x }
         , y { _y } { };
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
     int x;
     int y;
@@ -155,8 +139,7 @@ struct point_t final : public io::Serializable {
 
 class BaseNode : public io::Serializable {
 public:
-    explicit BaseNode(Scene*, node, direction_t _dir = direction_t::RIGHT,
-        point_t _p = { 0, 0 });
+    explicit BaseNode(Scene*, Node, Point _p = { 0, 0 });
     BaseNode(const BaseNode&)            = default;
     BaseNode(BaseNode&&)                 = default;
     BaseNode& operator=(BaseNode&&)      = default;
@@ -166,7 +149,7 @@ public:
 
     inline void reload(Scene* s) { _parent = s; }
     BaseNode* get_base(void) { return dynamic_cast<BaseNode*>(this); };
-    inline node id(void) const { return _id; }
+    inline Node id(void) const { return _id; }
 
     /**
      * Updates the internal data and send out signals to all connected nodes.
@@ -175,17 +158,15 @@ public:
     /** Returns whether all nodes are connected */
     virtual bool is_connected(void) const = 0;
     /** Get the current status */
-    virtual state_t get(sockid slot = 0) const = 0;
+    virtual State get(sockid slot = 0) const = 0;
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
-
-    direction_t dir;
-    point_t point;
+    Point point;
 
 protected:
     Scene* _parent;
-    node _id;
+    Node _id;
 };
 
 /**
@@ -196,7 +177,7 @@ protected:
  * can have multiple output sockets.
  */
 struct Rel final : public io::Serializable {
-    explicit Rel(relid _id, node _from_node, node _to_node, sockid _from_sock,
+    explicit Rel(relid _id, Node _from_node, Node _to_node, sockid _from_sock,
         sockid _to_sock);
     Rel();
     ~Rel() = default;
@@ -204,15 +185,15 @@ struct Rel final : public io::Serializable {
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
     relid id;
-    node from_node;
-    node to_node;
+    Node from_node;
+    Node to_node;
     sockid from_sock;
     sockid to_sock;
-    state_t value;
-    std::vector<point_t> curve_points;
+    State value;
+    std::vector<Point> curve_points;
 };
 
 /**
@@ -220,7 +201,7 @@ struct Rel final : public io::Serializable {
  */
 class GateNode final : public BaseNode {
 public:
-    explicit GateNode(Scene*, node, gate_t type, sockid max_in = 2);
+    explicit GateNode(Scene*, Node, GateType type, sockid max_in = 2);
     GateNode(const GateNode&)            = default;
     GateNode(GateNode&&)                 = default;
     GateNode& operator=(GateNode&&)      = default;
@@ -233,15 +214,15 @@ public:
     bool increment(void);
     /** Removes an input socket */
     bool decrement(void);
-    inline gate_t type(void) const { return _type; };
+    inline GateType type(void) const { return _type; };
 
     /* BaseNode */
     void on_signal(void) override;
     bool is_connected(void) const override;
-    state_t get(sockid slot = 0) const override;
+    State get(sockid slot = 0) const override;
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
     /** max_in number of inputs, denoted with relation id */
     std::vector<relid> inputs;
@@ -252,15 +233,15 @@ private:
     /** Gate specific calculation function */
     bool (*_apply)(const std::vector<bool>&);
 
-    gate_t _type;
-    state_t _value;
+    GateType _type;
+    State _value;
     bool _is_disabled;
     sockid _max_in;
 };
 
 class ComponentNode final : public BaseNode {
 public:
-    explicit ComponentNode(Scene*, node, const std::string& path = "");
+    explicit ComponentNode(Scene*, Node, const std::string& path = "");
     ComponentNode(const ComponentNode&)            = default;
     ComponentNode(ComponentNode&&)                 = default;
     ComponentNode& operator=(ComponentNode&&)      = default;
@@ -269,15 +250,15 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const ComponentNode& g);
 
     /** Assigns configurations of given component to this node. */
-    error_t set_component(const std::string& path);
+    Error set_component(const std::string& path);
 
     /* BaseNode */
     void on_signal(void) override;
     bool is_connected(void) const override;
-    state_t get(sockid slot = 0) const override;
+    State get(sockid slot = 0) const override;
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
     std::vector<relid> inputs;
     std::map<sockid, std::vector<relid>> outputs;
@@ -294,7 +275,7 @@ private:
 class InputNode : public BaseNode {
 public:
     InputNode(
-        Scene* _scene, node _id, std::optional<uint32_t> freq = std::nullopt);
+        Scene* _scene, Node _id, std::optional<float> freq = std::nullopt);
     InputNode(const InputNode&)            = default;
     InputNode(InputNode&&)                 = default;
     InputNode& operator=(InputNode&&)      = default;
@@ -302,36 +283,34 @@ public:
     ~InputNode()                           = default;
     friend std::ostream& operator<<(std::ostream& os, const InputNode& g);
 
+    bool is_timer(void) const { return _freq.has_value(); }
     /** Set the value, and notify connected nodes.
      * @param value to set
      **/
     void set(bool value);
-    /** If the InputNode is set up as a timer updates the frequency.
-     * @param freq new frequency
-     */
-    void set_freq(uint32_t freq);
     /** Inverts the value and notifies connected nodes. */
     void toggle(void);
 
     /* BaseNode */
     void on_signal(void) override;
     bool is_connected(void) const override;
-    state_t get(sockid slot = 0) const override;
+    State get(sockid slot = 0) const override;
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
     std::vector<relid> output;
 
+    std::optional<float> _freq;
+
 private:
     bool _value;
-    std::optional<uint32_t> _freq;
 };
 
 /** An output node that displays the result */
 class OutputNode final : public BaseNode {
 public:
-    OutputNode(Scene* _scene, node _id);
+    OutputNode(Scene* _scene, Node _id);
     OutputNode(const OutputNode&)            = default;
     OutputNode(OutputNode&&)                 = default;
     OutputNode& operator=(OutputNode&&)      = default;
@@ -342,15 +321,15 @@ public:
     /* BaseNode */
     void on_signal(void) override;
     bool is_connected(void) const override;
-    state_t get(sockid slot = 0) const override;
+    State get(sockid slot = 0) const override;
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
     relid input;
 
 private:
-    state_t _value;
+    State _value;
 };
 
 /**
@@ -384,20 +363,20 @@ struct ComponentContext final : public io::Serializable {
     uint64_t run(uint64_t input);
 
     /** Get node id for given input socket */
-    node get_input(sockid id) const;
+    Node get_input(sockid id) const;
 
     /** Get node id for given output socket */
-    node get_output(sockid id) const;
+    Node get_output(sockid id) const;
 
     /** Get value of the given node socket */
-    state_t get_value(node id) const;
+    State get_value(Node id) const;
 
     /** Update the value of an output slot */
-    void set_value(sockid sock, state_t value);
+    void set_value(sockid sock, State value);
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
     std::map<sockid, std::vector<relid>> inputs;
     std::map<sockid, relid> outputs;
@@ -424,12 +403,15 @@ public:
     ~Scene()                       = default;
     friend std::ostream& operator<<(std::ostream& os, const Scene&);
 
+    /** Run a frame for the scene. */
+    void run_timers(void);
+
     /** Creates a node in a scene with given type. Passes arguments to
      * the constructor similar to emplace methods.
      * @param args to pass
      * @returns node identifier of newly created node.
      */
-    template <class T, class... Args> node add_node(Args&&... args)
+    template <class T, class... Args> Node add_node(Args&&... args)
     {
         constexpr bool is_gate      = std::is_same<T, GateNode>::value;
         constexpr bool is_component = std::is_same<T, ComponentNode>::value;
@@ -437,45 +419,52 @@ public:
         constexpr bool is_output    = std::is_same<T, OutputNode>::value;
 
         if constexpr (is_gate) {
-            _last_node[node_t::GATE].id++;
+            _last_node[NodeType::GATE].id++;
             return _gates
-                .emplace(_last_node[node_t::GATE],
-                    GateNode { this, _last_node[node_t::GATE].id, args... })
+                .emplace(_last_node[NodeType::GATE],
+                    GateNode { this, _last_node[NodeType::GATE].id, args... })
                 .first->first;
         } else if constexpr (is_component) {
-            _last_node[node_t::COMPONENT].id++;
+            _last_node[NodeType::COMPONENT].id++;
             return _components
-                .emplace(_last_node[node_t::COMPONENT],
+                .emplace(_last_node[NodeType::COMPONENT],
                     ComponentNode {
-                        this, _last_node[node_t::COMPONENT].id, args... })
+                        this, _last_node[NodeType::COMPONENT].id, args... })
                 .first->first;
         } else if constexpr (is_input) {
-            _last_node[node_t::INPUT].id++;
-            return _inputs
-                .emplace(_last_node[node_t::INPUT],
-                    InputNode { this, _last_node[node_t::INPUT].id, args... })
-                .first->first;
+            _last_node[NodeType::INPUT].id++;
+            auto new_node
+                = _inputs
+                      .emplace(_last_node[NodeType::INPUT],
+                          InputNode {
+                              this, _last_node[NodeType::INPUT].id, args... })
+                      .first;
+            if (new_node->second.is_timer()) {
+                _timerlist.emplace(new_node->first, 0.0f);
+            }
+            return new_node->first;
         } else if constexpr (is_output) {
-            _last_node[node_t::OUTPUT].id++;
+            _last_node[NodeType::OUTPUT].id++;
             return _outputs
-                .emplace(_last_node[node_t::OUTPUT],
-                    OutputNode { this, _last_node[node_t::OUTPUT].id, args... })
+                .emplace(_last_node[NodeType::OUTPUT],
+                    OutputNode {
+                        this, _last_node[NodeType::OUTPUT].id, args... })
                 .first->first;
         }
-        return { 0, node_t::GATE };
+        return { 0, NodeType::GATE };
     }
 
     /** Safely removes given node from the scene.
      * @param id node to remove
      */
-    void remove_node(node id);
+    void remove_node(Node id);
 
     /** Obtain a temporary node reference from the scene.
      *
      * @param id non-zero node id
      * @returns T* | nullptr
      */
-    template <typename T> NRef<T> get_node(node id)
+    template <typename T> NRef<T> get_node(Node id)
     {
         constexpr bool is_gate      = std::is_same<T, GateNode>::value;
         constexpr bool is_component = std::is_same<T, ComponentNode>::value;
@@ -484,22 +473,22 @@ public:
         if constexpr (is_gate) {
             auto g = _gates.find(id);
             lcs_assert(
-                id.id != 0 && g != _gates.end() && id.type == node_t::GATE);
+                id.id != 0 && g != _gates.end() && id.type == NodeType::GATE);
             return &g->second;
         } else if constexpr (is_component) {
             auto g = _components.find(id);
             lcs_assert(id.id != 0 && g != _components.end()
-                && id.type == node_t::COMPONENT);
+                && id.type == NodeType::COMPONENT);
             return &g->second;
         } else if constexpr (is_input) {
             auto g = _inputs.find(id);
             lcs_assert(
-                id.id != 0 && g != _inputs.end() && id.type == node_t::INPUT);
+                id.id != 0 && g != _inputs.end() && id.type == NodeType::INPUT);
             return &g->second;
         } else if constexpr (is_output) {
             auto g = _outputs.find(id);
-            lcs_assert(
-                id.id != 0 && g != _outputs.end() && id.type == node_t::OUTPUT);
+            lcs_assert(id.id != 0 && g != _outputs.end()
+                && id.type == NodeType::OUTPUT);
             return &g->second;
         }
         return nullptr;
@@ -512,7 +501,7 @@ public:
      * @param id non-zero node id
      * @returns BaseNode* || nullptr
      */
-    NRef<BaseNode> get_base(node id);
+    NRef<BaseNode> get_base(Node id);
 
     /**
      * Obtain a relationship between nodes by its id.
@@ -535,25 +524,25 @@ public:
      * @returns relid on success, 0 on failure.
      */
     relid connect(
-        node to_node, sockid to_sock, node from_node, sockid from_sock = 0);
+        Node to_node, sockid to_sock, Node from_node, sockid from_sock = 0);
 
     /**
      * Safely disconnects a node relationship.
      * @param id relid to disconnect
      * @returns Error on failure:
      *
-     * - error_t::INVALID_RELID
-     * - error_t::REL_NOT_FOUND
-     * - error_t::NOT_CONNECTED
+     * - Error::INVALID_RELID
+     * - Error::REL_NOT_FOUND
+     * - Error::NOT_CONNECTED
      */
-    error_t disconnect(relid id);
+    Error disconnect(relid id);
 
     /**
      * Trigger a signal for the given relation while updating it's value.
      * @param id relationship id
      * @param value to set
      */
-    void signal(relid id, state_t value);
+    void signal(relid id, State value);
 
     /** Returns a dependency string. */
     std::string to_dependency(void) const;
@@ -566,27 +555,27 @@ public:
      * - io::component::fetch
      *
      */
-    error_t load_dependencies(void);
+    Error load_dependencies(void);
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
-    error_t from_json(const Json::Value&) override;
+    Error from_json(const Json::Value&) override;
 
-    // [id][period] map for timer inputs
-    std::map<node, int> timer_sub_vec;
-
-    std::string name;
-    std::string description;
-    std::string author;
+    std::array<char, 128> name;
+    std::array<char, 512> description;
+    /** GitHub user names are limited to 40 characters. */
+    std::array<char, 60> author; //
     int version;
     std::vector<std::string> dependencies;
     std::optional<ComponentContext> component_context;
 
-    std::map<node, GateNode> _gates;
-    std::map<node, ComponentNode> _components;
-    std::map<node, InputNode> _inputs;
-    std::map<node, OutputNode> _outputs;
+    std::map<Node, GateNode> _gates;
+    std::map<Node, ComponentNode> _components;
+    std::map<Node, InputNode> _inputs;
+    std::map<Node, OutputNode> _outputs;
     std::map<relid, Rel> _relations;
+    /** key = Node::id, value: internal clock counter */
+    std::map<Node, float> _timerlist;
 
 private:
     /** The helper method for move constructor and move assignment */
@@ -605,29 +594,35 @@ private:
      * @param from_sock socket of the source node
      * @returns Error on failure:
      *
-     * - error_t::INVALID_FROM_TYPE
-     * - error_t::INVALID_NODEID
-     * - error_t::NOT_A_COMPONENT
-     * - error_t::ALREADY_CONNECTED
-     * - error_t::INVALID_TO_TYPE
+     * - Error::INVALID_FROM_TYPE
+     * - Error::INVALID_NODEID
+     * - Error::NOT_A_COMPONENT
+     * - Error::ALREADY_CONNECTED
+     * - Error::INVALID_TO_TYPE
      */
-    error_t _connect_with_id(relid id, node to_node, sockid to_sock,
-        node from_node, sockid from_sock = 0);
+    Error _connect_with_id(relid id, Node to_node, sockid to_sock,
+        Node from_node, sockid from_sock = 0);
 
-    node _last_node[node_t::NODE_S];
+    Node _last_node[NodeType::NODE_S];
     relid _last_rel;
 };
 
-/** Class to node_t conversion */
-template <typename T> constexpr node_t to_node_type(void)
+/** Class to NodeType conversion */
+template <typename T> constexpr NodeType as_node_type(void)
 {
-    if constexpr (std::is_same<T, GateNode>::value) { return node_t::GATE; }
-    if constexpr (std::is_same<T, ComponentNode>::value) {
-        return node_t::COMPONENT;
+    if constexpr (std::is_same<T, GateNode>::value) {
+        return NodeType::GATE;
     }
-    if constexpr (std::is_same<T, InputNode>::value) { return node_t::INPUT; }
-    if constexpr (std::is_same<T, OutputNode>::value) { return node_t::OUTPUT; }
-    return node_t::NODE_S;
+    if constexpr (std::is_same<T, ComponentNode>::value) {
+        return NodeType::COMPONENT;
+    }
+    if constexpr (std::is_same<T, InputNode>::value) {
+        return NodeType::INPUT;
+    }
+    if constexpr (std::is_same<T, OutputNode>::value) {
+        return NodeType::OUTPUT;
+    }
+    return NodeType::NODE_S;
 }
 
 } // namespace lcs

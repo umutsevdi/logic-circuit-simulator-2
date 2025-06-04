@@ -60,26 +60,28 @@ void ComponentContext::setup(sockid input_s, sockid output_s)
     _execution_output = 0;
 }
 
-node ComponentContext::get_input(sockid id) const
+Node ComponentContext::get_input(sockid id) const
 {
     if (id < inputs.size()) {
-        return node { static_cast<uint32_t>(id + 1), node_t::COMPONENT_INPUT };
+        return Node { static_cast<uint16_t>(id + 1),
+            NodeType::COMPONENT_INPUT };
     }
     return {};
 }
 
-node ComponentContext::get_output(sockid id) const
+Node ComponentContext::get_output(sockid id) const
 {
     if (id < outputs.size()) {
-        return node { static_cast<uint32_t>(id + 1), node_t::COMPONENT_OUTPUT };
+        return Node { static_cast<uint16_t>(id + 1),
+            NodeType::COMPONENT_OUTPUT };
     }
     return {};
 }
 
-void ComponentContext::set_value(sockid sock, state_t value)
+void ComponentContext::set_value(sockid sock, State value)
 {
     if (sock > 0 && sock < 64) {
-        if (value == state_t::TRUE) {
+        if (value == State::TRUE) {
             _execution_output |= 1 << sock;
         } else {
             _execution_output &= ~(1 << sock);
@@ -87,20 +89,19 @@ void ComponentContext::set_value(sockid sock, state_t value)
     }
 }
 
-state_t ComponentContext::get_value(node id) const
+State ComponentContext::get_value(Node id) const
 {
-    if (id.type == node_t::COMPONENT_INPUT) {
+    if (id.type == NodeType::COMPONENT_INPUT) {
         if (auto in = inputs.find(id.id); in != inputs.end()) {
-            return _execution_input & (1 << id.id) ? state_t::TRUE
-                                                   : state_t::FALSE;
+            return _execution_input & (1 << id.id) ? State::TRUE : State::FALSE;
         }
     } else {
         if (auto in = outputs.find(id.id); in != outputs.end()) {
-            return _execution_output & (1 << id.id) ? state_t::TRUE
-                                                    : state_t::FALSE;
+            return _execution_output & (1 << id.id) ? State::TRUE
+                                                    : State::FALSE;
         }
     }
-    return state_t::DISABLED;
+    return State::DISABLED;
 }
 
 uint64_t ComponentContext::run(uint64_t v)
@@ -110,8 +111,7 @@ uint64_t ComponentContext::run(uint64_t v)
     _execution_input  = v;
     _execution_output = 0;
     for (auto input : inputs) {
-        state_t result
-            = v & (1 << input.first) ? state_t::TRUE : state_t::FALSE;
+        State result = v & (1 << input.first) ? State::TRUE : State::FALSE;
         for (relid in : input.second) {
             _parent->signal(in, result);
         }
@@ -128,18 +128,24 @@ uint64_t ComponentContext::run(uint64_t v)
     return _execution_output >> 1;
 }
 
-ComponentNode::ComponentNode(Scene* _s, node _id, const std::string& _path)
-    : BaseNode { _s, node { _id.id, node_t::COMPONENT } }
+ComponentNode::ComponentNode(Scene* _s, Node _id, const std::string& _path)
+    : BaseNode { _s, Node { _id.id, NodeType::COMPONENT } }
     , _output_value { 0 }
 {
-    if (_path != "") { set_component(_path); }
+    if (_path != "") {
+        set_component(_path);
+    }
 }
 
-error_t ComponentNode::set_component(const std::string& _path)
+Error ComponentNode::set_component(const std::string& _path)
 {
-    if (_path == "") { return ERROR(error_t::INVALID_DEPENDENCY_FORMAT); }
+    if (_path == "") {
+        return ERROR(Error::INVALID_DEPENDENCY_FORMAT);
+    }
     auto ref = io::component::get(_path);
-    if (ref == nullptr) { return ERROR(error_t::COMPONENT_NOT_FOUND); }
+    if (ref == nullptr) {
+        return ERROR(Error::COMPONENT_NOT_FOUND);
+    }
     for (relid id : inputs) {
         _parent->disconnect(id);
     }
@@ -158,7 +164,7 @@ error_t ComponentNode::set_component(const std::string& _path)
         outputs[i] = {};
     }
     path = _path;
-    return error_t::OK;
+    return Error::OK;
 }
 
 bool ComponentNode::is_connected() const
@@ -167,9 +173,11 @@ bool ComponentNode::is_connected() const
         inputs.begin(), inputs.end(), [&](relid i) { return i != 0; });
 }
 
-state_t ComponentNode::get(sockid id) const
+State ComponentNode::get(sockid id) const
 {
-    if (_is_disabled) { return state_t::DISABLED; }
+    if (_is_disabled) {
+        return State::DISABLED;
+    }
     return _output_value & (1 << id) ? TRUE : FALSE;
 }
 
@@ -182,22 +190,26 @@ void ComponentNode::on_signal()
             if (in != 0) {
                 auto rel = _parent->get_rel(in);
                 lcs_assert(rel != nullptr);
-                if (rel->value == state_t::DISABLED) {
+                if (rel->value == State::DISABLED) {
                     _is_disabled = true;
                     break;
                 }
                 input <<= 1;
-                if (rel->value == TRUE) { input++; }
+                if (rel->value == TRUE) {
+                    input++;
+                }
             }
         }
-        if (!_is_disabled) { _output_value = io::component::run(path, input); }
+        if (!_is_disabled) {
+            _output_value = io::component::run(path, input);
+        }
     } else {
         _is_disabled = true;
     }
 
     for (auto sock : outputs) {
         for (relid out : sock.second) {
-            L_INFO(CLASS "Sending " << state_t_str(get(sock.first))
+            L_INFO(CLASS "Sending " << State_to_str(get(sock.first))
                                     << " signal to rel@" << out);
             _parent->signal(out, get(sock.first));
         }

@@ -10,7 +10,19 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include <imgui.h>
+
+#include "core.h"
+
+namespace lcs {
+class Scene;
+}
 namespace lcs::ui {
 void MenuBar(void);
-bool TabWindow(void);
+void TabWindow(void);
+void Palette(void);
+void Inspector(NRef<Scene>);
+void set_selected(Node node);
+void NodeEditor(NRef<Scene> scene);
+int _input_text_callback(ImGuiInputTextCallbackData*);
 } // namespace lcs::ui

@@ -50,7 +50,8 @@ namespace ui {
     int main(int, char**)
     {
         glfwSetErrorCallback(glfw_error_callback);
-        if (!glfwInit()) return 1;
+        if (!glfwInit())
+            return 1;
 
         // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -85,8 +86,9 @@ namespace ui {
 
         // Create window with graphics context
         GLFWwindow* window = glfwCreateWindow(
-            1280, 720, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
-        if (window == nullptr) return 1;
+            1920, 1080, "Logic Circuit Simulator", nullptr, nullptr);
+        if (window == nullptr)
+            return 1;
         glfwMakeContextCurrent(window);
         glfwSwapInterval(1); // Enable vsync
 
@@ -100,6 +102,7 @@ namespace ui {
             |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
         io.ConfigFlags
             |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         set_style(io, 1, is_dark);
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
@@ -184,7 +187,9 @@ namespace ui {
 
             ImGui::NewFrame();
             ImGui::ShowDemoWindow(&show_demo_window);
-            if (show_demo_window) { show_demo_window = ui::loop(io); }
+            if (show_demo_window) {
+                show_demo_window = ui::loop(io);
+            }
 
             // 3. Show another simple window.
             if (show_another_window) {
@@ -194,7 +199,8 @@ namespace ui {
                                            // closing button that will clear the
                                            // bool when clicked)
                 ImGui::Text("Hello from another window!");
-                if (ImGui::Button("Close Me")) show_another_window = false;
+                if (ImGui::Button("Close Me"))
+                    show_another_window = false;
                 ImGui::End();
             }
 
