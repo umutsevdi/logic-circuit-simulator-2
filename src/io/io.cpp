@@ -4,6 +4,7 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <string_view>
 
 #include "common.h"
 #include "core.h"
@@ -33,7 +34,8 @@ fs::path LOCAL;
 static std::string current_path;
 static std::map<std::string, Scene> COMPONENT_STORAGE;
 static std::vector<Inode> SCENE_STORAGE;
-static size_t active_scene = 0;
+static size_t active_scene = SIZE_MAX;
+static bool _first_frame   = false;
 
 void init_paths(bool is_testing)
 {
@@ -81,7 +83,9 @@ void init_paths(bool is_testing)
 
             fs::create_directories(LOCAL);
         }
-        if (is_testing) { TESTLOG.emplace(APP_DATA / "log.txt"); }
+        if (is_testing) {
+            TESTLOG.emplace(APP_DATA / "log.txt");
+        }
     } catch (const std::exception& e) {
         L_ERROR("Directory creation failed: " << e.what());
     }
@@ -108,7 +112,9 @@ bool write(const std::string& path, const std::string& data)
 std::string read(const std::string& path)
 {
     L_INFO("Reading from " << path);
-    if (path.find(".json") == std::string::npos) { return ""; }
+    if (path.find(".json") == std::string::npos) {
+        return "";
+    }
     fs::path json_path = fs::path(path);
     std::ifstream infile { json_path };
     std::string content((std::istreambuf_iterator<char>(infile)),
@@ -116,49 +122,66 @@ std::string read(const std::string& path)
     return content;
 }
 
-error_t load(const std::string& data, Scene& s)
+Error load(const std::string& data, Scene& s)
 {
-    if (data == "") { return ERROR(error_t::NOT_FOUND); }
+    if (data == "") {
+        return ERROR(Error::NOT_FOUND);
+    }
     Json::Reader reader {};
     Json::Value root;
     if (!reader.parse(data, root)) {
-        return ERROR(error_t::INVALID_JSON_FORMAT);
+        return ERROR(Error::INVALID_JSON_FORMAT);
     }
     return s.from_json(root);
 }
 
 namespace scene {
 
-    error_t open(const std::string& path, size_t& idx)
+    Error open(const std::string& path, size_t& idx)
     {
         for (size_t i = 0; i < SCENE_STORAGE.size(); i++) {
             if (SCENE_STORAGE[i].path == path) {
                 idx = i;
-                return error_t::OK;
+                if (idx != active_scene) {
+                    active_scene = idx;
+                    _first_frame = true;
+                }
+                return Error::OK;
             }
         }
         Inode inode { true, path, Scene {} };
         std::string data = read(path);
-        error_t err      = io::load(data, inode.scene);
-        if (err) { return err; }
+        Error err        = io::load(data, inode.scene);
+        if (err) {
+            return err;
+        }
         SCENE_STORAGE.push_back(std::move(inode));
         idx          = SCENE_STORAGE.size() - 1;
         active_scene = idx;
-        return error_t::OK;
+        _first_frame = true;
+        return Error::OK;
     }
 
-    error_t close(size_t idx)
+    Error close(size_t idx)
     {
-        if (idx == SIZE_MAX) { idx = active_scene; }
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
         lcs_assert(idx < SCENE_STORAGE.size());
         SCENE_STORAGE.erase(SCENE_STORAGE.begin() + idx);
-        if (active_scene >= SCENE_STORAGE.size()) { active_scene--; }
-        return error_t::OK;
+        if (active_scene > 0) {
+            active_scene--;
+            _first_frame = true;
+        }
+        return Error::OK;
     }
 
     void notify_change(size_t idx)
     {
-        if (idx == SIZE_MAX) { idx = active_scene; }
+        L_INFO("Change happened");
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
         lcs_assert(idx < SCENE_STORAGE.size());
         Inode& inode   = SCENE_STORAGE[idx];
         inode.is_saved = false;
@@ -166,19 +189,23 @@ namespace scene {
 
     bool is_saved(size_t idx)
     {
-        if (idx == SIZE_MAX) { idx = active_scene; }
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
         lcs_assert(idx < SCENE_STORAGE.size());
         return SCENE_STORAGE[idx].is_saved;
     }
 
-    error_t save(size_t idx)
+    Error save(size_t idx)
     {
-        if (idx == SIZE_MAX) { idx = active_scene; }
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
         lcs_assert(idx < SCENE_STORAGE.size());
         Inode& inode = SCENE_STORAGE[idx];
         if (inode.is_saved) {
             L_INFO("Already saved!");
-            return error_t::OK;
+            return Error::OK;
         }
 
         if (inode.scene.component_context.has_value()) {
@@ -186,7 +213,7 @@ namespace scene {
         }
 
         if (!write(inode.path, inode.scene.to_json().toStyledString())) {
-            return ERROR(error_t::NO_SAVE_PATH_DEFINED);
+            return ERROR(Error::NO_SAVE_PATH_DEFINED);
         }
         inode.is_saved = true;
         // Reload component storage if saved scene is a component
@@ -199,48 +226,95 @@ namespace scene {
                     inode.scene.to_json());
             }
         }
-        return error_t::OK;
+        return Error::OK;
     }
 
-    error_t save_as(const std::string& new_path, size_t idx)
+    Error save_as(const std::string& new_path, size_t idx)
     {
-        if (idx == SIZE_MAX) { idx = active_scene; }
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
         lcs_assert(idx < SCENE_STORAGE.size());
         Inode& inode = SCENE_STORAGE[idx];
-        if (inode.path == new_path) { return error_t::OK; }
+        if (inode.path == new_path) {
+            return Error::OK;
+        }
         inode.path     = new_path;
         inode.is_saved = false;
-        error_t err    = save(idx);
-        if (err) { return err; }
-        return error_t::OK;
+        Error err      = save(idx);
+        if (err) {
+            return err;
+        }
+        return Error::OK;
     }
 
     NRef<Scene> get(size_t idx)
     {
-        if (idx == SIZE_MAX) { idx = active_scene; }
-        if (idx >= SCENE_STORAGE.size()) { return nullptr; }
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
+        if (idx >= SCENE_STORAGE.size()) {
+            return nullptr;
+        }
+        if (idx != active_scene) {
+            L_INFO("idx != active_scene");
+            _first_frame = true;
+        }
         active_scene = idx;
         return &SCENE_STORAGE[idx].scene;
     }
 
-    size_t create(const std::string& name)
+    size_t create(const std::string& name, const std::string& author,
+        const std::string& description, int version)
     {
-        SCENE_STORAGE.emplace_back(false, "", Scene { name });
+        SCENE_STORAGE.emplace_back(
+            false, "", Scene { name, author, description, version });
+        _first_frame = true;
         return SCENE_STORAGE.size() - 1;
     }
 
-    void iterate(std::function<bool(
-            size_t idx, const std::string& path, bool is_saved, bool is_active)>
+    void iterate(std::function<bool(std::string_view name,
+            std::string_view path, bool is_saved, bool is_active)>
             run)
     {
         size_t updated_scene = active_scene;
         for (size_t i = 0; i < SCENE_STORAGE.size(); i++) {
-            if (run(i, SCENE_STORAGE[i].path, SCENE_STORAGE[i].is_saved,
-                    i == active_scene)) {
+            if (run(std::string_view { SCENE_STORAGE[i].scene.name.begin() },
+                    std::string_view { SCENE_STORAGE[i].path },
+                    SCENE_STORAGE[i].is_saved, i == active_scene)) {
                 updated_scene = i;
             };
         }
+        if (active_scene != updated_scene) {
+            _first_frame = true;
+        }
         active_scene = updated_scene;
+    }
+
+    void run_frame(size_t idx)
+    {
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
+        if (idx >= SCENE_STORAGE.size()) {
+            return;
+        }
+        SCENE_STORAGE[idx].scene.run_timers();
+        for (auto compname : SCENE_STORAGE[idx].scene.dependencies) {
+            COMPONENT_STORAGE.find(compname)->second.run_timers();
+            // FIX Component may not be fetched correctly
+        }
+    }
+
+    bool first_frame(void)
+    {
+        if (_first_frame) {
+            L_INFO("Check out tab(" << active_scene << ") at "
+                                    << SCENE_STORAGE[active_scene].path);
+            _first_frame = false;
+            return true;
+        }
+        return false;
     }
 
 } // namespace scene
@@ -249,12 +323,12 @@ namespace component {
 
     void _load_stdlib(void);
 
-    error_t _check_fs(const std::string& name)
+    Error _check_fs(const std::string& name)
     {
         std::string n { name };
         std::vector<std::string> tokens = split(n, '/');
         if (tokens.size() != 3) {
-            return ERROR(error_t::INVALID_DEPENDENCY_FORMAT);
+            return ERROR(Error::INVALID_DEPENDENCY_FORMAT);
         }
         std::string path;
         Scene s;
@@ -266,53 +340,65 @@ namespace component {
                 / (base64_encode(tokens[1] + "/" + tokens[2]) + ".json");
         }
         std::string data = read(path);
-        if (data == "") { return ERROR(error_t::COMPONENT_NOT_FOUND); }
-        error_t err = load(data, s);
-        if (err) { return err; }
+        if (data == "") {
+            return ERROR(Error::COMPONENT_NOT_FOUND);
+        }
+        Error err = load(data, s);
+        if (err) {
+            return err;
+        }
         if (!s.component_context.has_value()) {
-            return ERROR(error_t::NOT_A_COMPONENT);
+            return ERROR(Error::NOT_A_COMPONENT);
         }
         COMPONENT_STORAGE.insert_or_assign(s.to_dependency(), std::move(s));
-        return error_t::OK;
+        return Error::OK;
     }
 
-    error_t _check_src(const std::string&) { return error_t::NOT_FOUND; }
+    Error _check_src(const std::string&) { return Error::NOT_FOUND; }
 
-    error_t fetch(const std::string& name, bool invalidate)
+    Error fetch(const std::string& name, bool invalidate)
     {
         if (!invalidate) {
             if (auto cmp = COMPONENT_STORAGE.find(name);
                 cmp != COMPONENT_STORAGE.end()) {
-                return error_t::OK;
+                return Error::OK;
             }
         }
-        error_t err = _check_fs(name);
-        if (err == error_t::COMPONENT_NOT_FOUND) { err = _check_src(name); }
-        if (err) { return err; }
-        return error_t::OK;
+        Error err = _check_fs(name);
+        if (err == Error::COMPONENT_NOT_FOUND) {
+            err = _check_src(name);
+        }
+        if (err) {
+            return err;
+        }
+        return Error::OK;
     }
 
-    error_t fetch(
+    Error fetch(
         const std::string& name, const std::string& data, bool invalidate)
     {
         if (!invalidate) {
             if (auto cmp = COMPONENT_STORAGE.find(name);
                 cmp != COMPONENT_STORAGE.end()) {
-                return error_t::OK;
+                return Error::OK;
             }
         }
         Scene s;
-        if (error_t err = load(data, s); err) { return err; }
+        if (Error err = load(data, s); err) {
+            return err;
+        }
         if (!s.component_context.has_value()) {
-            return ERROR(error_t::NOT_A_COMPONENT);
+            return ERROR(Error::NOT_A_COMPONENT);
         }
         COMPONENT_STORAGE.insert_or_assign(name, std::move(s));
-        return error_t::OK;
+        return Error::OK;
     }
 
     uint64_t run(const std::string& name, uint64_t input)
     {
-        if (fetch(name)) { return 0; }
+        if (fetch(name)) {
+            return 0;
+        }
         return COMPONENT_STORAGE[name].component_context->run(input);
     }
 

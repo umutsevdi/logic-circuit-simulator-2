@@ -9,7 +9,7 @@ TEST_CASE("Increment socket size, expect update")
 
     auto v     = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
-    auto g_and = s.add_node<GateNode>(gate_t::AND);
+    auto g_and = s.add_node<GateNode>(GateType::AND);
     auto o     = s.add_node<OutputNode>();
 
     s.get_node<InputNode>(v)->set(true);
@@ -19,9 +19,9 @@ TEST_CASE("Increment socket size, expect update")
     REQUIRE(s.connect(g_and, 0, v));
     REQUIRE(s.connect(g_and, 1, v2));
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
     s.get_node<GateNode>(g_and)->increment();
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::DISABLED);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
     s.get_node<GateNode>(g_and)->decrement();
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), state_t::TRUE);
+    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
 }

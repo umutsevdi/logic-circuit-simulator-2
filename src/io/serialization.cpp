@@ -7,7 +7,7 @@
 
 namespace lcs {
 
-template <typename T> Json::Value _to_json(const std::map<node, T>& m)
+template <typename T> Json::Value _to_json(const std::map<Node, T>& m)
 {
     Json::Value doc { Json::objectValue };
     for (const auto& c : m) {
@@ -20,9 +20,11 @@ template <typename T> Json::Value _to_json(const std::map<node, T>& m)
 Json::Value Scene::to_json(void) const
 {
     Json::Value out { Json::objectValue };
-    out["name"]   = name;
-    out["author"] = author;
-    if (description != "") { out["description"] = description; }
+    out["name"]   = name.data();
+    out["author"] = author.data();
+    if (!description.empty()) {
+        out["description"] = description.data();
+    }
     out["version"] = version;
     if (!dependencies.empty()) {
         Json::Value dep { Json::arrayValue };
@@ -33,19 +35,21 @@ Json::Value Scene::to_json(void) const
         }
         out["dependencies"] = dep;
     }
-
+    out["nodes"] = { Json::objectValue };
     if (!_gates.empty()) {
-        out["nodes"][node_to_str(node_t::GATE)] = _to_json<GateNode>(_gates);
+        out["nodes"][NodeType_to_str(NodeType::GATE)]
+            = _to_json<GateNode>(_gates);
     }
     if (!_inputs.empty()) {
-        out["nodes"][node_to_str(node_t::INPUT)] = _to_json<InputNode>(_inputs);
+        out["nodes"][NodeType_to_str(NodeType::INPUT)]
+            = _to_json<InputNode>(_inputs);
     }
     if (!_outputs.empty()) {
-        out["nodes"][node_to_str(node_t::OUTPUT)]
+        out["nodes"][NodeType_to_str(NodeType::OUTPUT)]
             = _to_json<OutputNode>(_outputs);
     }
     if (!_components.empty()) {
-        out["nodes"][node_to_str(node_t::COMPONENT)]
+        out["nodes"][NodeType_to_str(NodeType::COMPONENT)]
             = _to_json<ComponentNode>(_components);
     }
 
@@ -62,14 +66,15 @@ Json::Value Scene::to_json(void) const
     return out;
 }
 
-Json::Value node::to_json(void) const
+Json::Value Node::to_json(void) const
 {
     Json::Value out;
-    out["id"] = std::string { node_to_str(type) } + "@" + std::to_string(id);
+    out["id"]
+        = std::string { NodeType_to_str(type) } + "@" + std::to_string(id);
     return out;
 }
 
-Json::Value point_t::to_json(void) const
+Json::Value Point::to_json(void) const
 {
     Json::Value out { Json::objectValue };
     out["x"] = x;
@@ -81,9 +86,13 @@ Json::Value Rel::to_json(void) const
 {
     Json::Value out { Json::objectValue };
     Json::Value from = from_node.to_json();
-    if (from_sock) { from["sock"] = from_sock; }
+    if (from_sock) {
+        from["sock"] = from_sock;
+    }
     Json::Value to = to_node.to_json();
-    if (to_sock) { to["sock"] = to_sock; }
+    if (to_sock) {
+        to["sock"] = to_sock;
+    }
     out["from"] = from;
     out["to"]   = to;
 
@@ -100,8 +109,10 @@ Json::Value Rel::to_json(void) const
 Json::Value GateNode::to_json(void) const
 {
     Json::Value out = this->BaseNode::to_json();
-    out["gate"]     = gate_to_str(type());
-    if (type() != gate_t::NOT && _max_in != 2) { out["size"] = _max_in; }
+    out["type"]     = GateType_to_str(type());
+    if (type() != GateType::NOT && _max_in != 2) {
+        out["size"] = _max_in;
+    }
     return out;
 }
 
@@ -138,8 +149,9 @@ Json::Value ComponentContext::to_json(void) const
 Json::Value BaseNode::to_json(void) const
 {
     Json::Value out { Json::objectValue };
-    if (dir != direction_t::RIGHT) { out["dir"] = direction_to_str(dir); }
-    if (point.x != 0 || point.y != 0) { out["pos"] = point.to_json(); }
+    if (point.x != 0 || point.y != 0) {
+        out["pos"] = point.to_json();
+    }
     return out;
 }
 
