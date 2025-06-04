@@ -12,17 +12,17 @@ static bool _nor(const std::vector<bool>&);
 static bool _xnor(const std::vector<bool>&);
 static bool _not(const std::vector<bool>&);
 
-GateNode::GateNode(Scene* _scene, node id, gate_t type, sockid _max_in)
-    : BaseNode { _scene, { id.id, node_t::GATE } }
+GateNode::GateNode(Scene* _scene, Node id, GateType type, sockid _max_in)
+    : BaseNode { _scene, { id.id, NodeType::GATE } }
     , inputs {}
     , output {}
     , _type { type }
-    , _value { state_t::DISABLED }
+    , _value { State::DISABLED }
     , _is_disabled { true }
     , _max_in { _max_in }
 
 {
-    if (_type == gate_t::NOT) {
+    if (_type == GateType::NOT) {
         _max_in = 1;
     } else if (_max_in < 2) {
         _max_in = 2;
@@ -42,14 +42,14 @@ bool GateNode::is_connected() const
         inputs.begin(), inputs.end(), [&](relid i) { return i != 0; });
 }
 
-state_t GateNode::get(sockid) const
+State GateNode::get(sockid) const
 {
-    return _is_disabled ? state_t::DISABLED : _value;
+    return _is_disabled ? State::DISABLED : _value;
 }
 
 void GateNode::on_signal()
 {
-    _value = state_t::DISABLED;
+    _value = State::DISABLED;
     if (is_connected()) {
         std::vector<bool> v {};
         v.reserve(inputs.size());
@@ -57,28 +57,30 @@ void GateNode::on_signal()
         for (relid in : inputs) {
             auto rel = _parent->get_rel(in);
             lcs_assert(rel != nullptr);
-            if (rel->value == state_t::DISABLED) {
+            if (rel->value == State::DISABLED) {
                 _is_disabled = true;
                 break;
             }
             v.push_back(rel->value == TRUE ? TRUE : FALSE);
         }
         if (!_is_disabled) {
-            _value = _apply(v) ? state_t::TRUE : state_t::FALSE;
+            _value = _apply(v) ? State::TRUE : State::FALSE;
         }
     } else {
         _is_disabled = true;
     }
     for (relid& out : output) {
         L_INFO(
-            CLASS "Sending " << state_t_str(get()) << " signal to rel@" << out);
+            CLASS "Sending " << State_to_str(get()) << " signal to rel@" << out);
         _parent->signal(out, get());
     }
 }
 
 bool GateNode::increment()
 {
-    if (_type == gate_t::NOT) { return false; }
+    if (_type == GateType::NOT) {
+        return false;
+    }
     _max_in++;
     inputs.reserve(_max_in);
     inputs.push_back(0);
@@ -88,7 +90,9 @@ bool GateNode::increment()
 
 bool GateNode::decrement()
 {
-    if (_type == gate_t::NOT || _max_in == 2) { return false; }
+    if (_type == GateType::NOT || _max_in == 2) {
+        return false;
+    }
     if (inputs[inputs.size() - 1] != 0) {
         _parent->disconnect(inputs[inputs.size() - 1]);
     }
@@ -100,22 +104,26 @@ bool GateNode::decrement()
 std::ostream& operator<<(std::ostream& os, const GateNode& g)
 {
 
-    os << g.id() << "( " << gate_to_str(g.type()) << ", "
-       << state_t_str(g._value) << " )";
+    os << g.id() << "( " << GateType_to_str(g.type()) << ", "
+       << State_to_str(g._value) << " )";
     return os;
 };
 
 static bool _and(const std::vector<bool>& in)
 {
     for (const auto& s : in) {
-        if (s == false) { return false; }
+        if (s == false) {
+            return false;
+        }
     }
     return true;
 }
 static bool _or(const std::vector<bool>& in)
 {
     for (const auto& s : in) {
-        if (s == true) { return true; }
+        if (s == true) {
+            return true;
+        }
     }
     return false;
 }
@@ -123,7 +131,9 @@ static bool _xor(const std::vector<bool>& in)
 {
     bool result = false;
     for (const auto& s : in) {
-        if (s == true) { result = !result; }
+        if (s == true) {
+            result = !result;
+        }
     }
     return result;
 }

@@ -120,9 +120,13 @@ void set_style(ImGuiIO& io, int alpha, bool& is_dark)
             float H, S, V;
             ImGui::ColorConvertRGBtoHSV(col.x, col.y, col.z, H, S, V);
 
-            if (S < 0.1f) { V = 1.0f - V; }
+            if (S < 0.1f) {
+                V = 1.0f - V;
+            }
             ImGui::ColorConvertHSVtoRGB(H, S, V, col.x, col.y, col.z);
-            if (col.w < 1.00f) { col.w *= alpha; }
+            if (col.w < 1.00f) {
+                col.w *= alpha;
+            }
         }
     } else {
         for (int i = 0; i <= ImGuiCol_COUNT; i++) {

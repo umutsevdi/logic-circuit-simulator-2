@@ -19,7 +19,7 @@
 
 namespace lcs {
 
-enum error_t {
+enum Error {
     /** Operation is successful. */
     OK,
     /** Object has 0 as node id. */
@@ -32,8 +32,8 @@ enum error_t {
     NODE_NOT_FOUND,
     /** Outputs can not be used as a from type. */
     INVALID_FROM_TYPE,
-    /** Only components can have node_t::COMPONENT_INPUT and
-       node_t::COMPONENT_OUTPUT. */
+    /** Only components can have NodeType::COMPONENT_INPUT and
+       NodeType::COMPONENT_OUTPUT. */
     NOT_A_COMPONENT,
     /** Inputs can not be used as a to type. */
     INVALID_TO_TYPE,
@@ -51,6 +51,12 @@ enum error_t {
     INVALID_GATE,
     /** Deserialized scene does not fulfill its requirements. */
     INVALID_SCENE,
+    /** Deserialized scene name exceeds the character limits. */
+    INVALID_SCENE_NAME,
+    /** Deserialized name of the scene's author exceeds the character limits. */
+    INVALID_AUTHOR_NAME,
+    /** Deserialized description of the scene exceeds the character limits. */
+    INVALID_DESCRIPTION,
     /** Deserialized component does not fulfill its requirements. */
     INVALID_COMPONENT,
     /** An error occurred while connecting a node during serialization. */
@@ -167,7 +173,6 @@ std::ostream& _log_pre_f(
 #define L_ERROR(...) __LLOG__(ERROR, std::cerr, __VA_ARGS__)
 
 #ifndef NDEBUG
-#define C_INFO()
 #define L_INFO(...) __LLOG__(INFO, std::cout, __VA_ARGS__)
 /** Runs an assertion. Displays an error message on failure. In debug builds
  * also crashes the application. */
@@ -200,6 +205,8 @@ std::ostream& _log_pre_f(
 inline std::string strlimit(const std::string& input, size_t limit)
 {
     size_t len = input.length();
-    if (len > limit) { return "..." + input.substr(len - limit + 3, len); }
+    if (len > limit) {
+        return "..." + input.substr(len - limit + 3, len);
+    }
     return input;
 }

@@ -1,20 +1,19 @@
 #pragma once
-#include "core.h"
 
 #define _create_full_adder_io(s)                                               \
     using namespace lcs;                                                       \
-    node a     = s.add_node<InputNode>();                                      \
-    node b     = s.add_node<InputNode>();                                      \
-    node c_in  = s.add_node<InputNode>();                                      \
-    node c_out = s.add_node<OutputNode>();                                     \
-    node sum   = s.add_node<OutputNode>();
+    Node a     = s.add_node<InputNode>();                                      \
+    Node b     = s.add_node<InputNode>();                                      \
+    Node c_in  = s.add_node<InputNode>();                                      \
+    Node c_out = s.add_node<OutputNode>();                                     \
+    Node sum   = s.add_node<OutputNode>();
 
 #define _create_full_adder(s)                                                  \
-    node g_xor       = s.add_node<GateNode>(gate_t::XOR);                      \
-    node g_xor_sum   = s.add_node<GateNode>(gate_t::XOR);                      \
-    node g_and_carry = s.add_node<GateNode>(gate_t::AND);                      \
-    node g_and       = s.add_node<GateNode>(gate_t::AND);                      \
-    node g_or        = s.add_node<GateNode>(gate_t::OR);                       \
+    Node g_xor       = s.add_node<GateNode>(GateType::XOR);                    \
+    Node g_xor_sum   = s.add_node<GateNode>(GateType::XOR);                    \
+    Node g_and_carry = s.add_node<GateNode>(GateType::AND);                    \
+    Node g_and       = s.add_node<GateNode>(GateType::AND);                    \
+    Node g_or        = s.add_node<GateNode>(GateType::OR);                     \
                                                                                \
     s.connect(g_xor, 0, a);                                                    \
     s.connect(g_xor, 1, b);                                                    \
