@@ -21,7 +21,8 @@ void _new_flow(bool& show)
     if (!show) {
         return;
     }
-    if (ImGui::BeginPopupModal("PopupNewScene", &show)) {
+    if (ImGui::BeginPopupModal(
+            "PopupNewScene", &show, ImGuiWindowFlags_NoTitleBar)) {
         static bool is_scene         = true;
         static char author[60]       = "local";
         static char name[128]        = { 0 };
@@ -58,12 +59,10 @@ void _new_flow(bool& show)
                 get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
             ImGui::TextColored(ImVec4(200, 200, 0, 255), "Input Size");
             ImGui::PopFont();
-            ImGui::SameLine();
             ImGui::InputInt("##CompInputSize", (int*)&input_size);
             ImGui::PushFont(
                 get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
             ImGui::TextColored(ImVec4(200, 200, 0, 255), "Output Size");
-            ImGui::SameLine();
             ImGui::PopFont();
             ImGui::InputInt("##CompOutputSize", (int*)&output_size);
         }
@@ -167,59 +166,70 @@ bool loop(ImGuiIO& io)
         return true;
     }
 
-    ImGui::BeginChild("Node Tree",
-        ImVec2 { ImGui::CalcTextSize("COMPONENT").x, app_size.y * 0.85f },
-        ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoTitleBar);
-    {
-        ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-        ImGui::TextColored(ImVec4(200, 200, 0, 255), "Scene Name");
-        ImGui::PopFont();
-        if (ImGui::InputText("##SceneNameInputText", scene->name.data(),
-                scene->name.max_size(), ImGuiInputTextFlags_CharsNoBlank)) {
-            io::scene::notify_change();
-        };
-        ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-        ImGui::TextColored(ImVec4(200, 200, 0, 255), "Description");
-        ImGui::PopFont();
-        if (ImGui::InputTextMultiline("##SceneDescInputText",
-                scene->description.data(), scene->description.max_size(),
-                ImVec2(ImGui::GetWindowWidth(),
-                    ImGui::CalcTextSize("\n\n\n").y))) {
-            io::scene::notify_change();
-        };
-        ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-        ImGui::TextColored(ImVec4(200, 200, 0, 255), "Version");
-        ImGui::PopFont();
-        if (ImGui::InputInt("##SceneVersion", &scene->version)) {
-            scene->version = std::max(scene->version, 0);
-            io::scene::notify_change();
-        };
-
-        if (scene->component_context.has_value()) {
+    float left_width = app_size.x * 0.3f;
+    if (ImGui::BeginChild("LeftMenu", ImVec2 { left_width, app_size.y * 0.85f },
+            ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoTitleBar)) {
+        if (ImGui::BeginChild(
+                "SceneInfo", ImVec2 { left_width, app_size.y * 0.85f / 2 })) {
             ImGui::PushFont(
                 get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-            ImGui::TextColored(
-                ImVec4(200, 200, 0, 255), "Component Attributes");
-            ImGui::Separator();
-            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Input Size");
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Scene Name");
             ImGui::PopFont();
-            size_t input_size  = scene->component_context->inputs.size();
-            size_t output_size = scene->component_context->outputs.size();
-
-            ImGui::InputInt("##CompInputSize", (int*)&input_size);
-            ImGui::PushFont(
-                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Output Size");
-            ImGui::PopFont();
-            ImGui::InputInt("##CompOutputSize", (int*)&output_size);
-
-            if (input_size != scene->component_context->inputs.size()
-                || output_size != scene->component_context->outputs.size()) {
-                scene->component_context->setup(input_size, output_size);
+            if (ImGui::InputText("##SceneNameInputText", scene->name.data(),
+                    scene->name.max_size(), ImGuiInputTextFlags_CharsNoBlank)) {
                 io::scene::notify_change();
-            }
-        }
+            };
+            ImGui::PushFont(
+                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Description");
+            ImGui::PopFont();
+            if (ImGui::InputTextMultiline("##SceneDescInputText",
+                    scene->description.data(), scene->description.max_size(),
+                    ImVec2(ImGui::GetWindowWidth(),
+                        ImGui::CalcTextSize("\n\n\n").y))) {
+                io::scene::notify_change();
+            };
+            ImGui::PushFont(
+                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Version");
+            ImGui::PopFont();
+            if (ImGui::InputInt("##SceneVersion", &scene->version)) {
+                scene->version = std::max(scene->version, 0);
+                io::scene::notify_change();
+            };
 
+            if (scene->component_context.has_value()) {
+                ImGui::PushFont(
+                    get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                ImGui::TextColored(
+                    ImVec4(200, 200, 0, 255), "Component Attributes");
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(200, 200, 0, 255), "Input Size");
+                ImGui::PopFont();
+                size_t input_size  = scene->component_context->inputs.size();
+                size_t output_size = scene->component_context->outputs.size();
+
+                ImGui::InputInt("##CompInputSize", (int*)&input_size);
+                ImGui::PushFont(
+                    get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                ImGui::TextColored(ImVec4(200, 200, 0, 255), "Output Size");
+                ImGui::PopFont();
+                ImGui::InputInt("##CompOutputSize", (int*)&output_size);
+
+                if (input_size != scene->component_context->inputs.size()
+                    || output_size
+                        != scene->component_context->outputs.size()) {
+                    scene->component_context->setup(input_size, output_size);
+                    io::scene::notify_change();
+                }
+            }
+            ImGui::EndChild();
+        }
+        if (ImGui::BeginChild("ObjectInspector",
+                ImVec2 { left_width, app_size.y * 0.85f / 2 })) {
+            ImGui::TextColored(ImVec4(200, 200, 0, 255), "Object Inspector");
+            ImGui::EndChild();
+        }
         ImGui::EndChild();
     }
     ImGui::SameLine();

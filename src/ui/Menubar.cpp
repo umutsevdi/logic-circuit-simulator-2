@@ -88,9 +88,6 @@ void MenuBar(void)
         if (ImGui::BeginMenu("Help")) {
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Help")) {
-            ImGui::EndMenu();
-        }
         ImGui::EndMainMenuBar();
     };
     ImGui::PopFont();

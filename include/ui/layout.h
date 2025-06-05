@@ -20,6 +20,7 @@ namespace lcs::ui {
 void MenuBar(void);
 void TabWindow(void);
 void Palette(void);
+void Inspector(NRef<Scene> scene);
 void NodeEditor(NRef<Scene> scene);
 int _input_text_callback(ImGuiInputTextCallbackData*);
 } // namespace lcs::ui

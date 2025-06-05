@@ -73,6 +73,7 @@ void NodeEditor(NRef<Scene> scene)
             }
             ImNodes::PopColorStyle();
         }
+        ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
         ImNodes::EndNodeEditor();
         {
             int linkid = 0;
