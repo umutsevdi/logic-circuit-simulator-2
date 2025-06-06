@@ -5,8 +5,8 @@
 #include <tinyfiledialogs.h>
 
 #include "io.h"
-#include "ui.h"
 #include "ui/layout.h"
+#include "ui/util.h"
 
 namespace lcs::ui {
 static const char* _PATH_FILTER[1] = { "*.json" };

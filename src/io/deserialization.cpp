@@ -1,7 +1,9 @@
 #include <algorithm>
+#include <cmath>
 #include <json/json.h>
 
 #include <map>
+#include <optional>
 
 #include "common.h"
 #include "core.h"
@@ -215,9 +217,10 @@ Error ComponentNode::from_json(const Json::Value& doc)
 
 Error InputNode::from_json(const Json::Value& doc)
 {
-    if (doc["freq"].isInt()) {
-        _freq = doc["freq"].isInt();
-        if (_freq == 0) {
+    if (doc["freq"].isNumeric()) {
+        _freq = std::max(0.25f,
+            std::min(std::round(doc["freq"].asFloat() * 4.0f) / 4.0f, 10.0f));
+        if (_freq <= 0) {
             _freq = std::nullopt;
         }
     } else if (doc["data"].isBool()) {
@@ -261,7 +264,6 @@ Error _json_to_map(
         if (err) {
             return err;
         }
-
         if constexpr (std::is_same<T, GateNode>::value) {
             if (!value["type"].isString()) {
                 return ERROR(Error::INVALID_GATE);
@@ -281,6 +283,12 @@ Error _json_to_map(
             }
             t.point = point;
             m.emplace(id, t);
+        }
+
+        if constexpr (std::is_same<T, InputNode>::value) {
+            if (auto t = m.find(id); t != m.end() && t->second.is_timer()) {
+                s->_timerlist.emplace(id, 0);
+            }
         }
     }
     last_node = last_id;

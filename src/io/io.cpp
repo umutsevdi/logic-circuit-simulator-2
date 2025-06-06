@@ -178,6 +178,7 @@ namespace scene {
 
     void notify_change(size_t idx)
     {
+        L_INFO("Change happened");
         if (idx == SIZE_MAX) {
             idx = active_scene;
         }
@@ -288,6 +289,21 @@ namespace scene {
             _first_frame = true;
         }
         active_scene = updated_scene;
+    }
+
+    void run_frame(size_t idx)
+    {
+        if (idx == SIZE_MAX) {
+            idx = active_scene;
+        }
+        if (idx >= SCENE_STORAGE.size()) {
+            return;
+        }
+        SCENE_STORAGE[idx].scene.run_timers();
+        for (auto compname : SCENE_STORAGE[idx].scene.dependencies) {
+            COMPONENT_STORAGE.find(compname)->second.run_timers();
+            // FIX Component may not be fetched correctly
+        }
     }
 
     bool first_frame(void)

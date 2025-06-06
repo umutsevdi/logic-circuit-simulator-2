@@ -4,21 +4,10 @@
 #include "io.h"
 #include "ui.h"
 #include "ui/nodes.h"
+#include "ui/util.h"
 #include <imnodes.h>
 
 namespace lcs::ui {
-constexpr ImVec4 NodeType_to_color(mode_t type)
-{
-    switch (type) {
-    case NodeType::GATE: return ImVec4(0, 1, 1, 1);
-    case NodeType::INPUT: return ImVec4(0.3, 0.3, 0.7, 1);
-    case NodeType::OUTPUT: return ImVec4(0.6, 0.0, 0.6, 1);
-    case NodeType::COMPONENT: return ImVec4(0.3, 0.7, 0.3, 1);
-    default: return ImVec4(0.8, 0.6, 0.1, 1);
-    }
-}
-void NodeType_to_title(Node n);
-void NodeType_to_title(Node n, sockid sock);
 void _value_tooltip(State s);
 
 int hash_pair(Node node, sockid sock, bool is_out)
@@ -90,10 +79,10 @@ void NodeEditor(NRef<Scene> scene)
                     ImGui::PushFont(get_font(font_flags_t::NORMAL));
                     ImGui::TextColored(ImVec4(200, 200, 0, 255), "From:");
                     ImGui::SameLine();
-                    NodeType_to_title(r->from_node, r->from_sock);
+                    NodeTypeTitle(r->from_node, r->from_sock);
                     ImGui::TextColored(ImVec4(200, 200, 0, 255), "To:");
                     ImGui::SameLine();
-                    NodeType_to_title(r->to_node, r->to_sock);
+                    NodeTypeTitle(r->to_node, r->to_sock);
                     ImGui::TextColored(ImVec4(200, 200, 0, 255), "Value:");
                     ImGui::SameLine();
                     _value_tooltip(r->value);
@@ -111,7 +100,7 @@ void NodeEditor(NRef<Scene> scene)
                     ImGui::BeginTooltip() && n != nullptr) {
                     ImGui::PushFont(
                         get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-                    NodeType_to_title((Node)nodeid);
+                    NodeTypeTitle((Node)nodeid);
                     ImGui::Separator();
                     ImGui::PopFont();
                     ImGui::PushFont(get_font(font_flags_t::NORMAL));

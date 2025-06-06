@@ -69,7 +69,7 @@ void Scene::_move_from(Scene&& other)
     author            = std::move(other.author);
     version           = other.version;
     dependencies      = std::move(other.dependencies);
-    timer_sub_vec     = std::move(other.timer_sub_vec);
+    _timerlist        = std::move(other._timerlist);
     _gates            = std::move(other._gates);
     _components       = std::move(other._components);
     _inputs           = std::move(other._inputs);
@@ -144,6 +144,9 @@ void Scene::remove_node(Node id)
         lcs_assert(id.id <= _last_node[NodeType::INPUT].id);
         auto i = _inputs.find(id);
         lcs_assert(i != _inputs.end());
+        if (i->second.is_timer()) {
+            _timerlist.erase(i->first);
+        }
         for (auto r : i->second.output) {
             if (r != 0) {
                 disconnect(r);
@@ -442,6 +445,18 @@ std::string Scene::to_filepath(void) const
         p = io::LIBRARY / str_author / file_name;
     }
     return p;
+}
+
+void Scene::run_timers(void)
+{
+    for (auto& timer : _timerlist) {
+        NRef<InputNode> node = get_node<InputNode>(timer.first);
+        timer.second += node->_freq.value_or(0) / 60;
+        if (timer.second > 1) {
+            timer.second--;
+            node->toggle();
+        }
+    }
 }
 
 } // namespace lcs

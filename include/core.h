@@ -275,7 +275,7 @@ private:
 class InputNode : public BaseNode {
 public:
     InputNode(
-        Scene* _scene, Node _id, std::optional<uint32_t> freq = std::nullopt);
+        Scene* _scene, Node _id, std::optional<float> freq = std::nullopt);
     InputNode(const InputNode&)            = default;
     InputNode(InputNode&&)                 = default;
     InputNode& operator=(InputNode&&)      = default;
@@ -301,7 +301,7 @@ public:
 
     std::vector<relid> output;
 
-    std::optional<uint32_t> _freq;
+    std::optional<float> _freq;
 
 private:
     bool _value;
@@ -403,6 +403,9 @@ public:
     ~Scene()                       = default;
     friend std::ostream& operator<<(std::ostream& os, const Scene&);
 
+    /** Run a frame for the scene. */
+    void run_timers(void);
+
     /** Creates a node in a scene with given type. Passes arguments to
      * the constructor similar to emplace methods.
      * @param args to pass
@@ -430,10 +433,16 @@ public:
                 .first->first;
         } else if constexpr (is_input) {
             _last_node[NodeType::INPUT].id++;
-            return _inputs
-                .emplace(_last_node[NodeType::INPUT],
-                    InputNode { this, _last_node[NodeType::INPUT].id, args... })
-                .first->first;
+            auto new_node
+                = _inputs
+                      .emplace(_last_node[NodeType::INPUT],
+                          InputNode {
+                              this, _last_node[NodeType::INPUT].id, args... })
+                      .first;
+            if (new_node->second.is_timer()) {
+                _timerlist.emplace(new_node->first, 0.0f);
+            }
+            return new_node->first;
         } else if constexpr (is_output) {
             _last_node[NodeType::OUTPUT].id++;
             return _outputs
@@ -552,9 +561,6 @@ public:
     Json::Value to_json(void) const override;
     Error from_json(const Json::Value&) override;
 
-    // [id][period] map for timer inputs
-    std::map<Node, int> timer_sub_vec;
-
     std::array<char, 128> name;
     std::array<char, 512> description;
     /** GitHub user names are limited to 40 characters. */
@@ -568,6 +574,8 @@ public:
     std::map<Node, InputNode> _inputs;
     std::map<Node, OutputNode> _outputs;
     std::map<relid, Rel> _relations;
+    /** key = Node::id, value: internal clock counter */
+    std::map<Node, float> _timerlist;
 
 private:
     /** The helper method for move constructor and move assignment */

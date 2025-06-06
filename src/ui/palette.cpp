@@ -27,9 +27,8 @@ void Palette()
         is_dragging  = true;
     }
     if (ImGui::Button("Timer")) {
-        dragged_node = scene->add_node<InputNode>();
+        dragged_node = scene->add_node<InputNode>(1.0f);
         is_dragging  = true;
-        scene->get_node<InputNode>(dragged_node)->_freq = 1;
     }
     if (ImGui::Button("NOT Gate")) {
         dragged_node = scene->add_node<GateNode>(GateType::NOT);

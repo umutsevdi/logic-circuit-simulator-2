@@ -9,6 +9,7 @@
 #include "io.h"
 #include "ui.h"
 #include "ui/layout.h"
+#include "ui/util.h"
 
 static bool show_demo_window = true;
 ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -84,17 +85,6 @@ void _new_flow(bool& show)
     }
 }
 
-constexpr ImVec4 NodeType_to_color(mode_t type)
-{
-    switch (type) {
-    case NodeType::GATE: return ImVec4(0, 1, 1, 1);
-    case NodeType::INPUT: return ImVec4(0.3, 0.3, 0.7, 1);
-    case NodeType::OUTPUT: return ImVec4(0.6, 0.0, 0.6, 1);
-    case NodeType::COMPONENT: return ImVec4(0.3, 0.7, 0.3, 1);
-    default: return ImVec4(0.8, 0.6, 0.1, 1);
-    }
-}
-
 void _value_tooltip(State s)
 {
     switch (s) {
@@ -113,29 +103,6 @@ void _value_tooltip(State s)
     default: break;
     }
     ImGui::PopStyleColor();
-}
-
-void NodeType_to_title(Node n)
-{
-    ImGui::TextColored(
-        NodeType_to_color(n.type), "%s", NodeType_to_str(n.type));
-    ImGui::SameLine();
-    ImGui::Text("@");
-    ImGui::SameLine();
-    ImGui::TextColored(
-        ImVec4(0, 1.0, 0, 1), "%s", std::to_string(n.id).c_str());
-}
-
-void NodeType_to_title(Node n, sockid sock)
-{
-    ImGui::PushFont(get_font(font_flags_t::REGULAR | font_flags_t::NORMAL));
-    NodeType_to_title(n);
-    ImGui::SameLine();
-    ImGui::Text("sock:");
-    ImGui::SameLine();
-    ImGui::TextColored(
-        ImVec4(0.5f, 0.5f, 1.0f, 1.00f), "%s", std::to_string(sock).c_str());
-    ImGui::PopFont();
 }
 
 void before(ImGuiIO&) { ImNodes::CreateContext(); }
@@ -160,6 +127,7 @@ bool loop(ImGuiIO& io)
     }
     _new_flow(show);
     NRef<Scene> scene = io::scene::get();
+    io::scene::run_frame();
     if (scene == nullptr) {
         ImGui::End();
         ImGui::PopFont();
@@ -250,8 +218,7 @@ bool loop(ImGuiIO& io)
             dragged_node = scene->add_node<OutputNode>();
         }
         if (ImGui::Button("Timer")) {
-            dragged_node = scene->add_node<InputNode>();
-            scene->get_node<InputNode>(dragged_node)->_freq = 1;
+            dragged_node = scene->add_node<InputNode>(1.0f);
         }
         if (ImGui::Button("NOT Gate")) {
             dragged_node = scene->add_node<GateNode>(GateType::NOT);
@@ -276,6 +243,7 @@ bool loop(ImGuiIO& io)
         }
         ImGui::EndChild();
     }
+    Inspector(&scene);
 
     Palette();
     ImGui::End();

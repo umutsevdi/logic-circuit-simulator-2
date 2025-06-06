@@ -2,6 +2,7 @@
 #include "ui.h"
 
 #include "common.h"
+#include "ui/util.h"
 #include <imgui.h>
 #define FONTPATH "/usr/share/fonts/UbuntuMono/"
 #define _FONT_NAME "UbuntuMonoNerdFont-"

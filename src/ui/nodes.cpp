@@ -4,8 +4,11 @@
 #include "common.h"
 #include "core.h"
 #include "imnodes.h"
+#include "io.h"
 #include "ui.h"
+#include "ui/layout.h"
 #include "ui/nodes.h"
+#include "ui/util.h"
 
 namespace lcs::ui {
 
@@ -24,34 +27,6 @@ void _sync_position(NRef<BaseNode> node, bool first_time)
             lcs::io::scene::notify_change();
         }
     }
-}
-
-static inline void _Stateoggle_button(NRef<InputNode> node)
-{
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-    switch (node->get()) {
-    case State::TRUE:
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 1, 0, 1));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
-        if (ImGui::Button("TRUE ")) {
-            node->toggle();
-        };
-        ImGui::PopStyleColor();
-        break;
-    case State::FALSE:
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 1));
-        if (ImGui::Button("FALSE")) {
-            node->toggle();
-        };
-        break;
-    case State::DISABLED:
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 1));
-        ImGui::Button("DISABLED");
-        break;
-    default: break;
-    }
-    ImGui::PopFont();
-    ImGui::PopStyleColor();
 }
 
 static inline ImNodesPinShape_ to_shape(bool value, bool is_input)
@@ -116,16 +91,19 @@ template <> NodeView<InputNode>::NodeView(NRef<InputNode> node, bool first_time)
     ImNodes::BeginOutputAttribute(hash_pair(node->id(), 0, true),
         to_shape(node->output.size() > 0, false));
     if (node->is_timer()) {
-        int freq_value = node->_freq.value();
+        float freq_value = node->_freq.value();
         ImGui::PushItemWidth(60);
-        if (ImGui::InputInt("Hz", &freq_value)) {
-            if (freq_value != (int)node->_freq.value()) {
-                node->_freq = std::max(0, std::min(freq_value, 60));
+        if (ImGui::InputFloat("Hz", &freq_value, 0.25f, 1.0f, "%.2f")) {
+            freq_value = std::max(
+                0.25f, std::min(std::round(freq_value * 4.0f) / 4.0f, 10.0f));
+            if (freq_value != node->_freq.value()) {
+                node->_freq = freq_value;
+                io::scene::notify_change();
             }
         }
         ImGui::PopItemWidth();
     } else {
-        _Stateoggle_button(&node);
+        ToggleButton(&node);
     }
     ImGui::SameLine();
     ImGui::Text("%d", 0);
@@ -133,7 +111,7 @@ template <> NodeView<InputNode>::NodeView(NRef<InputNode> node, bool first_time)
 
     ImNodes::EndNode();
     if (ImNodes::IsNodeSelected(nodeid)) {
-        _show_node_window();
+        set_selected(node->id());
     }
 }
 
@@ -154,7 +132,7 @@ NodeView<OutputNode>::NodeView(NRef<OutputNode> node, bool first_time)
 
     ImNodes::EndNode();
     if (ImNodes::IsNodeSelected(nodeid)) {
-        _show_node_window();
+        set_selected(node->id());
     }
 }
 
@@ -184,49 +162,10 @@ template <> NodeView<GateNode>::NodeView(NRef<GateNode> node, bool first_time)
 
     ImNodes::EndNode();
     if (ImNodes::IsNodeSelected(nodeid)) {
-        _show_node_window();
+        set_selected(node->id());
     }
 }
 
 template <> NodeView<ComponentNode>::NodeView(NRef<ComponentNode>, bool) { }
 
-/*template <> void NodeView<InputNode>::_show_node_window(void)
-{
-    ImGuiIO& io     = ImGui::GetIO();
-    ImVec2 app_size = io.DisplaySize;
-    ImGui::Begin("ShowSelectDisplay", nullptr,
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
-            | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings
-            | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing);
-    ImGui::SetWindowSize(ImVec2 { app_size.x * 0.15f, app_size.y * 0.2f });
-    ImGui::SetWindowPos(ImVec2 { app_size.x * 0.85f, app_size.y * 0.8f });
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::LARGE));
-    ImGui::Text("Node %s@%ul", NodeType_to_str(node->id().type), node->id().id);
-    ImGui::Separator();
-    ImGui::PopFont();
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-    ImGui::TextColored(ImVec4(200, 200, 0, 255), "Id:");
-    ImGui::PopFont();
-    ImGui::SameLine();
-    ImGui::Text("%ul", node->id().id);
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-    ImGui::TextColored(ImVec4(200, 200, 0, 255), "Value:");
-    ImGui::PopFont();
-    ImGui::SameLine();
-
-    _Stateoggle_button(&node);
-
-    ImGui::Text("%ul", node->id().id);
-
-    //  NodeType_to_title(r->from_node, r->from_sock);
-    //  ImGui::PushFont(get_font(font_flags_t::NORMAL));
-    //  ImGui::TextColored(ImVec4(200, 200, 0, 255), "To:");
-    //  ImGui::PopFont();
-    //  ImGui::SameLine();
-    //  NodeType_to_title(r->to_node, r->to_sock);
-    ImGui::End();
-}
-*/
-
 } // namespace lcs::ui
-  //

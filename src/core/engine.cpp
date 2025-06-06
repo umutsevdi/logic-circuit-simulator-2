@@ -63,7 +63,7 @@ std::ostream& operator<<(std::ostream& os, const BaseNode& g)
                                 InputNode
 *****************************************************************************/
 
-InputNode::InputNode(Scene* _scene, Node _id, std::optional<uint32_t> freq)
+InputNode::InputNode(Scene* _scene, Node _id, std::optional<float> freq)
     : BaseNode { _scene, { _id.id, NodeType::INPUT } }
     , _freq { freq }
     , _value { false } { };
@@ -94,8 +94,8 @@ void InputNode::on_signal()
 {
     State result = _value ? State::TRUE : State::FALSE;
     for (relid& out : output) {
-        L_INFO(CLASS "Sending " << State_to_str((State)_value) << " signal to rel@"
-                                << out);
+        L_INFO(CLASS "Sending " << State_to_str((State)_value)
+                                << " signal to rel@" << out);
         _parent->signal(out, result);
     }
 }

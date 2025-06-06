@@ -19,9 +19,6 @@ namespace lcs::ui {
 template <typename T> class NodeView {
 public:
     NodeView(NRef<T> base_node, bool first_time);
-
-private:
-    void _show_node_window(void) { }
 };
 
 } // namespace lcs::ui

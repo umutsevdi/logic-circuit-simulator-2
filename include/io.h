@@ -148,6 +148,13 @@ namespace io {
         NRef<Scene> get(size_t idx = SIZE_MAX);
 
         /**
+         * Runs a single frame to update values of selected scene and it's
+         * dependency's clocks.
+         * @param idx to select
+         */
+        void run_frame(size_t idx = SIZE_MAX);
+
+        /**
          * Creates an empty scene with given name
          * @param name Scene name
          * @param author Scene author
