@@ -35,7 +35,7 @@ static std::string current_path;
 static std::map<std::string, Scene> COMPONENT_STORAGE;
 static std::vector<Inode> SCENE_STORAGE;
 static size_t active_scene = SIZE_MAX;
-static bool _first_frame   = false;
+static bool _has_changes   = false;
 
 void init_paths(bool is_testing)
 {
@@ -144,7 +144,7 @@ namespace scene {
                 idx = i;
                 if (idx != active_scene) {
                     active_scene = idx;
-                    _first_frame = true;
+                    _has_changes = true;
                 }
                 return Error::OK;
             }
@@ -158,7 +158,7 @@ namespace scene {
         SCENE_STORAGE.push_back(std::move(inode));
         idx          = SCENE_STORAGE.size() - 1;
         active_scene = idx;
-        _first_frame = true;
+        _has_changes = true;
         return Error::OK;
     }
 
@@ -171,7 +171,7 @@ namespace scene {
         SCENE_STORAGE.erase(SCENE_STORAGE.begin() + idx);
         if (active_scene > 0) {
             active_scene--;
-            _first_frame = true;
+            _has_changes = true;
         }
         return Error::OK;
     }
@@ -185,6 +185,7 @@ namespace scene {
         lcs_assert(idx < SCENE_STORAGE.size());
         Inode& inode   = SCENE_STORAGE[idx];
         inode.is_saved = false;
+        _has_changes   = true;
     }
 
     bool is_saved(size_t idx)
@@ -258,7 +259,7 @@ namespace scene {
         }
         if (idx != active_scene) {
             L_INFO("idx != active_scene");
-            _first_frame = true;
+            _has_changes = true;
         }
         active_scene = idx;
         return &SCENE_STORAGE[idx].scene;
@@ -269,7 +270,7 @@ namespace scene {
     {
         SCENE_STORAGE.emplace_back(
             false, "", Scene { name, author, description, version });
-        _first_frame = true;
+        _has_changes = true;
         return SCENE_STORAGE.size() - 1;
     }
 
@@ -286,7 +287,7 @@ namespace scene {
             };
         }
         if (active_scene != updated_scene) {
-            _first_frame = true;
+            _has_changes = true;
         }
         active_scene = updated_scene;
     }
@@ -306,12 +307,12 @@ namespace scene {
         }
     }
 
-    bool first_frame(void)
+    bool has_changes(void)
     {
-        if (_first_frame) {
-            L_INFO("Check out tab(" << active_scene << ") at "
-                                    << SCENE_STORAGE[active_scene].path);
-            _first_frame = false;
+        if (_has_changes) {
+            L_INFO("Updating tab(" << active_scene << ") at "
+                                   << SCENE_STORAGE[active_scene].path);
+            _has_changes = false;
             return true;
         }
         return false;

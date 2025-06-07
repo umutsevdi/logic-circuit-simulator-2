@@ -1,8 +1,5 @@
 #include <algorithm>
-#include <cstdint>
-#include <cstdlib>
-#include <iostream>
-#include <string>
+#include <bitset>
 
 #include "common.h"
 #include "core.h"
@@ -17,45 +14,37 @@ ComponentContext::ComponentContext(
     , _execution_output { 0 }
     , _parent { parent }
 {
-    for (relid i = 1; i <= input_s; i++) {
-        inputs[i] = {};
+    for (relid i = 0; i < input_s; i++) {
+        inputs.push_back({});
     }
-    for (relid i = 1; i <= output_s; i++) {
-        outputs[i] = 0;
+    for (relid i = 0; i < output_s; i++) {
+        outputs.push_back(0);
     }
 }
 
 void ComponentContext::setup(sockid input_s, sockid output_s)
 {
     if (inputs.size() > input_s) {
-        for (auto& i : inputs) {
-            if (i.first > input_s) {
-                for (relid& id : i.second) {
-                    _parent->disconnect(id);
-                    id = 0;
-                }
+        for (size_t i = input_s; i < inputs.size(); i++) {
+            for (relid& id : inputs[i]) {
+                _parent->disconnect(id);
+                id = 0;
             }
         }
-        inputs.erase(inputs.find(input_s), inputs.end());
+        inputs.resize(input_s);
     } else if (inputs.size() < input_s) {
-        for (sockid i = inputs.size() + 1; i <= input_s; i++) {
-            inputs[i] = {};
-        }
+        inputs.resize(input_s);
     }
     if (outputs.size() > output_s) {
-        for (auto& id : outputs) {
-            if (id.first > output_s) {
-                _parent->disconnect(id.second);
-                id.second = 0;
+        for (size_t i = output_s; i < outputs.size(); i++) {
+            if (outputs[i] != 0) {
+                _parent->disconnect(outputs[i]);
             }
         }
-        outputs.erase(outputs.find(output_s), outputs.end());
+        outputs.resize(output_s);
     } else if (outputs.size() < output_s) {
-        for (sockid i = outputs.size() + 1; i <= output_s; i++) {
-            outputs[i] = 0;
-        }
+        outputs.resize(output_s);
     }
-
     _execution_input  = 0;
     _execution_output = 0;
 }
@@ -78,54 +67,57 @@ Node ComponentContext::get_output(sockid id) const
     return {};
 }
 
-void ComponentContext::set_value(sockid sock, State value)
-{
-    if (sock > 0 && sock < 64) {
-        if (value == State::TRUE) {
-            _execution_output |= 1 << sock;
-        } else {
-            _execution_output &= ~(1 << sock);
-        }
-    }
-}
-
 State ComponentContext::get_value(Node id) const
 {
+    id.id -= 1;
     if (id.type == NodeType::COMPONENT_INPUT) {
-        if (auto in = inputs.find(id.id); in != inputs.end()) {
-            return _execution_input & (1 << id.id) ? State::TRUE : State::FALSE;
+        if (id.id < inputs.size() && !inputs[id.id].empty()) {
+            return _execution_input[id.id] ? State::TRUE : State::FALSE;
         }
     } else {
-        if (auto in = outputs.find(id.id); in != outputs.end()) {
-            return _execution_output & (1 << id.id) ? State::TRUE
-                                                    : State::FALSE;
+        if (id.id < outputs.size() && outputs[id.id] != 0) {
+            return _execution_output[id.id] ? State::TRUE : State::FALSE;
         }
     }
     return State::DISABLED;
 }
 
-uint64_t ComponentContext::run(uint64_t v)
+void ComponentContext::set_value(Node id, State value)
 {
-    L_INFO("Execute component: " << v);
-    v <<= 1;
-    _execution_input  = v;
+    if (id.id > 0 && id.id < 64) {
+        if (id.type == NodeType::COMPONENT_INPUT) {
+            _execution_input[id.id - 1] = value == State::TRUE;
+        } else {
+            _execution_output[id.id - 1] = value == State::TRUE;
+        }
+    }
+}
+
+uint64_t ComponentContext::run()
+{
+    L_INFO("Execute component: " << _execution_input);
     _execution_output = 0;
-    for (auto input : inputs) {
-        State result = v & (1 << input.first) ? State::TRUE : State::FALSE;
-        for (relid in : input.second) {
+    for (size_t i = 0; i < inputs.size(); i++) {
+        State result = _execution_input[i] ? State::TRUE : State::FALSE;
+        for (relid in : inputs[i]) {
             _parent->signal(in, result);
         }
     }
 
-    for (auto output : outputs) {
-        if (output.second != 0) {
-            _execution_output |= _parent->get_rel(output.second)->value
-                ? (1 << output.first)
-                : 0;
+    for (size_t i = 0; i < outputs.size(); i++) {
+        if (outputs[i] != 0) {
+            _execution_output.set(
+                i, _parent->get_rel(outputs[i])->value == State::TRUE);
         }
     }
-    L_INFO("Component result: " << (_execution_output >> 1));
-    return _execution_output >> 1;
+    L_INFO("Component result: " << _execution_output);
+    return _execution_output.to_ullong();
+}
+
+uint64_t ComponentContext::run(uint64_t v)
+{
+    _execution_input = v;
+    return run();
 }
 
 ComponentNode::ComponentNode(Scene* _s, Node _id, const std::string& _path)

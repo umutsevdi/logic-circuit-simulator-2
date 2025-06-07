@@ -10,6 +10,7 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include <bitset>
 #include <map>
 #include <optional>
 #include <string>
@@ -45,6 +46,18 @@ enum NodeType : uint8_t {
     NODE_S
 };
 
+constexpr const char* NodeType_to_str_full(NodeType s)
+{
+    switch (s) {
+    case NodeType::GATE: return "Gate";
+    case NodeType::COMPONENT: return "Component";
+    case NodeType::INPUT: return "Input";
+    case NodeType::OUTPUT: return "Output";
+    case NodeType::COMPONENT_INPUT: return "Component Input";
+    case NodeType::COMPONENT_OUTPUT: return "Component Output";
+    default: return "Unknown";
+    }
+}
 constexpr const char* NodeType_to_str(NodeType s)
 {
     switch (s) {
@@ -54,7 +67,7 @@ constexpr const char* NodeType_to_str(NodeType s)
     case NodeType::OUTPUT: return "Out";
     case NodeType::COMPONENT_INPUT: return "Cin";
     case NodeType::COMPONENT_OUTPUT: return "Cout";
-    default: return "unknown";
+    default: return "Unknown";
     }
 }
 
@@ -358,9 +371,14 @@ struct ComponentContext final : public io::Serializable {
      * @param input binary encoded input. Starting from the lowest bit
      * values are assigned to each input slot.
      * @returns binary encoded result
-     *
-     **/
+     */
     uint64_t run(uint64_t input);
+
+    /**
+     * Execute a scene using the existing state.
+     * @returns binary encoded result
+     */
+    uint64_t run();
 
     /** Get node id for given input socket */
     Node get_input(sockid id) const;
@@ -372,20 +390,20 @@ struct ComponentContext final : public io::Serializable {
     State get_value(Node id) const;
 
     /** Update the value of an output slot */
-    void set_value(sockid sock, State value);
+    void set_value(Node id, State value);
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
     Error from_json(const Json::Value&) override;
 
-    std::map<sockid, std::vector<relid>> inputs;
-    std::map<sockid, relid> outputs;
+    std::vector<std::vector<relid>> inputs;
+    std::vector<relid> outputs;
 
 private:
     /** Temporarily used input value */
-    uint64_t _execution_input;
+    std::bitset<64> _execution_input;
     /** Temporarily used output value */
-    uint64_t _execution_output;
+    std::bitset<64> _execution_output;
     Scene* _parent;
 };
 

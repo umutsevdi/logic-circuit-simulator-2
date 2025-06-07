@@ -224,13 +224,13 @@ Error Scene::_connect_with_id(
         break;
     }
     case NodeType::COMPONENT_OUTPUT: {
-        if (auto compout = component_context->outputs.find(to_node.id);
-            compout != component_context->outputs.end()) {
-            if (compout->second != 0) {
+        if (component_context->outputs.size() > to_node.id - 1) {
+            relid& to_id = component_context->outputs[to_node.id - 1];
+            if (to_id != 0) {
                 return ERROR(Error::ALREADY_CONNECTED);
             }
-            compout->second = id;
-            is_connected    = true;
+            to_id        = id;
+            is_connected = true;
         }
         break;
     }
@@ -257,14 +257,15 @@ Error Scene::_connect_with_id(
     case NodeType::COMPONENT_INPUT: /* Component input is not handled
                                      here. */
         lcs_assert(component_context.has_value());
-        if (auto compin = component_context->inputs.find(from_node.id);
-            compin != component_context->inputs.end()) {
-            for (auto _id : compin->second) {
+        if (component_context->inputs.size() > from_node.id - 1) {
+            std::vector<relid>& from_list
+                = component_context->inputs[from_node.id - 1];
+            for (auto _id : from_list) {
                 if (_id == id) {
                     return ERROR(Error::ALREADY_CONNECTED);
                 }
             }
-            compin->second.push_back(id);
+            from_list.push_back(id);
         }
         component_context->run(0);
         break;
@@ -311,10 +312,9 @@ Error Scene::disconnect(relid id)
         break;
     }
     case NodeType::COMPONENT_INPUT: {
-        if (auto inputitr
-            = component_context->inputs.find(r->second.from_node.id);
-            inputitr != component_context->inputs.end()) {
-            auto& v = inputitr->second;
+        lcs_assert(component_context.has_value());
+        if (component_context->inputs.size() > r->second.from_node.id - 1) {
+            auto& v = component_context->inputs[r->second.from_node.id - 1];
             v.erase(std::remove_if(v.begin(), v.end(), remove_fn));
         } else {
             return ERROR(Error::NOT_CONNECTED);
@@ -347,10 +347,9 @@ Error Scene::disconnect(relid id)
     }
     case NodeType::COMPONENT_OUTPUT: {
         lcs_assert(component_context.has_value());
-        if (auto outitr = component_context->outputs.find(r->second.to_node.id);
-            outitr != component_context->outputs.end()) {
-            outitr->second = 0;
-            component_context->run(0);
+        if (component_context->outputs.size() > r->second.to_node.id - 1) {
+            component_context->outputs[r->second.to_node.id - 1] = 0;
+            component_context->run();
         } else {
             return ERROR(Error::NOT_CONNECTED);
         }

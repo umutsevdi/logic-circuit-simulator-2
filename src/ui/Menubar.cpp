@@ -1,7 +1,8 @@
-#include <imgui.h>
-#include <imnodes.h>
 #include <string>
 #include <string_view>
+
+#include <imgui.h>
+#include <imnodes.h>
 #include <tinyfiledialogs.h>
 
 #include "io.h"
@@ -114,6 +115,8 @@ void TabWindow(void)
                           : ImGuiTabItemFlags_UnsavedDocument))) {
             if (!is_active) {
                 result = true;
+                ImNodes::ClearLinkSelection();
+                ImNodes::ClearNodeSelection();
             }
             ImGui::EndTabItem();
         }

@@ -99,6 +99,8 @@ public:
     inline T* operator->() { return _v; }
     inline const T* operator->() const { return _v; }
     inline T* operator&() { return _v; }
+    inline T& operator*() { return *_v; }
+    inline const T& operator*() const { return *_v; }
 
     friend std::ostream& operator<<(std::ostream& os, const NRef<T>& g)
     {
@@ -160,8 +162,9 @@ std::ostream& _log_pre_f(
 #define __LLOG_CUSTOM__(status, stream, file, line, function, ...)             \
     ((_log_pre(stream, (__F_##status), file, line, function)                   \
          << __VA_ARGS__ << std::endl),                                         \
-        (_log_pre_f((_##status), file, line, function)                         \
-            << __VA_ARGS__ << std::endl))
+        (TESTLOG.has_value()                                                   \
+            && _log_pre_f((_##status), file, line, function)                   \
+                << __VA_ARGS__ << std::endl))
 
 #define __LLOG__(STATUS, _STREAM, ...)                                         \
     __LLOG_CUSTOM__(                                                           \

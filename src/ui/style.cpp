@@ -1,11 +1,10 @@
-#include "imnodes.h"
-#include "ui.h"
-
-#include "common.h"
-#include "ui/util.h"
 #include <imgui.h>
-#define FONTPATH "/usr/share/fonts/UbuntuMono/"
-#define _FONT_NAME "UbuntuMonoNerdFont-"
+#include <imnodes.h>
+
+#include "ui.h"
+#include "ui/util.h"
+#define FONTPATH "/usr/share/fonts/UbuntuSans/"
+#define _FONT_NAME "UbuntuSansNerdFont-"
 #define _BOLD_NAME "Bold"
 #define _ITALIC_NAME "Italic"
 #define BOLDITALIC BOLD | ITALIC

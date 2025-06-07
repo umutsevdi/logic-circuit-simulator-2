@@ -18,7 +18,7 @@ namespace lcs::ui {
 
 template <typename T> class NodeView {
 public:
-    NodeView(NRef<T> base_node, bool first_time);
+    NodeView(NRef<T> base_node, bool has_changes);
 };
 
 } // namespace lcs::ui

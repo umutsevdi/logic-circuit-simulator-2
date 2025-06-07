@@ -62,9 +62,10 @@ int __expect(std::function<bool(void)> expr, const char* function,
     }
     _log_pre(std::cerr, __F_FATAL, file, line, function) << F_RED F_BOLD
         "Assertion " << str_expr << " failed!" F_RESET << std::endl;
-    _log_pre_f(_FATAL, file, line, function)
-        << "Assertion " << str_expr << " failed!" << std::endl;
-
+    if (TESTLOG.has_value()) {
+        _log_pre_f(_FATAL, file, line, function)
+            << "Assertion " << str_expr << " failed!" << std::endl;
+    }
     return 1;
 }
 
