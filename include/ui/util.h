@@ -32,6 +32,9 @@ enum font_flags_t {
     FONT_S = BOLD | ITALIC | LARGE
 };
 
+int encode_pair(Node node, sockid sock, bool is_out);
+Node decode_pair(int pair_code, sockid* sock = nullptr, bool* is_out = nullptr);
+
 ImFont* get_font(int attributes);
 constexpr ImVec4 NodeType_to_color(mode_t type)
 {
@@ -44,13 +47,20 @@ constexpr ImVec4 NodeType_to_color(mode_t type)
     }
 }
 
+void PositionSelector(NRef<BaseNode> node, const char* prefix);
 void ToggleButton(NRef<InputNode> node);
-void ToggleButton(State);
+State ToggleButton(State, bool clickable = false);
 void NodeTypeTitle(Node n);
 void NodeTypeTitle(Node n, sockid sock);
 #define Field(...)                                                             \
     ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));      \
     ImGui::TextColored(ImVec4(200, 200, 0, 255), __VA_ARGS__);                 \
-    ImGui::PopFont();
+    ImGui::PopFont()
+#define TablePair(KEY, ...)                                                    \
+    ImGui::TableNextRow();                                                     \
+    ImGui::TableSetColumnIndex(0);                                             \
+    KEY;                                                                       \
+    ImGui::TableSetColumnIndex(1);                                             \
+    __VA_ARGS__
 
 } // namespace lcs::ui

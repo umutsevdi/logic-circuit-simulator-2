@@ -22,7 +22,6 @@ void MenuBar(void);
 void TabWindow(void);
 void Palette(void);
 void Inspector(NRef<Scene>);
-void set_selected(Node node);
 void NodeEditor(NRef<Scene> scene);
 int _input_text_callback(ImGuiInputTextCallbackData*);
 } // namespace lcs::ui

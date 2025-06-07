@@ -1,48 +1,33 @@
+#include <imgui.h>
+#include <imnodes.h>
 
 #include "core.h"
-#include "imgui.h"
-#include "io.h"
-#include "ui.h"
 #include "ui/nodes.h"
 #include "ui/util.h"
-#include <imnodes.h>
 
 namespace lcs::ui {
 void _value_tooltip(State s);
-
-int hash_pair(Node node, sockid sock, bool is_out)
-{
-    // WARN: I hope you never reach 24 bit id.
-    int x = node.id;
-    lcs_assert(node.id < 0xFFFF);
-    x |= node.type << 16;
-    x |= sock << 20;
-    if (is_out) {
-        x |= 1 << 21;
-    }
-    return x;
-}
 
 void NodeEditor(NRef<Scene> scene)
 {
     if (ImGui::BeginChild("NodeEditor")) {
         ImNodes::BeginNodeEditor();
-        bool scene_changed = io::scene::first_frame();
+        bool has_changes = io::scene::has_changes();
         if (scene->component_context.has_value()) {
             NodeView<ComponentContext> { &scene->component_context.value(),
-                scene_changed };
+                has_changes };
         }
         for (auto& out : scene->_inputs) {
-            NodeView<InputNode>(&out.second, scene_changed);
+            NodeView<InputNode>(&out.second, has_changes);
         }
         for (auto& out : scene->_outputs) {
-            NodeView<OutputNode>(&out.second, scene_changed);
+            NodeView<OutputNode>(&out.second, has_changes);
         }
         for (auto& out : scene->_gates) {
-            NodeView<GateNode>(&out.second, scene_changed);
+            NodeView<GateNode>(&out.second, has_changes);
         }
         for (auto& out : scene->_components) {
-            NodeView<ComponentNode>(&out.second, scene_changed);
+            NodeView<ComponentNode>(&out.second, has_changes);
         }
         for (auto& r : scene->_relations) {
             ImNodes::PushColorStyle(ImNodesCol_Link,
@@ -50,16 +35,9 @@ void NodeEditor(NRef<Scene> scene)
                     : r.second.value == State::FALSE
                     ? IM_COL32(255, 0, 100, 255)
                     : IM_COL32(55, 55, 55, 255));
-            if (r.second.from_node.type != COMPONENT_OUTPUT
-                && r.second.from_node.type != COMPONENT_INPUT
-                && r.second.to_node.type != COMPONENT_OUTPUT
-                && r.second.to_node.type != COMPONENT_INPUT) {
-                ImNodes::Link(r.first,
-                    hash_pair(r.second.from_node, r.second.from_sock, true),
-                    hash_pair(r.second.to_node, r.second.to_sock, false));
-            } else {
-                L_INFO(r.second.from_node << " -> " << r.second.to_node);
-            }
+            ImNodes::Link(r.first,
+                encode_pair(r.second.from_node, r.second.from_sock, true),
+                encode_pair(r.second.to_node, r.second.to_sock, false));
             ImNodes::PopColorStyle();
         }
         ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
@@ -77,13 +55,13 @@ void NodeEditor(NRef<Scene> scene)
                     ImGui::Separator();
                     ImGui::PopFont();
                     ImGui::PushFont(get_font(font_flags_t::NORMAL));
-                    ImGui::TextColored(ImVec4(200, 200, 0, 255), "From:");
+                    Field("From");
                     ImGui::SameLine();
                     NodeTypeTitle(r->from_node, r->from_sock);
-                    ImGui::TextColored(ImVec4(200, 200, 0, 255), "To:");
+                    Field("To");
                     ImGui::SameLine();
                     NodeTypeTitle(r->to_node, r->to_sock);
-                    ImGui::TextColored(ImVec4(200, 200, 0, 255), "Value:");
+                    Field("Value");
                     ImGui::SameLine();
                     _value_tooltip(r->value);
                     ImGui::PopFont();
@@ -95,7 +73,6 @@ void NodeEditor(NRef<Scene> scene)
             if (ImNodes::IsNodeHovered(&nodeid_encoded)) {
                 Node nodeid { static_cast<uint16_t>(0xFFFF & nodeid_encoded),
                     (NodeType)(nodeid_encoded >> 16) };
-
                 if (NRef<BaseNode> n = scene->get_base(nodeid);
                     ImGui::BeginTooltip() && n != nullptr) {
                     ImGui::PushFont(
@@ -104,15 +81,15 @@ void NodeEditor(NRef<Scene> scene)
                     ImGui::Separator();
                     ImGui::PopFont();
                     ImGui::PushFont(get_font(font_flags_t::NORMAL));
-                    ImGui::TextColored(ImVec4(200, 200, 0, 255), "Position:");
+                    Field("Position");
                     ImGui::SameLine();
                     ImGui::Text("(%d, %d)", n->point.x, n->point.y);
-                    ImGui::TextColored(ImVec4(200, 200, 0, 255), "Connected:");
+                    Field("Connected");
                     ImGui::SameLine();
                     ImGui::Text("%s", n->is_connected() ? "true" : "false");
+                    Field("Value");
+                    ImGui::SameLine();
                     if (nodeid.type != NodeType::COMPONENT) {
-                        ImGui::TextColored(ImVec4(200, 200, 0, 255), "Value:");
-                        ImGui::SameLine();
                         _value_tooltip(n->get());
                     } else {
                         auto comp = scene->get_node<ComponentNode>(nodeid);
@@ -125,6 +102,44 @@ void NodeEditor(NRef<Scene> scene)
                         ImGui::Text(")");
                     }
 
+                    ImGui::PopFont();
+                    ImGui::EndTooltip();
+                } else {
+                    ImGui::EndTooltip();
+                }
+            }
+
+            int pin_id = 0;
+            if (ImNodes::IsPinHovered(&pin_id)) {
+                bool is_out = 0;
+                sockid sock = 0;
+                Node nodeid = decode_pair(pin_id, &sock, &is_out);
+                if (ImGui::BeginTooltip()) {
+                    sock = nodeid.type == COMPONENT_INPUT
+                            || nodeid.type == COMPONENT_OUTPUT
+                        ? nodeid.id
+                        : sock;
+                    ImGui::PushFont(
+                        get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                    ImGui::Text(
+                        "%s Socket %u", is_out ? "Output" : "Input", sock);
+                    ImGui::Separator();
+                    ImGui::PopFont();
+                    ImGui::PushFont(get_font(font_flags_t::NORMAL));
+                    Field("Owner");
+                    ImGui::SameLine();
+                    NodeTypeTitle(nodeid);
+                    if (is_out) {
+                        Field("Value");
+                        ImGui::SameLine();
+                        if (nodeid.type == COMPONENT_INPUT
+                            || nodeid.type == COMPONENT_OUTPUT) {
+                            _value_tooltip(
+                                scene->component_context->get_value(nodeid));
+                        } else {
+                            _value_tooltip(scene->get_base(nodeid)->get(sock));
+                        }
+                    }
                     ImGui::PopFont();
                     ImGui::EndTooltip();
                 }

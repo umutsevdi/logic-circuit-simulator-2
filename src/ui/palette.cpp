@@ -1,7 +1,7 @@
+#include <imgui.h>
+#include <imnodes.h>
 
 #include "core.h"
-#include "imgui.h"
-#include "imnodes.h"
 #include "io.h"
 #include "ui/layout.h"
 
@@ -58,11 +58,7 @@ void Palette()
         dragged_node = scene->add_node<GateNode>(GateType::XNOR);
         is_dragging  = true;
     }
-    if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-        io.MouseClickedPos;
-
-        ;
-    }
+    if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) { }
     if (is_dragging) {
         L_INFO(is_dragging);
         ImNodes::SetNodeGridSpacePos(

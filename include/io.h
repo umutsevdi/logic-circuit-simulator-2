@@ -112,6 +112,18 @@ namespace io {
          */
         void notify_change(size_t idx = SIZE_MAX);
 
+        /**
+         * Get if there are any changes that have been done to the scene
+         * outside the Node editor. Node editor uses this method to update
+         * itself.
+         *
+         * NOTE: Has changes assumes, after calling this method required changes
+         * are made. So calling this method again would return always false.
+         *
+         * @returns whether there are changes within the scene
+         */
+        bool has_changes(void);
+
         bool is_saved(size_t idx = SIZE_MAX);
 
         /**
@@ -179,7 +191,6 @@ namespace io {
                 std::string_view path, bool is_saved, bool is_active)>
                 run);
 
-        bool first_frame(void);
     } // namespace scene
 
     /***************************************************************************

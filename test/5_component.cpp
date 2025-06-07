@@ -85,6 +85,7 @@ TEST_CASE("Create a component, grow it")
     s.component_context->setup(2, 1);
     REQUIRE_EQ(s.component_context->run(0b11), 0);
     REQUIRE_EQ(s.component_context->run(0b10), 0);
-    REQUIRE_EQ(s.component_context->run(0b01), 1);
+    lcs_assert(s.component_context->run(0b01) == 1);
+    //    REQUIRE_EQ(s.component_context->run(0b01), 1);
     REQUIRE_EQ(s.component_context->run(0b00), 0);
 }
