@@ -395,10 +395,10 @@ std::ostream& operator<<(std::ostream& os, const Scene& s)
 NRef<BaseNode> Scene::get_base(Node id)
 {
     switch (id.type) {
-    case NodeType::GATE: return get_node<GateNode>(id)->get_base();
-    case NodeType::COMPONENT: return get_node<ComponentNode>(id)->get_base();
-    case NodeType::INPUT: return get_node<InputNode>(id)->get_base();
-    case NodeType::OUTPUT: return get_node<OutputNode>(id)->get_base();
+    case NodeType::GATE: return get_node<GateNode>(id)->base();
+    case NodeType::COMPONENT: return get_node<ComponentNode>(id)->base();
+    case NodeType::INPUT: return get_node<InputNode>(id)->base();
+    case NodeType::OUTPUT: return get_node<OutputNode>(id)->base();
     default: break;
     }
     return nullptr;

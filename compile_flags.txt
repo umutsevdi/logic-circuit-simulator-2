@@ -18,3 +18,5 @@ external/imgui/backends
 external/cpp-base64
 -I
 external/imnodes/
+-I
+external/keychain/include

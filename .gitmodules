@@ -3,7 +3,7 @@
 	url = https://github.com/jothepro/doxygen-awesome-css.git
 [submodule "external/tfd"]
 	path = external/tfd
-	url = git@github.com:umutsevdi/tinyfiledialogs.git
+	url = https://git.code.sf.net/p/tinyfiledialogs/code
 [submodule "external/jsoncpp"]
 	path = external/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
@@ -23,3 +23,6 @@
 [submodule "external/imnodes"]
 	path = external/imnodes
 	url = https://github.com/Nelarius/imnodes.git
+[submodule "external/keychain"]
+	path = external/keychain
+	url = https://github.com/hrantzsch/keychain.git
