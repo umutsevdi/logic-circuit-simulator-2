@@ -14,8 +14,17 @@
 #include <iostream>
 #include <optional>
 
+#define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
 #define APPNAME_LONG "LogicCircuitSimulator"
+
+#ifndef API_ENDPOINT
+#ifndef NDEBUG
+#define API_ENDPOINT "http://localhost:8080"
+#else
+#define API_ENDPOINT "https://lcs2.com"
+#endif
+#endif
 
 namespace lcs {
 
@@ -73,7 +82,28 @@ enum Error {
     NOT_FOUND,
     /** Failed to save file*/
     NO_SAVE_PATH_DEFINED,
-    CYCLIC_DEPENDENCY,
+    /** Failed to send the request to the server. Request didn't arrive to the
+       server. */
+    REQUEST_FAILED,
+    /** Request was sent successfully to the server but the server responded
+     * with non 200 code message.*/
+    RESPONSE_ERROR,
+    /** Response is not a valid JSON string. */
+    JSON_PARSE_ERROR,
+
+    /** See error message.*/
+    KEYCHAIN_GENERIC_ERROR,
+    /** Key not found.*/
+    KEYCHAIN_NOT_FOUND,
+    /** Occurs on Windows when the number of characters in password is too
+       long.*/
+    KEYCHAIN_TOO_LONG,
+    /** Occurs on MacOS when the application fails to pass certain conditions.*/
+    KEYCHAIN_ACCESS_DENIED,
+
+    /** Represents the how many types of error codes exists. Not a valid error
+       code.*/
+    ERROR_S
 };
 
 /**
@@ -212,4 +242,14 @@ inline std::string strlimit(const std::string& input, size_t limit)
         return "..." + input.substr(len - limit + 3, len);
     }
     return input;
+}
+
+template <typename T, typename... Args> const char* get_first(T first, Args...)
+{
+    return first;
+}
+
+template <typename... Args> const char* get_first(const char* first, Args...)
+{
+    return first;
 }

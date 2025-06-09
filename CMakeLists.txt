@@ -33,7 +33,7 @@ message("Doxygen: ${LCS_ENABLE_DOXYGEN}")
 message("GUI: ${LCS_GUI}")
 
 set(__CORE core common io jsoncpp_static base64)
-set(__DEPENDS ui imnodes ${__CORE})
+set(__DEPENDS ui net imnodes ${__CORE})
 
 message("Build Type: ${CMAKE_BUILD_TYPE}")
 add_compile_options(-Wall -Wextra)
@@ -61,6 +61,7 @@ add_subdirectory(src/common)
 add_subdirectory(src/core)
 if(LCS_GUI)
 add_subdirectory(src/ui)
+add_subdirectory(src/net)
 endif()
 add_subdirectory(src/io)
 

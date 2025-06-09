@@ -2,11 +2,11 @@
 #include <imnodes.h>
 
 #include "core.h"
+#include "io.h"
 #include "ui/nodes.h"
 #include "ui/util.h"
 
 namespace lcs::ui {
-void _value_tooltip(State s);
 
 void NodeEditor(NRef<Scene> scene)
 {
@@ -63,7 +63,7 @@ void NodeEditor(NRef<Scene> scene)
                     NodeTypeTitle(r->to_node, r->to_sock);
                     Field("Value");
                     ImGui::SameLine();
-                    _value_tooltip(r->value);
+                    ToggleButton(r->value);
                     ImGui::PopFont();
                     ImGui::EndTooltip();
                 }
@@ -90,13 +90,13 @@ void NodeEditor(NRef<Scene> scene)
                     Field("Value");
                     ImGui::SameLine();
                     if (nodeid.type != NodeType::COMPONENT) {
-                        _value_tooltip(n->get());
+                        ToggleButton(n->get());
                     } else {
                         auto comp = scene->get_node<ComponentNode>(nodeid);
                         ImGui::Text("(");
                         ImGui::SameLine();
                         for (size_t i = 0; i < comp->inputs.size(); i++) {
-                            _value_tooltip(comp->get(i));
+                            ToggleButton(comp->get(i));
                             ImGui::SameLine();
                         }
                         ImGui::Text(")");
@@ -134,16 +134,26 @@ void NodeEditor(NRef<Scene> scene)
                         ImGui::SameLine();
                         if (nodeid.type == COMPONENT_INPUT
                             || nodeid.type == COMPONENT_OUTPUT) {
-                            _value_tooltip(
+                            ToggleButton(
                                 scene->component_context->get_value(nodeid));
                         } else {
-                            _value_tooltip(scene->get_base(nodeid)->get(sock));
+                            ToggleButton(scene->get_base(nodeid)->get(sock));
                         }
                     }
                     ImGui::PopFont();
                     ImGui::EndTooltip();
                 }
             }
+            int start_pin_id = 0;
+            int end_pin_id   = 0;
+            if (ImNodes::IsLinkCreated(&start_pin_id, &end_pin_id)) {
+                sockid from_sock = 0, to_sock = 0;
+                Node from = decode_pair(start_pin_id, &from_sock);
+                Node to   = decode_pair(end_pin_id, &to_sock);
+                if (!scene->connect(to, to_sock, from, from_sock)) {
+                    io::scene::notify_change();
+                }
+            };
         }
         ImGui::EndChild();
     }

@@ -22,12 +22,12 @@ void Palette()
         dragged_node = scene->add_node<InputNode>();
         is_dragging  = true;
     }
-    if (ImGui::Button("Output")) {
-        dragged_node = scene->add_node<OutputNode>();
-        is_dragging  = true;
-    }
     if (ImGui::Button("Timer")) {
         dragged_node = scene->add_node<InputNode>(1.0f);
+        is_dragging  = true;
+    }
+    if (ImGui::Button("Output")) {
+        dragged_node = scene->add_node<OutputNode>();
         is_dragging  = true;
     }
     if (ImGui::Button("NOT Gate")) {
@@ -60,7 +60,7 @@ void Palette()
     }
     if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) { }
     if (is_dragging) {
-        L_INFO(is_dragging);
+        L_INFO(dragged_node);
         ImNodes::SetNodeGridSpacePos(
             dragged_node.numeric(), ImGui::GetCursorPos());
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {

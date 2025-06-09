@@ -1,8 +1,9 @@
+#include "IconsLucide.h"
+#include "ui.h"
+#include "ui/util.h"
 #include <imgui.h>
 #include <imnodes.h>
 
-#include "ui.h"
-#include "ui/util.h"
 #define FONTPATH "/usr/share/fonts/UbuntuSans/"
 #define _FONT_NAME "UbuntuSansNerdFont-"
 #define _BOLD_NAME "Bold"
@@ -12,39 +13,70 @@
 #define _REGULAR_NAME "Regular"
 #define LOAD_FONT_FOR(S_FLAG, W_FLAG, ...)                                     \
     if ((_FONT[S_FLAG | W_FLAG] = atlas->AddFontFromFileTTF(                   \
-             FONTPATH _FONT_NAME _##W_FLAG##_NAME ".ttf", __VA_ARGS__))        \
+             FONTPATH _FONT_NAME _##W_FLAG##_NAME ".ttf",                      \
+             _FONT_SIZES[S_FLAG | W_FLAG], __VA_ARGS__))                       \
         == nullptr) {                                                          \
         L_ERROR("Failed to load the font: " #S_FLAG "|" #W_FLAG);              \
     };
 
 namespace lcs::ui {
 
-static ImFont* _FONT[font_flags_t::FONT_S] = { 0 };
+static ImFont* _FONT[font_flags_t::FONT_S]     = { 0 };
+static float _FONT_SIZES[font_flags_t::FONT_S] = { 0 };
 
 static void _init_fonts(ImGuiIO& io)
 {
+    _FONT_SIZES[SMALL | REGULAR]     = 12.f;
+    _FONT_SIZES[SMALL | BOLD]        = 12.f;
+    _FONT_SIZES[SMALL | ITALIC]      = 12.f;
+    _FONT_SIZES[SMALL | BOLDITALIC]  = 12.f;
+    _FONT_SIZES[SMALL | ICON]        = 12.f;
+    _FONT_SIZES[NORMAL | REGULAR]    = 16.f;
+    _FONT_SIZES[NORMAL | BOLD]       = 16.f;
+    _FONT_SIZES[NORMAL | ITALIC]     = 16.f;
+    _FONT_SIZES[NORMAL | BOLDITALIC] = 16.f;
+    _FONT_SIZES[NORMAL | ICON]       = 16.f;
+    _FONT_SIZES[LARGE | REGULAR]     = 24.f;
+    _FONT_SIZES[LARGE | BOLD]        = 24.f;
+    _FONT_SIZES[LARGE | ITALIC]      = 24.f;
+    _FONT_SIZES[LARGE | BOLDITALIC]  = 24.f;
+    _FONT_SIZES[LARGE | ICON]        = 24.f;
+
     ImFontAtlas* atlas = io.Fonts;
     atlas->Clear();
+    io.Fonts->AddFontDefault();
 
-    LOAD_FONT_FOR(SMALL, REGULAR, 12.f);
-    LOAD_FONT_FOR(SMALL, BOLD, 12.f, nullptr, atlas->GetGlyphRangesDefault());
-    LOAD_FONT_FOR(SMALL, ITALIC, 12.f);
-    LOAD_FONT_FOR(
-        SMALL, BOLDITALIC, 10.f, nullptr, atlas->GetGlyphRangesDefault());
+    ImFontConfig config;
+    config.MergeMode = true;
 
-    LOAD_FONT_FOR(NORMAL, REGULAR, 15.f);
-    LOAD_FONT_FOR(NORMAL, BOLD, 15.f, nullptr, atlas->GetGlyphRangesDefault());
-    LOAD_FONT_FOR(NORMAL, ITALIC, 15.f);
-    LOAD_FONT_FOR(
-        SMALL, BOLDITALIC, 16.f, nullptr, atlas->GetGlyphRangesDefault());
+    static const ImWchar icon_ranges[] = { ICON_MIN_LC, ICON_MAX_LC, 0 };
+#define FONTPATH "/usr/share/fonts/UbuntuSans/"
+    LOAD_FONT_FOR(SMALL, REGULAR, nullptr);
+    LOAD_FONT_FOR(SMALL, BOLD, nullptr, atlas->GetGlyphRangesDefault());
+    LOAD_FONT_FOR(SMALL, ITALIC, nullptr);
+    LOAD_FONT_FOR(SMALL, BOLDITALIC, nullptr, atlas->GetGlyphRangesDefault());
 
-    LOAD_FONT_FOR(LARGE, REGULAR, 24.f);
-    LOAD_FONT_FOR(LARGE, BOLD, 24.f, nullptr, atlas->GetGlyphRangesDefault());
-    LOAD_FONT_FOR(LARGE, ITALIC, 24.f);
-    LOAD_FONT_FOR(
-        SMALL, BOLDITALIC, 24.f, nullptr, atlas->GetGlyphRangesDefault());
+    LOAD_FONT_FOR(NORMAL, REGULAR, nullptr);
+    LOAD_FONT_FOR(NORMAL, BOLD, nullptr, atlas->GetGlyphRangesDefault());
+    LOAD_FONT_FOR(NORMAL, ITALIC, nullptr);
+    LOAD_FONT_FOR(NORMAL, BOLDITALIC, nullptr, atlas->GetGlyphRangesDefault());
+
+    LOAD_FONT_FOR(LARGE, REGULAR, nullptr);
+    LOAD_FONT_FOR(LARGE, BOLD, nullptr, atlas->GetGlyphRangesDefault());
+    LOAD_FONT_FOR(LARGE, ITALIC, nullptr);
+    LOAD_FONT_FOR(LARGE, BOLDITALIC, nullptr, atlas->GetGlyphRangesDefault());
+#undef FONTPATH
+#define FONTPATH "../misc/" FONT_ICON_FILE_NAME_LC
+
+    _FONT[SMALL | ICON] = io.Fonts->AddFontFromFileTTF(
+        FONTPATH, _FONT_SIZES[ICON | SMALL], &config, icon_ranges);
+    _FONT[NORMAL | ICON] = io.Fonts->AddFontFromFileTTF(
+        FONTPATH, _FONT_SIZES[ICON | NORMAL], &config, icon_ranges);
+    _FONT[LARGE | ICON] = io.Fonts->AddFontFromFileTTF(
+        FONTPATH, _FONT_SIZES[ICON | LARGE], &config, icon_ranges);
 }
 
+float get_font_size(int attributes) { return _FONT_SIZES[attributes]; }
 ImFont* get_font(int attributes) { return _FONT[attributes]; }
 
 void set_style(ImGuiIO& io, int alpha, bool& is_dark)

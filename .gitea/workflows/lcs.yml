@@ -1,0 +1,32 @@
+name: LCS CI For Gitea
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  test-cmake:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Update Packages
+        run: sudo apt-get update -y
+      - name: Install Packages
+        run:  sudo apt-get install -y ninja-build doxygen graphviz build-essential cmake
+      - name: Build
+        run: cmake -S . -B build/ -DCMAKE_BUILD_TYPE=Release -G Ninja -DLCS_GUI=False
+      - name: Run ninja
+        run: ninja -C build/ release/LogicCircuitSimulator.tst
+      - name: Run the test file
+        run: build/release/LogicCircuitSimulator.tst
+      - name: Upload artifact
+        run: |
+          cd build
+          zip -r "lcs.zip" docs
+          curl -X POST -F "file=@lcs.zip" "http://home.internal:9696/" -H "Filename: lcs.zip"

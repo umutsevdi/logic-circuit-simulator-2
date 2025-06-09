@@ -70,8 +70,8 @@ void GateNode::on_signal()
         _is_disabled = true;
     }
     for (relid& out : output) {
-        L_INFO(
-            CLASS "Sending " << State_to_str(get()) << " signal to rel@" << out);
+        L_INFO(CLASS "Sending " << State_to_str(get()) << " signal to rel@"
+                                << out);
         _parent->signal(out, get());
     }
 }
@@ -96,6 +96,7 @@ bool GateNode::decrement()
     if (inputs[inputs.size() - 1] != 0) {
         _parent->disconnect(inputs[inputs.size() - 1]);
     }
+    _max_in--;
     inputs.pop_back();
     on_signal();
     return true;

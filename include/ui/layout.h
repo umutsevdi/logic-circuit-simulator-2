@@ -24,4 +24,5 @@ void Palette(void);
 void Inspector(NRef<Scene>);
 void NodeEditor(NRef<Scene> scene);
 int _input_text_callback(ImGuiInputTextCallbackData*);
+void Profile(const std::string& name);
 } // namespace lcs::ui

@@ -27,9 +27,10 @@ struct Inode {
 };
 
 fs::path TMP;
-fs::path APP_DATA;
+fs::path ROOT;
 fs::path LIBRARY;
 fs::path LOCAL;
+fs::path CACHE;
 
 static std::string current_path;
 static std::map<std::string, Scene> COMPONENT_STORAGE;
@@ -43,9 +44,9 @@ void init_paths(bool is_testing)
 #ifdef _WIN32
     // TODO
 #elif defined(__linux__)
-    TMP      = "/tmp/" APPNAME_LONG;
-    APP_DATA = home ? std::string(home) + "/.local/share/" APPNAME_LONG
-                    : "/tmp/" APPNAME_LONG;
+    TMP  = "/tmp/" APPNAME_LONG;
+    ROOT = home ? std::string(home) + "/.local/share/" APPNAME_LONG
+                : "/tmp/" APPNAME_LONG;
 #elif defined(__unix__)
     // TODO For BSD & Mac
 #endif
@@ -62,12 +63,13 @@ void init_paths(bool is_testing)
             "_dbg"
 #endif
             ;
-        APP_DATA = TMP / s_time.str();
-        TMP      = TMP / s_time.str() / "tmp";
-        L_INFO("Creating testing environment at:" << APP_DATA);
+        ROOT = TMP / s_time.str();
+        TMP  = TMP / s_time.str() / "tmp";
+        L_INFO("Creating testing environment at:" << ROOT);
     }
-    LIBRARY = APP_DATA / "lib";
-    LOCAL   = APP_DATA / "local";
+    LIBRARY = ROOT / "lib";
+    LOCAL   = ROOT / "local";
+    CACHE   = ROOT / ".cache";
     try {
         if (!fs::exists(TMP)) {
             L_INFO("Creating" << TMP);
@@ -83,8 +85,12 @@ void init_paths(bool is_testing)
 
             fs::create_directories(LOCAL);
         }
+        if (!fs::exists(CACHE)) {
+            L_INFO("Creating" << CACHE);
+            fs::create_directories(CACHE);
+        }
         if (is_testing) {
-            TESTLOG.emplace(APP_DATA / "log.txt");
+            TESTLOG.emplace(ROOT / "log.txt");
         }
     } catch (const std::exception& e) {
         L_ERROR("Directory creation failed: " << e.what());
@@ -109,17 +115,43 @@ bool write(const std::string& path, const std::string& data)
     return false;
 }
 
+bool write(const std::string& path, std::vector<unsigned char>& data)
+{
+    L_INFO("Saving to " << path);
+    try {
+        fs::create_directories(std::string {
+            path.begin(), path.begin() + path.find_last_of("/") });
+        std::ofstream outfile { path, std::ios::binary };
+        if (outfile) {
+            outfile.write((char*)data.data(), data.size());
+            return true;
+        }
+        L_ERROR("Failed to open file for writing: " << path);
+    } catch (const std::exception& e) {
+        L_ERROR("Exception in write_component: " << e.what());
+    }
+    return false;
+}
+
 std::string read(const std::string& path)
 {
     L_INFO("Reading from " << path);
-    if (path.find(".json") == std::string::npos) {
-        return "";
-    }
     fs::path json_path = fs::path(path);
     std::ifstream infile { json_path };
     std::string content((std::istreambuf_iterator<char>(infile)),
         std::istreambuf_iterator<char>());
     return content;
+}
+
+bool read(const std::string& path, std::vector<unsigned char>& data)
+{
+    L_INFO("Reading from " << path);
+    fs::path json_path = fs::path(path);
+    std::ifstream infile { json_path, std::ios::binary };
+    std::vector<unsigned char> buffer(
+        std::istreambuf_iterator<char>(infile), {});
+    data = std::move(buffer);
+    return !data.empty();
 }
 
 Error load(const std::string& data, Scene& s)
