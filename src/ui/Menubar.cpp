@@ -5,6 +5,7 @@
 #include <imnodes.h>
 #include <tinyfiledialogs.h>
 
+#include "IconsLucide.h"
 #include "io.h"
 #include "ui/layout.h"
 #include "ui/util.h"
@@ -47,15 +48,21 @@ void close_flow(void)
 
 void MenuBar(void)
 {
+    ImGui::PushStyleColor(
+        ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_PopupBg));
+    ImGui::PushStyleColor(
+        ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+        ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered));
+
     ImGui::PushFont(get_font(font_flags_t::NORMAL));
     if (ImGui::BeginMainMenuBar()) {
-
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New")) {
+            if (IconButton("##New", ICON_LC_PLUS, "New")) {
                 extern bool show;
                 show = true;
             }
-            if (ImGui::MenuItem("Open")) {
+            if (IconButton("##Open", ICON_LC_FOLDER_OPEN, "Open")) {
                 const char* path = tinyfd_openFileDialog("Select a scene",
                     io::LIBRARY.c_str(), 1, _PATH_FILTER, "LCS Scene File", 0);
                 if (path != nullptr) {
@@ -66,16 +73,16 @@ void MenuBar(void)
                     }
                 }
             }
-            if (ImGui::MenuItem("Save")) {
+            if (IconButton("##Save", ICON_LC_SAVE, "Save")) {
                 if (io::scene::save() == Error::NO_SAVE_PATH_DEFINED) {
                     save_as_flow("Save scene");
                 };
             }
 
-            if (ImGui::MenuItem("Save As")) {
+            if (IconButton("##SaveAs", ICON_LC_SAVE_ALL, "Save As")) {
                 save_as_flow("Save scene as");
             }
-            if (ImGui::MenuItem("Close")) {
+            if (IconButton("##Close", ICON_LC_X, "Close")) {
                 close_flow();
             }
             ImGui::EndMenu();
@@ -92,6 +99,9 @@ void MenuBar(void)
         ImGui::EndMainMenuBar();
     };
     ImGui::PopFont();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
 }
 
 void TabWindow(void)
@@ -126,11 +136,13 @@ void TabWindow(void)
         return result;
     });
     ImGui::PushStyleColor(
-        ImGuiCol_Tab, ImGui::GetStyleColorVec4(ImNodesCol_TitleBar));
-    if (ImGui::TabItemButton("+")) {
+        ImGuiCol_Button, ImGui::GetStyleColorVec4(ImNodesCol_TitleBar));
+    ImGui::PushFont(get_font(ICON | SMALL));
+    if (ImGui::TabItemButton(ICON_LC_PLUS)) {
         extern bool show;
         show = true;
     }
+    ImGui::PopFont();
     ImGui::PopStyleColor();
     ImGui::EndTabBar();
 }

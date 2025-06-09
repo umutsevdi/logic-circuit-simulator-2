@@ -1,6 +1,7 @@
 #include <imgui.h>
 #include <imnodes.h>
 
+#include "IconsLucide.h"
 #include "core.h"
 #include "io.h"
 #include "ui/util.h"
@@ -40,7 +41,7 @@ void ToggleButton(State state)
     case State::TRUE: ImGui::TextColored(ImVec4(0, 1, 0, 1), "TRUE"); break;
     case State::FALSE: ImGui::TextColored(ImVec4(1, 0, 0, 1), "FALSE"); break;
     case State::DISABLED:
-        ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISABLED");
+        ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISCONNECTED");
         break;
     default: break;
     }
@@ -76,9 +77,9 @@ State ToggleButton(State state, bool clickable)
     case State::DISABLED:
         if (clickable) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3, 0.3, 0.3, 1));
-            ImGui::Button("DISABLED");
+            ImGui::Button("DISCONNECTED");
         } else {
-            ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISABLED");
+            ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISCONNECTED");
         }
         break;
     }
