@@ -72,7 +72,7 @@ NodeView<InputNode>::NodeView(NRef<InputNode> node, bool has_changes)
 {
     uint32_t nodeid = node->id().numeric();
     ImNodes::BeginNode(nodeid);
-    _sync_position(node->get_base(), has_changes);
+    _sync_position(node->base(), has_changes);
     ImNodes::BeginNodeTitleBar();
     ImGui::Text("%s %u", node->is_timer() ? "Timer " : "Input ", node->id().id);
     ImNodes::EndNodeTitleBar();
@@ -92,7 +92,10 @@ NodeView<InputNode>::NodeView(NRef<InputNode> node, bool has_changes)
         }
         ImGui::PopItemWidth();
     } else {
-        ToggleButton(&node);
+        State old = node->get();
+        if (State t = ToggleButton(old, true); t != old) {
+            node->toggle();
+        }
     }
     ImGui::SameLine();
     ImGui::Text("%d", 0);
@@ -106,7 +109,7 @@ NodeView<OutputNode>::NodeView(NRef<OutputNode> node, bool has_changes)
 {
     uint32_t nodeid = node->id().numeric();
     ImNodes::BeginNode(nodeid);
-    _sync_position(node->get_base(), has_changes);
+    _sync_position(node->base(), has_changes);
     ImNodes::BeginNodeTitleBar();
     ImGui::Text("Output %u", node->id().id);
     ImNodes::EndNodeTitleBar();
@@ -123,7 +126,7 @@ template <> NodeView<GateNode>::NodeView(NRef<GateNode> node, bool has_changes)
 {
     uint32_t nodeid = node->id().numeric();
     ImNodes::BeginNode(nodeid);
-    _sync_position(node->get_base(), has_changes);
+    _sync_position(node->base(), has_changes);
     ImNodes::BeginNodeTitleBar();
     ImGui::Text("%s Gate %u", GateType_to_str(node->type()), node->id().id);
     ImNodes::EndNodeTitleBar();

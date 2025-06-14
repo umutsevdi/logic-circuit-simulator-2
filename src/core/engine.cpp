@@ -63,10 +63,15 @@ std::ostream& operator<<(std::ostream& os, const BaseNode& g)
                                 InputNode
 *****************************************************************************/
 
-InputNode::InputNode(Scene* _scene, Node _id, std::optional<float> freq)
-    : BaseNode { _scene, { _id.id, NodeType::INPUT } }
+InputNode::InputNode(Scene* _scene, Node id, std::optional<float> freq)
+    : BaseNode { _scene, { id.id, NodeType::INPUT } }
     , _freq { freq }
-    , _value { false } { };
+    , _value { false }
+{
+    if (_freq.has_value()) {
+        _parent->_timerlist.emplace(_id, 0);
+    }
+};
 
 std::ostream& operator<<(std::ostream& os, const InputNode& g)
 {

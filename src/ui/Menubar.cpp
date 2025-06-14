@@ -7,6 +7,7 @@
 
 #include "IconsLucide.h"
 #include "io.h"
+#include "net.h"
 #include "ui/layout.h"
 #include "ui/util.h"
 
@@ -46,6 +47,9 @@ void close_flow(void)
     }
 }
 
+net::DeviceFlow df;
+bool device_modal_show = false;
+bool device_flow       = false;
 void MenuBar(void)
 {
     ImGui::PushStyleColor(
@@ -96,12 +100,51 @@ void MenuBar(void)
         if (ImGui::BeginMenu("Help")) {
             ImGui::EndMenu();
         }
+        ImGui::Separator();
+        if (!net::is_logged_in()) {
+            if (IconButton("##LoginButton", ICON_LC_LOG_IN, "Login")) {
+                device_flow       = true;
+                device_modal_show = true;
+            }
+        } else {
+            if (IconButton(
+                    "##LoginButton", ICON_LC_DOOR_CLOSED_LOCKED, "Logout")) { }
+        }
         ImGui::EndMainMenuBar();
     };
     ImGui::PopFont();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
+    if (device_modal_show) {
+        if (device_flow) {
+            device_flow = false;
+            if (net::start_device_flow(df)) {
+                device_modal_show = false;
+                return;
+            };
+        }
+        ImGui::OpenPopup("Login");
+        if (ImGui::BeginPopupModal(
+                "Login", nullptr, ImGuiWindowFlags_NoSavedSettings)) {
+            Field("Enter the code to your browser");
+            ImGui::SameLine();
+            ImGui::Text("%s", df.user_code.c_str());
+            ImGui::ProgressBar(
+                static_cast<float>(difftime(time(nullptr), df.start_time))
+                    / static_cast<float>(df.expires_in),
+                ImGui::CalcTextSize("LONGLONGTEXT"));
+            ImGui::SetClipboardText(df.user_code.c_str());
+            switch (df.poll()) {
+            case net::DeviceFlow::IDLE:
+            case net::DeviceFlow::BROKEN:
+            case net::DeviceFlow::POLLING: break;
+            case net::DeviceFlow::DONE:
+            case net::DeviceFlow::TIMEOUT: device_modal_show = false; break;
+            }
+            ImGui::EndPopup();
+        }
+    }
 }
 
 void TabWindow(void)

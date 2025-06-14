@@ -7,7 +7,6 @@
 #include "core.h"
 #include "imnodes.h"
 #include "io.h"
-#include "ui.h"
 #include "ui/layout.h"
 #include "ui/util.h"
 
@@ -51,6 +50,7 @@ void Inspector(NRef<Scene> scene)
         ImGui::EndTabBar();
     } else if (selection_s) {
         Node node = decode_pair(node_list[0]);
+        L_INFO("Selecting: " << node);
         _inspector_tab(&scene, node);
     }
     ImGui::End();
@@ -128,13 +128,14 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
         }
         values[SIZE - 1] = _node->get() == State::TRUE;
         ImGui::PlotLines("##Frequency", values, SIZE, 0, nullptr, 0.0f, 1.0f);
-        ImGui::EndTable();
-
     } else {
-        TablePair(Field("Value"), ToggleButton(&_node));
-        ImGui::EndTable();
+        TablePair(
+            Field("Value"), State old = _node->get();
+            if (State t = ToggleButton(old, true);
+                t != old) { _node->toggle(); });
     }
 
+    TablePair(Field("Outputs"));
     if (ImGui::BeginTable("InputList", 3, ImGuiTableFlags_BordersInner)) {
         ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
@@ -149,20 +150,24 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
         ToggleButton(_node->get());
         ImGui::EndTable();
     }
+    ImGui::EndTable();
 }
 
 static void _inspector_output_node(NRef<Scene> scene, Node node)
 {
     auto _node = scene->get_node<OutputNode>(node);
     TablePair(Field("Value"), ToggleButton(_node->get()));
-    ImGui::EndTable();
     std::vector<relid> in;
     in.push_back(_node->input);
+    TablePair(Field("Inputs"));
     _input_table(&scene, in);
+    ImGui::EndTable();
 }
 
 static void _inspector_gate_node(NRef<Scene> scene, Node node)
 {
+    const static ImVec2 __selector_size = ImGui::CalcTextSize("-000000000000");
+
     auto _node = scene->get_node<GateNode>(node);
     TablePair(Field("Value"), ToggleButton(_node->get()));
     TablePair(
@@ -171,6 +176,7 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
     TablePair(Field("Socket Count"));
     size_t socket_count = _node->inputs.size();
     size_t inc          = 1;
+    ImGui::PushItemWidth(__selector_size.x);
     if (ImGui::InputScalar("##SocketCount", ImGuiDataType_U8, &socket_count,
             &inc, &inc, nullptr)) {
         bool keep = true;
@@ -185,9 +191,10 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
     ImGui::EndDisabled();
     ImGui::TableNextRow();
     ImGui::TableSetColumnIndex(0);
-    ImGui::EndTable();
+    TablePair(Field("Inputs"));
     _input_table(&scene, _node->inputs);
 
+    TablePair(Field("Outputs"));
     if (ImGui::BeginTable("InputList", 3, ImGuiTableFlags_BordersInner)) {
         ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
@@ -202,13 +209,16 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
         ToggleButton(_node->get());
         ImGui::EndTable();
     }
+    ImGui::EndTable();
 }
 
 static void _inspector_component_node(NRef<Scene> scene, Node node)
 {
     auto _node = scene->get_node<ComponentNode>(node);
     TablePair(Field("Value"), ToggleButton(_node->get()));
+    TablePair(Field("Inputs"));
     _input_table(&scene, _node->inputs);
+    TablePair(Field("Outputs"));
     for (auto out : _node->outputs) {
         if (ImGui::BeginTabBar(std::to_string(out.first).c_str())) {
             _output_table(&scene, out.second);
@@ -220,8 +230,8 @@ static void _inspector_component_node(NRef<Scene> scene, Node node)
 static void _inspector_component_context_node(NRef<Scene> scene, Node node)
 {
     ComponentContext& ctx = scene->component_context.value();
-    ImGui::EndTable();
     if (node.type == COMPONENT_INPUT) {
+        TablePair(Field("Outputs"));
         if (ImGui::BeginTable(
                 "InputsComponentInputList", 3, ImGuiTableFlags_BordersInner)) {
             ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
@@ -247,8 +257,10 @@ static void _inspector_component_context_node(NRef<Scene> scene, Node node)
             ImGui::EndTable();
         }
     } else {
+        TablePair(Field("Inputs"));
         _input_table(&scene, scene->component_context->outputs);
     }
+    ImGui::EndTable();
 }
 
 static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)

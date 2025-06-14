@@ -34,20 +34,6 @@ void PositionSelector(NRef<BaseNode> node, const char* prefix)
     ImGui::Text(")");
 }
 
-void ToggleButton(State state)
-{
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
-    switch (state) {
-    case State::TRUE: ImGui::TextColored(ImVec4(0, 1, 0, 1), "TRUE"); break;
-    case State::FALSE: ImGui::TextColored(ImVec4(1, 0, 0, 1), "FALSE"); break;
-    case State::DISABLED:
-        ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISCONNECTED");
-        break;
-    default: break;
-    }
-    ImGui::PopFont();
-}
-
 State ToggleButton(State state, bool clickable)
 {
     ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::SMALL));

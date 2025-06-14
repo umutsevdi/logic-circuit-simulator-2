@@ -51,7 +51,6 @@ constexpr ImVec4 NodeType_to_color(mode_t type)
 }
 
 void PositionSelector(NRef<BaseNode> node, const char* prefix);
-void ToggleButton(NRef<InputNode> node);
 State ToggleButton(State, bool clickable = false);
 void NodeTypeTitle(Node n);
 void NodeTypeTitle(Node n, sockid sock);
@@ -74,15 +73,19 @@ void NodeTypeTitle(Node n, sockid sock);
 template <typename... Args>
 bool IconButton(const char* label, const char* icon, Args... args)
 {
+
+    bool has_text = strnlen(get_first<const char*>(args...), 5);
     static char buffer[256];
-    snprintf(buffer, 256, args...);
-    ImVec2 text_s = ImGui::CalcTextSize(buffer);
+    ImVec2 text_s = { 0, 0 };
+    if (has_text) {
+        snprintf(buffer, 256, args...);
+        text_s = ImGui::CalcTextSize(buffer);
+    }
     ImGui::PushFont(get_font(ICON | NORMAL));
     ImVec2 icon_s = ImGui::CalcTextSize(icon);
-
-    ImVec2 btn_s
-        = ImVec2(text_s.x + icon_s.x + 1.5f * ImGui::GetStyle().ItemSpacing.x,
-            std::max(text_s.y, icon_s.y));
+    ImVec2 btn_s  = ImVec2(text_s.x + icon_s.x
+             + (has_text ? 1.5f : 1.f) * ImGui::GetStyle().ItemSpacing.x,
+         std::max(text_s.y, icon_s.y));
     bool pressed  = ImGui::Button(label, btn_s);
     ImVec2 btnpos = ImGui::GetItemRectMin();
 
@@ -91,20 +94,25 @@ bool IconButton(const char* label, const char* icon, Args... args)
             btnpos.y + (btn_s.y - icon_s.y) / 2),
         ImGui::GetColorU32(ImGuiCol_Text), icon);
     ImGui::PopFont();
-    ImGui::GetWindowDrawList()->AddText(
-        ImVec2(btnpos.x + icon_s.x + ImGui::GetStyle().ItemSpacing.x,
-            btnpos.y + (btn_s.y - text_s.y) / 2),
-        ImGui::GetColorU32(ImGuiCol_Text), buffer);
+    if (has_text) {
+        ImGui::GetWindowDrawList()->AddText(
+            ImVec2(btnpos.x + icon_s.x + ImGui::GetStyle().ItemSpacing.x,
+                btnpos.y + (btn_s.y - text_s.y) / 2),
+            ImGui::GetColorU32(ImGuiCol_Text), buffer);
+    }
     return pressed;
 }
 
 template <typename... Args> void IconText(const char* icon, Args... args)
 {
+    bool has_text = strnlen(get_first<const char*>(args...), 5);
     ImGui::PushFont(get_font(ICON | NORMAL));
     ImGui::Text("%s", icon);
     ImGui::PopFont();
-    ImGui::SameLine();
-    ImGui::Text(args...);
+    if (has_text) {
+        ImGui::SameLine();
+        ImGui::Text(args...);
+    }
 }
 
 void SceneType(NRef<Scene>);

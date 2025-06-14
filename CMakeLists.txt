@@ -32,7 +32,7 @@ message("Build Tests: ${LCS_BUILD_TESTS}")
 message("Doxygen: ${LCS_ENABLE_DOXYGEN}")
 message("GUI: ${LCS_GUI}")
 
-set(__CORE core common io jsoncpp_static base64)
+set(__CORE net core common io jsoncpp_static base64)
 set(__DEPENDS ui imnodes ${__CORE})
 
 message("Build Type: ${CMAKE_BUILD_TYPE}")
@@ -63,6 +63,7 @@ if(LCS_GUI)
 add_subdirectory(src/ui)
 endif()
 add_subdirectory(src/io)
+add_subdirectory(src/net)
 
 if(LCS_GUI)
     target_link_libraries(${PRJ} ${__DEPENDS})

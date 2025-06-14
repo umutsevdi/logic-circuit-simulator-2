@@ -213,3 +213,13 @@ inline std::string strlimit(const std::string& input, size_t limit)
     }
     return input;
 }
+
+template <typename T, typename... Args> const char* get_first(T first, Args...)
+{
+    return first;
+}
+
+template <typename... Args> const char* get_first(const char* first, Args...)
+{
+    return first;
+}

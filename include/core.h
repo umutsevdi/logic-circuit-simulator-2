@@ -126,14 +126,16 @@ enum GateType {
 
 constexpr const char* GateType_to_str(GateType g)
 {
-    return g == NOT ? "NOT"
-        : g == AND  ? "AND"
-        : g == OR   ? "OR"
-        : g == XOR  ? "XOR"
-        : g == NAND ? "NAND"
-        : g == NOR  ? "NOR"
-        : g == XNOR ? "XNOR"
-                    : "NaN";
+    switch (g) {
+    case NOT: return "NOT";
+    case AND: return "AND";
+    case OR: return "OR";
+    case XOR: return "XOR";
+    case NAND: return "NAND";
+    case NOR: return "NOR";
+    case XNOR: return "XNOR";
+    default: return "null";
+    }
 }
 
 /** Position of a node or a curve in the surface */
@@ -160,18 +162,18 @@ public:
     virtual ~BaseNode()                  = default;
     friend std::ostream& operator<<(std::ostream& os, const BaseNode& r);
 
-    inline void reload(Scene* s) { _parent = s; }
-    BaseNode* get_base(void) { return dynamic_cast<BaseNode*>(this); };
     inline Node id(void) const { return _id; }
-
-    /**
-     * Updates the internal data and send out signals to all connected nodes.
-     */
-    virtual void on_signal(void) = 0;
     /** Returns whether all nodes are connected */
     virtual bool is_connected(void) const = 0;
     /** Get the current status */
     virtual State get(sockid slot = 0) const = 0;
+
+    inline void reload(Scene* s) { _parent = s; }
+    BaseNode* base(void) { return dynamic_cast<BaseNode*>(this); };
+    /**
+     * Updates the internal data and send out signals to all connected nodes.
+     */
+    virtual void on_signal(void) = 0;
 
     /* Serializable interface */
     Json::Value to_json(void) const override;
@@ -230,9 +232,9 @@ public:
     inline GateType type(void) const { return _type; };
 
     /* BaseNode */
-    void on_signal(void) override;
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
+    void on_signal(void) override;
     /* Serializable interface */
     Json::Value to_json(void) const override;
     Error from_json(const Json::Value&) override;
@@ -407,6 +409,24 @@ private:
     Scene* _parent;
 };
 
+/** Class to NodeType conversion */
+template <typename T> constexpr NodeType as_node_type(void)
+{
+    if constexpr (std::is_same<T, GateNode>::value) {
+        return NodeType::GATE;
+    }
+    if constexpr (std::is_same<T, ComponentNode>::value) {
+        return NodeType::COMPONENT;
+    }
+    if constexpr (std::is_same<T, InputNode>::value) {
+        return NodeType::INPUT;
+    }
+    if constexpr (std::is_same<T, OutputNode>::value) {
+        return NodeType::OUTPUT;
+    }
+    return NodeType::NODE_S;
+}
+
 class Scene final : public io::Serializable {
 public:
     Scene(const std::string& name = "", const std::string& author = "",
@@ -431,45 +451,13 @@ public:
      */
     template <class T, class... Args> Node add_node(Args&&... args)
     {
-        constexpr bool is_gate      = std::is_same<T, GateNode>::value;
-        constexpr bool is_component = std::is_same<T, ComponentNode>::value;
-        constexpr bool is_input     = std::is_same<T, InputNode>::value;
-        constexpr bool is_output    = std::is_same<T, OutputNode>::value;
-
-        if constexpr (is_gate) {
-            _last_node[NodeType::GATE].id++;
-            return _gates
-                .emplace(_last_node[NodeType::GATE],
-                    GateNode { this, _last_node[NodeType::GATE].id, args... })
-                .first->first;
-        } else if constexpr (is_component) {
-            _last_node[NodeType::COMPONENT].id++;
-            return _components
-                .emplace(_last_node[NodeType::COMPONENT],
-                    ComponentNode {
-                        this, _last_node[NodeType::COMPONENT].id, args... })
-                .first->first;
-        } else if constexpr (is_input) {
-            _last_node[NodeType::INPUT].id++;
-            auto new_node
-                = _inputs
-                      .emplace(_last_node[NodeType::INPUT],
-                          InputNode {
-                              this, _last_node[NodeType::INPUT].id, args... })
-                      .first;
-            if (new_node->second.is_timer()) {
-                _timerlist.emplace(new_node->first, 0.0f);
-            }
-            return new_node->first;
-        } else if constexpr (is_output) {
-            _last_node[NodeType::OUTPUT].id++;
-            return _outputs
-                .emplace(_last_node[NodeType::OUTPUT],
-                    OutputNode {
-                        this, _last_node[NodeType::OUTPUT].id, args... })
-                .first->first;
-        }
-        return { 0, NodeType::GATE };
+        constexpr NodeType node_type = as_node_type<T>();
+        _last_node[node_type].id++;
+        std::map<Node, T>& nodemap = _get_node_map<T>();
+        return nodemap
+            .emplace(_last_node[node_type],
+                T { this, _last_node[node_type].id, args... })
+            .first->first;
     }
 
     /** Safely removes given node from the scene.
@@ -484,32 +472,11 @@ public:
      */
     template <typename T> NRef<T> get_node(Node id)
     {
-        constexpr bool is_gate      = std::is_same<T, GateNode>::value;
-        constexpr bool is_component = std::is_same<T, ComponentNode>::value;
-        constexpr bool is_input     = std::is_same<T, InputNode>::value;
-        constexpr bool is_output    = std::is_same<T, OutputNode>::value;
-        if constexpr (is_gate) {
-            auto g = _gates.find(id);
-            lcs_assert(
-                id.id != 0 && g != _gates.end() && id.type == NodeType::GATE);
-            return &g->second;
-        } else if constexpr (is_component) {
-            auto g = _components.find(id);
-            lcs_assert(id.id != 0 && g != _components.end()
-                && id.type == NodeType::COMPONENT);
-            return &g->second;
-        } else if constexpr (is_input) {
-            auto g = _inputs.find(id);
-            lcs_assert(
-                id.id != 0 && g != _inputs.end() && id.type == NodeType::INPUT);
-            return &g->second;
-        } else if constexpr (is_output) {
-            auto g = _outputs.find(id);
-            lcs_assert(id.id != 0 && g != _outputs.end()
-                && id.type == NodeType::OUTPUT);
-            return &g->second;
-        }
-        return nullptr;
+        std::map<Node, T>& nodemap = _get_node_map<T>();
+        auto g                     = nodemap.find(id);
+        lcs_assert(
+            id.id != 0 && g != nodemap.end() && id.type == as_node_type<T>());
+        return &g->second;
     }
 
     /**
@@ -599,6 +566,24 @@ private:
     /** The helper method for move constructor and move assignment */
     void _move_from(Scene&&);
 
+    template <class T> std::map<Node, T>& _get_node_map()
+    {
+        constexpr bool is_gate      = std::is_same<T, GateNode>::value;
+        constexpr bool is_component = std::is_same<T, ComponentNode>::value;
+        constexpr bool is_input     = std::is_same<T, InputNode>::value;
+        constexpr bool is_output    = std::is_same<T, OutputNode>::value;
+
+        if constexpr (is_gate) {
+            return _gates;
+        } else if constexpr (is_component) {
+            return _components;
+        } else if constexpr (is_input) {
+            return _inputs;
+        } else if constexpr (is_output) {
+            return _outputs;
+        }
+    }
+
     /**
      * Attempts to connect two nodes from their given sockets. On success
      * relationship with given id is inserted.
@@ -624,23 +609,5 @@ private:
     Node _last_node[NodeType::NODE_S];
     relid _last_rel;
 };
-
-/** Class to NodeType conversion */
-template <typename T> constexpr NodeType as_node_type(void)
-{
-    if constexpr (std::is_same<T, GateNode>::value) {
-        return NodeType::GATE;
-    }
-    if constexpr (std::is_same<T, ComponentNode>::value) {
-        return NodeType::COMPONENT;
-    }
-    if constexpr (std::is_same<T, InputNode>::value) {
-        return NodeType::INPUT;
-    }
-    if constexpr (std::is_same<T, OutputNode>::value) {
-        return NodeType::OUTPUT;
-    }
-    return NodeType::NODE_S;
-}
 
 } // namespace lcs
