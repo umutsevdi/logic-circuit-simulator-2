@@ -14,15 +14,17 @@ Rel::Rel(relid _id, Node _from_node, Node _to_node, sockid _from_sock,
     , to_node { _to_node }
     , from_sock { _from_sock }
     , to_sock { _to_sock }
-    , value { FALSE } { };
+    , value { FALSE }
+{
+}
 
 Rel::Rel()
     : id { 0 }
-    , from_node {}
-    , to_node {}
     , from_sock { 0 }
     , to_sock { 0 }
-    , value { FALSE } { };
+    , value { FALSE }
+{
+}
 
 std::ostream& operator<<(std::ostream& os, const Rel& r)
 {
@@ -71,7 +73,7 @@ InputNode::InputNode(Scene* _scene, Node id, std::optional<float> freq)
     if (_freq.has_value()) {
         _parent->_timerlist.emplace(_id, 0);
     }
-};
+}
 
 std::ostream& operator<<(std::ostream& os, const InputNode& g)
 {
@@ -81,7 +83,7 @@ std::ostream& operator<<(std::ostream& os, const InputNode& g)
     }
     os << " )";
     return os;
-};
+}
 
 void InputNode::set(bool v)
 {
@@ -105,12 +107,12 @@ void InputNode::on_signal()
     }
 }
 
-bool InputNode::is_connected() const { return true; };
+bool InputNode::is_connected() const { return true; }
 
 State InputNode::get(sockid) const
 {
     return _value ? State::TRUE : State::FALSE;
-};
+}
 
 /******************************************************************************
                                   OutputNode
@@ -119,17 +121,19 @@ State InputNode::get(sockid) const
 OutputNode::OutputNode(Scene* _scene, Node _id)
     : BaseNode { _scene, { _id.id, NodeType::OUTPUT } }
     , input { 0 }
-    , _value { State::DISABLED } { };
+    , _value { State::DISABLED }
+{
+}
 
 std::ostream& operator<<(std::ostream& os, const OutputNode& g)
 {
     os << g.id() << "( " << State_to_str(g._value) << " )";
     return os;
-};
+}
 
 State OutputNode::get(sockid) const { return _value; }
 
-bool OutputNode::is_connected() const { return input != 0; };
+bool OutputNode::is_connected() const { return input != 0; }
 
 void OutputNode::on_signal()
 {

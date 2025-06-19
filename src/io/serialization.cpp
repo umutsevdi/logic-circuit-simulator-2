@@ -1,9 +1,7 @@
-#include <json/value.h>
-
-#include <string>
-
 #include "core.h"
 #include "io.h"
+#include <json/value.h>
+#include <string>
 
 namespace lcs {
 

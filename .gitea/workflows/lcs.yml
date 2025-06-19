@@ -16,15 +16,17 @@ jobs:
         with:
           submodules: recursive
       - name: Update Packages
-        run: sudo apt-get update -y
+        run:  sudo apt-get update -y
       - name: Install Packages
         run:  sudo apt-get install -y ninja-build doxygen graphviz build-essential cmake
+      - name: Install Dynamic Dependencies
+        run:  sudo apt-get install -y libsecret-1-dev
       - name: Build
-        run: cmake -S . -B build/ -DCMAKE_BUILD_TYPE=Release -G Ninja -DLCS_GUI=False
+        run:  cmake -S . -B build/ -DCMAKE_BUILD_TYPE=Release -G Ninja -DLCS_GUI=False
       - name: Run ninja
-        run: ninja -C build/ release/LogicCircuitSimulator.tst
+        run:  ninja -C build/ release/LogicCircuitSimulator.tst
       - name: Run the test file
-        run: build/release/LogicCircuitSimulator.tst
+        run:  build/release/LogicCircuitSimulator.tst
       - name: Upload artifact
         run: |
           cd build

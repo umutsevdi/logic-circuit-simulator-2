@@ -1,15 +1,13 @@
 #include "common.h"
+#include "net.h"
 #include <curl/curl.h>
 #include <stdexcept>
 #include <string>
-
-#include "net.h"
 
 namespace lcs::net {
 
 void init(void)
 {
-    // Initialize cURL
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK) {
         throw std::runtime_error("Failed to initialize cURL: "
@@ -25,9 +23,10 @@ static size_t _write_cb(
     return total;
 }
 
-Error get(const Packet& pkt, std::string& resp)
+Error get_request(
+    const std::string& url, std::string& resp, const std::string& authorization)
 {
-    L_INFO("Sending GET to " << pkt.url << "\tAuth:" << pkt.session_token);
+    L_INFO("Sending GET to " << url << "\tAuth:" << authorization);
     CURL* curl = curl_easy_init();
     if (!curl) {
         resp = "";
@@ -35,7 +34,7 @@ Error get(const Packet& pkt, std::string& resp)
     }
 
     std::string readBuffer;
-    curl_easy_setopt(curl, CURLOPT_URL, pkt.url.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(
         curl, CURLOPT_HTTPHEADER, nullptr); // Set headers if needed
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _write_cb);
@@ -43,8 +42,8 @@ Error get(const Packet& pkt, std::string& resp)
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
 
     struct curl_slist* headers = nullptr;
-    if (!pkt.session_token.empty()) {
-        std::string authHeader = "Authorization: Bearer " + pkt.session_token;
+    if (!authorization.empty()) {
+        std::string authHeader = "Authorization: Bearer " + authorization;
         headers                = curl_slist_append(headers, authHeader.c_str());
     }
     headers = curl_slist_append(headers, "Accept: application/json");
@@ -71,9 +70,10 @@ Error get(const Packet& pkt, std::string& resp)
     return Error::OK;
 }
 
-Error post(const Packet& pkt, const std::string& req, std::string& resp)
+Error post_request(const std::string& url, std::string& resp,
+    const std::string& req, const std::string& authorization)
 {
-    L_INFO("Sending POST to " << pkt.url << "\tAuth:" << pkt.session_token
+    L_INFO("Sending POST to " << url << "\tAuth:" << authorization
                               << "\tReq:" << req);
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -82,14 +82,14 @@ Error post(const Packet& pkt, const std::string& req, std::string& resp)
     }
 
     std::string readBuffer;
-    curl_easy_setopt(curl, CURLOPT_URL, pkt.url.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _write_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 
     struct curl_slist* headers = nullptr;
-    if (!pkt.session_token.empty()) {
-        std::string authHeader = "Authorization: Bearer " + pkt.session_token;
+    if (!authorization.empty()) {
+        std::string authHeader = "Authorization: Bearer " + authorization;
         headers                = curl_slist_append(headers, authHeader.c_str());
     }
     headers = curl_slist_append(headers, "Accept: application/json");
@@ -128,14 +128,15 @@ static size_t write_bin_cb(
     return total;
 }
 
-Error get(const Packet& pkt, std::vector<unsigned char>& resp)
+Error get_request(const std::string& url, std::vector<unsigned char>& resp,
+    const std::string&)
 {
     CURL* curl;
     CURLcode res;
 
     curl = curl_easy_init();
     if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, pkt.url.c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_bin_cb);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);

@@ -10,14 +10,13 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include "common.h"
+#include "io.h"
 #include <bitset>
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
-
-#include "common.h"
-#include "io.h"
 
 namespace lcs {
 class Scene;

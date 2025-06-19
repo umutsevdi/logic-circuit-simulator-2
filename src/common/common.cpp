@@ -1,27 +1,35 @@
+#include "common.h"
 #include <tinyfiledialogs.h>
-
 #include <cstdlib>
 #include <iomanip>
 #include <sstream>
 #include <string>
 
-#include "common.h"
-
 std::optional<std::ofstream> TESTLOG = std::nullopt;
 static bool COLORS_ENABLED           = true;
 bool is_color_enabled(void) { return COLORS_ENABLED; }
+
+static std::string parse_function(std::string_view fnname)
+{
+    auto _fname
+        = std::string_view { fnname.begin() + fnname.find_first_of(' ') + 1 };
+    _fname = std::string_view {
+        _fname.begin() + _fname.find_first_of("lcs::") + 5,
+    };
+    return std::string { _fname.begin(), _fname.find_first_of('(') };
+}
 
 std::ostream& _log_pre(std::ostream& stream, const char* status,
     const char* file_name, int line, const char* function)
 {
     COLORS_ENABLED = true;
     std::ostringstream oss {};
-    oss << strlimit(file_name, 20) << ":" << std::left << std::setw(3) << line;
+    oss << file_name << ":" << std::left << std::setw(3) << line;
     std::ostringstream oss2 {};
-    oss2 << F_UNDERLINE F_BLUE << strlimit(function, 20) << "()" << F_RESET;
-    stream << F_BOLD << status << std::left << std::setw(24) << oss.str()
-           << F_GREEN " | " F_RESET << std::setw(35) << oss2.str()
-           << F_GREEN " | " F_RESET;
+    oss2 << F_UNDERLINE << strlimit(parse_function(function), 36) << F_RESET;
+    stream << F_BOLD << status << std::left << std::setw(18)
+           << strlimit(oss.str(), 18) << F_GREEN " | " F_RESET F_BLUE
+           << std::setw(44) << oss2.str() << F_GREEN " | " F_RESET;
     return stream;
 }
 
@@ -31,12 +39,10 @@ std::ostream& _log_pre_f(
     if (TESTLOG.has_value()) {
         COLORS_ENABLED = false;
         std::ostringstream oss {};
-        oss << strlimit(file_name, 20) << ":" << std::left << std::setw(3)
-            << line;
-        std::ostringstream oss2 {};
-        oss2 << strlimit(function, 20) << "()";
-        TESTLOG.value() << status << std::left << std::setw(24) << oss.str()
-                        << " | " << std::setw(35) << oss2.str() << " | ";
+        oss << file_name << ":" << std::left << std::setw(3) << line;
+        TESTLOG.value() << status << std::left << std::setw(20)
+                        << strlimit(oss.str(), 20) << " | " << std::setw(40)
+                        << strlimit(parse_function(function), 36) << " | ";
         return TESTLOG.value();
     }
     return std::cout;

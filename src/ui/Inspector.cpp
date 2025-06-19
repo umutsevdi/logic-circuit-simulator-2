@@ -1,14 +1,9 @@
-#include <cmath>
-
-#include <imgui.h>
-
 #include "IconsLucide.h"
-#include "common.h"
-#include "core.h"
 #include "imnodes.h"
 #include "io.h"
-#include "ui/layout.h"
-#include "ui/util.h"
+#include "ui/components.h"
+#include <imgui.h>
+#include <cmath>
 
 namespace lcs::ui {
 
@@ -65,7 +60,7 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
     ImGui::PopFont();
     if (node.type != COMPONENT_OUTPUT && node.type != COMPONENT_INPUT) {
         ImGui::SameLine();
-        if (IconButton<NORMAL>("##DeleteNode", ICON_LC_TRASH_2, "")) {
+        if (IconButton<NORMAL>(ICON_LC_TRASH_2, "")) {
             ImNodes::ClearNodeSelection(node.numeric());
             scene->remove_node(node);
             return;
@@ -289,8 +284,7 @@ static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
             }
             ImGui::TableSetColumnIndex(2);
             ImGui::BeginDisabled(inputs[i] == 0);
-            if (IconButton<NORMAL>(("##" + std::to_string(i)).c_str(),
-                    ICON_LC_CIRCLE_SLASH_2, "")) {
+            if (IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "")) {
                 scene->disconnect(inputs[i]);
                 io::scene::notify_change();
             }
@@ -318,7 +312,7 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGui ::TableNextRow();
             ImGui ::TableSetColumnIndex(1);
             ImGui::BeginDisabled(true);
-            IconButton<NORMAL>("##0", ICON_LC_CIRCLE_SLASH_2, "");
+            IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "");
             ImGui::EndDisabled();
         }
 
@@ -337,8 +331,7 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGui ::TableSetColumnIndex(1);
 
             ImGui::BeginDisabled(outputs[i] == 0);
-            if (IconButton<NORMAL>(("##" + std::to_string(i)).c_str(),
-                    ICON_LC_CIRCLE_SLASH_2, "")) {
+            if (IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "")) {
                 scene->disconnect(outputs[i]);
                 io::scene::notify_change();
             }

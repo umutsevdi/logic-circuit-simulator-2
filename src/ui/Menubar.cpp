@@ -1,53 +1,19 @@
-#include <string>
-#include <string_view>
-
-#include <imgui.h>
-#include <imnodes.h>
-#include <tinyfiledialogs.h>
-
 #include "IconsLucide.h"
 #include "io.h"
 #include "net.h"
+#include "ui/components.h"
+#include "ui/flows.h"
 #include "ui/layout.h"
-#include "ui/util.h"
+#include <imgui.h>
+#include <imnodes.h>
+#include <tinyfiledialogs.h>
+#include <string>
+#include <string_view>
 
 namespace lcs::ui {
-static const char* _PATH_FILTER[1] = { "*.json" };
 
-bool save_as_flow(const char* title)
-{
-    const char* new_path = tinyfd_saveFileDialog(
-        title, io::LOCAL.c_str(), 1, _PATH_FILTER, "Save the scene as");
-    if (new_path != nullptr) {
-        std::string path_as_str { new_path };
-        if (path_as_str.find(".json") != std::string::npos) {
-            return io::scene::save_as(new_path) == Error::OK;
-        } else {
-            return io::scene::save_as(path_as_str + ".json") == Error::OK;
-        }
-    }
-    return false;
-}
+static void _show_device_flow_ui();
 
-void close_flow(void)
-{
-    if (io::scene::get() == nullptr) {
-        exit(0);
-    }
-    if (io::scene::is_saved()) {
-        io::scene::close();
-    } else {
-        int option = tinyfd_messageBox("Close Scene",
-            "You have unsaved changes. Would you like to save your changes "
-            "before closing?",
-            "yesno", "question", 0);
-        if (!option || save_as_flow("Save scene")) {
-            io::scene::close();
-        }
-    }
-}
-
-net::DeviceFlow df;
 bool df_show = false;
 void MenuBar(void)
 {
@@ -61,31 +27,22 @@ void MenuBar(void)
     ImGui::PushFont(get_font(font_flags_t::NORMAL));
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (IconButton<NORMAL>("##New", ICON_LC_PLUS, "New")) {
-                extern bool show;
-                show = true;
+            if (IconButton<NORMAL>(ICON_LC_PLUS, "New")) {
+                new_flow_show = true;
             }
-            if (IconButton<NORMAL>("##Open", ICON_LC_FOLDER_OPEN, "Open")) {
-                const char* path = tinyfd_openFileDialog("Select a scene",
-                    io::LIBRARY.c_str(), 1, _PATH_FILTER, "LCS Scene File", 0);
-                if (path != nullptr) {
-                    size_t idx;
-                    Error err = io::scene::open(path, idx);
-                    if (err) {
-                        ERROR(err);
-                    }
-                }
+            if (IconButton<NORMAL>(ICON_LC_FOLDER_OPEN, "Open")) {
+                open_flow();
             }
-            if (IconButton<NORMAL>("##Save", ICON_LC_SAVE, "Save")) {
+            if (IconButton<NORMAL>(ICON_LC_SAVE, "Save")) {
                 if (io::scene::save() == Error::NO_SAVE_PATH_DEFINED) {
                     save_as_flow("Save scene");
                 };
             }
 
-            if (IconButton<NORMAL>("##SaveAs", ICON_LC_SAVE_ALL, "Save As")) {
+            if (IconButton<NORMAL>(ICON_LC_SAVE_ALL, "Save As")) {
                 save_as_flow("Save scene as");
             }
-            if (IconButton<NORMAL>("##Close", ICON_LC_X, "Close")) {
+            if (IconButton<NORMAL>(ICON_LC_X, "Close")) {
                 close_flow();
             }
             ImGui::EndMenu();
@@ -100,85 +57,13 @@ void MenuBar(void)
             ImGui::EndMenu();
         }
         ImGui::Separator();
-        if (!net::is_logged_in()
-            || (df.is_waiting() != net::DeviceFlow::DONE
-                && df.is_waiting() != net::DeviceFlow::POLLING)) {
-            if (IconButton<NORMAL>("##LoginButton", ICON_LC_LOG_IN, "Login")) {
-                df_show = true;
-            }
-        } else {
-            if (df.is_waiting() == net::DeviceFlow::POLLING) {
-                if (IconButton<NORMAL>("##LoggingIn", ICON_LC_LOADER_CIRCLE,
-                        "Logging in...")) { }
-            } else {
-                ImGui::BeginMenu(net::get_account()->login.c_str());
-            }
-        }
+
         ImGui::EndMainMenuBar();
     };
     ImGui::PopFont();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
-    if (df_show) {
-        Error err = Error::OK;
-        if (!df.is_started()) {
-            err = df.start();
-        }
-        if (err) {
-            df_show = false;
-            return;
-        }
-        ImGui::OpenPopup("Login");
-        if (ImGui::BeginPopupModal(
-                "Login", nullptr, ImGuiWindowFlags_NoSavedSettings)) {
-            IconText<LARGE>(ICON_LC_GITHUB, "");
-            ImGui::SameLine();
-            Field("Enter the code to your browser");
-            ImGui::PushFont(get_font(font_flags_t::LARGE | font_flags_t::BOLD));
-            ImGui::Text("%s", df.user_code.c_str());
-            ImGui::PopFont();
-            ImGui::SameLine();
-            if (IconButton<LARGE>(
-                    "##CopyToClipboard", ICON_LC_CLIPBOARD_COPY, "")) {
-                ImGui::SetClipboardText(df.user_code.c_str());
-            }
-            ImGui::ProgressBar(1.0f
-                    - static_cast<float>(difftime(time(nullptr), df.start_time))
-                        / static_cast<float>(df.expires_in),
-                ImVec2 { ImGui::GetWindowSize().x,
-                    ImGui::CalcTextSize("Remaining").y },
-                ("Remaining: "
-                    + std::to_string(df.expires_in
-                        - static_cast<int>(
-                            difftime(time(nullptr), df.start_time)))
-                    + " seconds")
-                    .c_str());
-            switch (df.poll()) {
-            case net::DeviceFlow::POLLING: break;
-            case net::DeviceFlow::BROKEN:
-            case net::DeviceFlow::DONE:
-            case net::DeviceFlow::TIMEOUT: df_show = false; break;
-            }
-
-            ImGui::EndPopup();
-        }
-        if (df.is_waiting() == net::DeviceFlow::BROKEN) {
-            ImGui::OpenPopup("Connection Error");
-            if (ImGui::BeginPopup("Connection Error")) {
-                ImGui::Text("An error occurred while authenticating you.");
-                if (ImGui::Button("Retry")) {
-                    df_show = true;
-                    df.start();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel")) {
-                    df_show = false;
-                }
-                ImGui::EndPopup();
-            }
-        }
-    }
 }
 
 void TabWindow(void)
@@ -216,11 +101,112 @@ void TabWindow(void)
         ImGuiCol_Button, ImGui::GetStyleColorVec4(ImNodesCol_TitleBar));
     ImGui::PushFont(get_font(ICON | SMALL));
     if (ImGui::TabItemButton(ICON_LC_PLUS)) {
-        extern bool show;
-        show = true;
+        new_flow_show = true;
     }
     ImGui::PopFont();
     ImGui::PopStyleColor();
     ImGui::EndTabBar();
+
+    ImGui::SameLine();
+    if (net::is_logged_in()) {
+        // TODO Show image
+        if (ImGui::BeginMenu(net::get_account().login.c_str())) {
+            if (IconButton<NORMAL>(
+                    "##Settings", ICON_LC_SETTINGS_2, "Settings")) { }
+            if (IconButton<NORMAL>(ICON_LC_LOG_OUT, "Log out")) {
+                net::get_flow().resolve();
+            }
+            ImGui::EndMenu();
+        };
+    } else {
+        ImGui::BeginDisabled(
+            net::get_flow().get_state() == Flow::State::POLLING);
+        if (IconButton<NORMAL>(ICON_LC_LOG_IN, "Login")) {
+            df_show = true;
+        }
+        ImGui::EndDisabled();
+    }
+    if (df_show) {
+        _show_device_flow_ui();
+    }
+}
+
+static void _show_device_flow_ui()
+{
+    Error err = Error::OK;
+    if (net::get_flow().get_state() == Flow::INACTIVE) {
+        net::get_flow().start();
+    }
+    if (err) {
+        df_show = false;
+        net::get_flow().resolve();
+        return;
+    }
+    Flow::State poll_result = net::get_flow().poll();
+    ImGui::OpenPopup("Login");
+    if (ImGui::BeginPopupModal(
+            "Login", nullptr, ImGuiWindowFlags_NoSavedSettings)) {
+
+        const char* icon;
+        switch (poll_result) {
+        case Flow::TIMEOUT: icon = ICON_LC_CLOCK_ALERT; break;
+        case Flow::BROKEN: icon = ICON_LC_TRIANGLE_ALERT; break;
+        default: icon = ICON_LC_GITHUB; break;
+        }
+        IconText<ULTRA>(icon, "");
+        ImGui::SameLine();
+        if (poll_result == Flow::BROKEN) {
+            ImGui ::PushFont(
+                get_font(font_flags_t ::BOLD | font_flags_t ::NORMAL));
+            ImGui ::TextColored(ImVec4(255, 0, 0, 255), "An error occurred.");
+            ImGui ::PopFont();
+            ImGui::Text("%s", net::get_flow().reason());
+        } else if (poll_result == Flow::TIMEOUT) {
+            ImGui ::PushFont(
+                get_font(font_flags_t ::BOLD | font_flags_t ::NORMAL));
+            ImGui ::TextColored(ImVec4(255, 55, 55, 255),
+                "You have exceeded the time limit for entering your\n"
+                "passcode. Please try again to authenticate your\n"
+                "session. ");
+            ImGui ::PopFont();
+        } else {
+            Field("Enter the code to your browser");
+        }
+        if (poll_result == Flow::POLLING) {
+            ImGui::PushFont(get_font(font_flags_t::LARGE | font_flags_t::BOLD));
+            ImGui::Text("%s", net::get_flow().user_code.c_str());
+            ImGui::PopFont();
+            ImGui::SameLine();
+            if (IconButton<LARGE>(
+                    "##CopyToClipboard", ICON_LC_CLIPBOARD_COPY, "")) {
+                ImGui::SetClipboardText(net::get_flow().user_code.c_str());
+            }
+            ImGui::ProgressBar(1.0f
+                    - static_cast<float>(
+                          difftime(time(nullptr), net::get_flow().start_time))
+                        / static_cast<float>(net::get_flow().expires_in),
+                ImVec2 { ImGui::GetWindowSize().x,
+                    ImGui::CalcTextSize("Remaining").y },
+                ("Remaining: "
+                    + std::to_string(net::get_flow().expires_in
+                        - static_cast<int>(difftime(
+                            time(nullptr), net::get_flow().start_time)))
+                    + " seconds")
+                    .c_str());
+        }
+        if (poll_result == Flow::State::BROKEN
+            || poll_result == Flow::State::TIMEOUT) {
+            if (IconButton<NORMAL>(ICON_LC_ROTATE_CW, "Retry")) {
+                df_show = true;
+                net::get_flow().resolve();
+            }
+            ImGui::SameLine(ImGui::GetWindowSize().x / 2);
+            if (IconButton<NORMAL>(ICON_LC_CIRCLE_X, "Cancel")) {
+                df_show = false;
+                net::get_flow().resolve();
+            }
+        }
+        ImGui::EndPopup();
+    }
 }
 } // namespace lcs::ui

@@ -100,6 +100,8 @@ enum Error {
     KEYCHAIN_TOO_LONG,
     /** Occurs on MacOS when the application fails to pass certain conditions.*/
     KEYCHAIN_ACCESS_DENIED,
+    /** Attempted to start a flow that was already active. */
+    UNTERMINATED_FLOW,
 
     /** Represents the how many types of error codes exists. Not a valid error
        code.*/
@@ -146,6 +148,47 @@ public:
 
 private:
     T* _v;
+};
+
+/**
+ * An interface for keeping state during long lasting flows for the user
+ * interface.
+ */
+class Flow {
+public:
+    enum State {
+        /** State is not active*/
+        INACTIVE,
+        /** Temporarily state: Flow has started, but it hasn't polled yet. */
+        STARTED,
+        /** Flow is active. */
+        POLLING,
+        /** Flow has been completed successfully. */
+        DONE,
+        /** Flow has been disrupted by an error. */
+        BROKEN,
+        /** Flow has not been completed in expected duration. */
+        TIMEOUT
+    };
+    Flow(Flow&&)                 = delete;
+    Flow(const Flow&)            = delete;
+    Flow& operator=(Flow&&)      = delete;
+    Flow& operator=(const Flow&) = delete;
+
+    /** Starts the flow and resets it's variables.*/
+    virtual Error start(void) = 0;
+    /** Run required steps for a single frame. Return current result.*/
+    virtual State poll(void) = 0;
+    /** Get active state.*/
+    virtual State get_state(void) const = 0;
+    /** Cleans the artifacts and prepares it for the next load.*/
+    virtual void resolve(void) = 0;
+    /** On error's returns the reason of the error.*/
+    virtual const char* reason(void) const = 0;
+
+protected:
+    Flow()          = default;
+    virtual ~Flow() = default;
 };
 
 } // namespace lcs
@@ -197,8 +240,8 @@ std::ostream& _log_pre_f(
                 << __VA_ARGS__ << std::endl))
 
 #define __LLOG__(STATUS, _STREAM, ...)                                         \
-    __LLOG_CUSTOM__(                                                           \
-        STATUS, _STREAM, __FILE_NAME__, __LINE__, __FUNCTION__, __VA_ARGS__)
+    __LLOG_CUSTOM__(STATUS, _STREAM, __FILE_NAME__, __LINE__,                  \
+        __PRETTY_FUNCTION__, __VA_ARGS__)
 
 #define CLASS *this << "\t"
 
@@ -211,8 +254,8 @@ std::ostream& _log_pre_f(
  * also crashes the application. */
 #define lcs_assert(expr)                                                       \
     {                                                                          \
-        if (__expect([&]() mutable -> bool { return expr; }, __FUNCTION__,     \
-                __FILE_NAME__, __LINE__, #expr)) {                             \
+        if (__expect([&]() mutable -> bool { return expr; },                   \
+                __PRETTY_FUNCTION__, __FILE_NAME__, __LINE__, #expr)) {        \
             exit(1);                                                           \
         }                                                                      \
     }
@@ -239,7 +282,7 @@ inline std::string strlimit(const std::string& input, size_t limit)
 {
     size_t len = input.length();
     if (len > limit) {
-        return "..." + input.substr(len - limit + 3, len);
+        return "..." + input.substr(len - limit + 3, limit);
     }
     return input;
 }

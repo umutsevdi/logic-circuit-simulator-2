@@ -10,10 +10,9 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include "common.h"
 #include <cstdint>
 #include <filesystem>
-
-#include "common.h"
 
 namespace Json {
 class Value;

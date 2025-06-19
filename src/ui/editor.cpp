@@ -1,18 +1,16 @@
-#include <algorithm>
-#include <cstring>
-
+#include "IconsLucide.h"
+#include "common.h"
+#include "net.h"
+#include "ui.h"
+#include "ui/components.h"
+#include "ui/flows.h"
+#include "ui/layout.h"
+#include "ui/util.h"
 #include <imgui.h>
 #include <imnodes.h>
 #include <tinyfiledialogs.h>
-
-#include "IconsLucide.h"
-#include "common.h"
-#include "core.h"
-#include "io.h"
-#include "net.h"
-#include "ui.h"
-#include "ui/layout.h"
-#include "ui/util.h"
+#include <algorithm>
+#include <cstring>
 
 static bool show_demo_window = true;
 ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -20,91 +18,18 @@ float f;
 
 namespace lcs::ui {
 
-void _new_flow(bool& show)
-{
-    if (!show) {
-        return;
-    }
-    if (ImGui::BeginPopupModal("New Scene", &show,
-            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings)) {
-        static bool is_scene         = true;
-        static char author[60]       = "local";
-        static char name[128]        = { 0 };
-        static char description[512] = { 0 };
-        static size_t input_size     = 0;
-        static size_t output_size    = 0;
-
-        if (ImGui::BeginTable("##NewFlow", 2, ImGuiTableFlags_None)) {
-            ImGui::TableSetupColumn(
-                "##NewFlowKey", ImGuiTableColumnFlags_WidthFixed);
-            ImGui::NextColumn();
-            ImGui::TableSetupColumn(
-                "##Value", ImGuiTableColumnFlags_WidthStretch);
-
-            TablePair(Field("Scene Name"),
-                ImGui::InputText("##SceneCreate_Name", name, 128,
-                    ImGuiInputTextFlags_CharsNoBlank));
-
-            TablePair(Field("Author"),
-                ImGui::PushFont(
-                    get_font(font_flags_t::ITALIC | font_flags_t::NORMAL)),
-                ImGui::InputText("##SceneCreate_Author", author, 60,
-                    ImGuiInputTextFlags_ReadOnly),
-                ImGui::PopFont());
-
-            TablePair(Field("Description"),
-                ImGui::InputTextMultiline(
-                    "##SceneCreate_Desc", description, 512));
-
-            TablePair(Field("Type"));
-            if (ImGui::RadioButton("##IsScene", is_scene)) {
-                is_scene = true;
-            }
-            ImGui::SameLine();
-            IconText<NORMAL>(ICON_LC_LAND_PLOT, "Scene");
-            ImGui::SameLine();
-            if (ImGui::RadioButton("##IsComponent", !is_scene)) {
-                is_scene = false;
-            }
-            ImGui::SameLine();
-            IconText<NORMAL>(ICON_LC_PACKAGE, "Component");
-
-            if (!is_scene) {
-                ImGui::Separator();
-                TablePair(Field("Input Size"));
-                ImGui::InputInt("##CompInputSize", (int*)&input_size);
-                TablePair(Field("Output Size"));
-                ImGui::InputInt("##CompOutputSize", (int*)&output_size);
-            }
-            TablePair(
-                if (ImGui::Button("Create")) {
-                    NRef<Scene> scene = io::scene::get(
-                        io::scene::create(name, author, description));
-                    if (!is_scene) {
-                        scene->component_context.emplace(
-                            &scene, input_size, output_size);
-                    }
-                    show = false;
-                },
-                if (ImGui::Button("Cancel")) {
-                    ImGui::CloseCurrentPopup();
-                    show = false;
-                });
-            ImGui::EndTable();
-        };
-        ImGui::EndPopup();
-    }
-}
-
 void before(ImGuiIO&)
 {
     ImNodes::CreateContext();
-    net::login_existing_session();
+
+    if (net::get_flow().start_existing()) {
+        net::get_flow().resolve();
+    };
 }
 
-bool show = false;
 bool loop(ImGuiIO& io)
 {
+
     ImGui::PushFont(get_font(font_flags_t::NORMAL));
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse
         | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings
@@ -117,10 +42,7 @@ bool loop(ImGuiIO& io)
     ImGui::SetWindowPos(
         ImVec2 { app_size.x * 0.0f, app_size.y * 0.0f + 20.0f });
     TabWindow();
-    if (show) {
-        ImGui::OpenPopup("New Scene");
-    }
-    _new_flow(show);
+    new_flow();
     NRef<Scene> scene = io::scene::get();
     io::scene::run_frame();
     if (scene == nullptr) {
@@ -185,6 +107,10 @@ bool loop(ImGuiIO& io)
                     scene->component_context->setup(input_size, output_size);
                     io::scene::notify_change();
                 }
+            }
+            if (IconButton<NORMAL>(ICON_LC_UPLOAD, "Upload")) {
+                std::string resp;
+                net::upload_scene(&scene, resp);
             }
             ImGui::EndChild();
         }
