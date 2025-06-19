@@ -1,8 +1,8 @@
 #pragma once
 /*******************************************************************************
  * \file
- * File: src/ui/nodes.hpp
- * Created: 05/30/25
+ * File: include/ui/flows.h
+ * Created: 06/19/25
  * Author: Umut Sevdi
  * Description:
  *
@@ -10,15 +10,11 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include <imnodes.h>
-
-#include "common.h"
-
 namespace lcs::ui {
+bool save_as_flow(const char* title);
+void close_flow(void);
+void open_flow(void);
 
-template <typename T> class NodeView {
-public:
-    NodeView(NRef<T> base_node, bool has_changes);
-};
-
+extern bool new_flow_show;
+void new_flow(void);
 } // namespace lcs::ui

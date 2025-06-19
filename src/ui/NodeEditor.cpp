@@ -1,10 +1,8 @@
+#include "io.h"
+#include "ui/components.h"
+#include "ui/util.h"
 #include <imgui.h>
 #include <imnodes.h>
-
-#include "core.h"
-#include "io.h"
-#include "ui/nodes.h"
-#include "ui/util.h"
 
 namespace lcs::ui {
 
@@ -14,8 +12,8 @@ void NodeEditor(NRef<Scene> scene)
         ImNodes::BeginNodeEditor();
         bool has_changes = io::scene::has_changes();
         if (scene->component_context.has_value()) {
-            NodeView<ComponentContext> { &scene->component_context.value(),
-                has_changes };
+            NodeView<ComponentContext>(
+                &scene->component_context.value(), has_changes);
         }
         for (auto& out : scene->_inputs) {
             NodeView<InputNode>(&out.second, has_changes);

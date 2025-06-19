@@ -41,6 +41,7 @@ static void _init_fonts(ImGuiIO& io)
     _FONT_SIZES[LARGE | ITALIC]      = 24.f;
     _FONT_SIZES[LARGE | BOLDITALIC]  = 24.f;
     _FONT_SIZES[LARGE | ICON]        = 24.f;
+    _FONT_SIZES[ULTRA | ICON]        = 40.f;
 
     ImFontAtlas* atlas = io.Fonts;
     atlas->Clear();
@@ -48,7 +49,8 @@ static void _init_fonts(ImGuiIO& io)
 
     ImFontConfig config;
     config.MergeMode = true;
-
+    config.GlyphMinAdvanceX
+        = 13.0f; // Use if you want to make the icon monospaced
     static const ImWchar icon_ranges[] = { ICON_MIN_LC, ICON_MAX_LC, 0 };
 #define FONTPATH "/usr/share/fonts/UbuntuSans/"
     LOAD_FONT_FOR(SMALL, REGULAR, nullptr);
@@ -69,11 +71,13 @@ static void _init_fonts(ImGuiIO& io)
 #define FONTPATH "../misc/" FONT_ICON_FILE_NAME_LC
 
     _FONT[SMALL | ICON] = io.Fonts->AddFontFromFileTTF(
-        FONTPATH, _FONT_SIZES[ICON | SMALL], &config, icon_ranges);
+        FONTPATH, _FONT_SIZES[ICON | SMALL], nullptr, icon_ranges);
     _FONT[NORMAL | ICON] = io.Fonts->AddFontFromFileTTF(
-        FONTPATH, _FONT_SIZES[ICON | NORMAL], &config, icon_ranges);
+        FONTPATH, _FONT_SIZES[ICON | NORMAL], nullptr, icon_ranges);
     _FONT[LARGE | ICON] = io.Fonts->AddFontFromFileTTF(
-        FONTPATH, _FONT_SIZES[ICON | LARGE], &config, icon_ranges);
+        FONTPATH, _FONT_SIZES[ICON | LARGE], nullptr, icon_ranges);
+    _FONT[ULTRA | ICON] = io.Fonts->AddFontFromFileTTF(
+        FONTPATH, _FONT_SIZES[ICON | ULTRA], nullptr, icon_ranges);
 }
 
 float get_font_size(int attributes) { return _FONT_SIZES[attributes]; }

@@ -1,25 +1,22 @@
-#include <algorithm>
+#include "common.h"
+#include "core.h"
 #include <base64.h>
-
+#include <algorithm>
 #include <cstring>
 #include <sstream>
 #include <utility>
 
-#include "common.h"
-#include "core.h"
-
 namespace lcs {
 
-Scene::Scene(const std::string& _name, const std::string& _author , const 
-std::string& _description, int _version)
-    :      version{_version}
-    , component_context{std::nullopt} ,_last_node {
-        Node { 0, NodeType::GATE },
-        Node { 0, NodeType::COMPONENT },
-        Node { 0, NodeType::INPUT },
-        Node { 0, NodeType::OUTPUT },
-    }  ,
-        _last_rel{0}
+Scene::Scene(const std::string& _name, const std::string& _author,
+        const std::string& _description, int _version) :
+        version { _version }, component_context { std::nullopt }, _last_node {
+            Node { 0, NodeType::GATE },
+            Node { 0, NodeType::COMPONENT },
+            Node { 0, NodeType::INPUT },
+            Node { 0, NodeType::OUTPUT },
+        },
+        _last_rel { 0 }
 {
     std::strncpy(name.data(), _name.c_str(), name.size() - 1);
     std::strncpy(author.data(), _author.c_str(), author.size() - 1);
@@ -27,18 +24,15 @@ std::string& _description, int _version)
         description.data(), _description.c_str(), description.size() - 1);
 }
 
-Scene::Scene(ComponentContext ctx, const std::string& _name, const std::string& 
-_author , const std::string& _description, int _version)
-    :    
-version{_version}
-    , component_context{ctx}
-    , _last_node {
+Scene::Scene(ComponentContext ctx, const std::string& _name,
+        const std::string& _author, const std::string& _description, int _version) :
+        version { _version }, component_context { ctx }, _last_node {
             Node { 0, NodeType::GATE },
             Node { 0, NodeType::COMPONENT },
             Node { 0, NodeType::INPUT },
             Node { 0, NodeType::OUTPUT },
-      }
-    , _last_rel{0}
+        },
+        _last_rel { 0 }
 {
     std::strncpy(name.data(), _name.c_str(), name.size() - 1);
     std::strncpy(author.data(), _author.c_str(), author.size() - 1);
@@ -63,7 +57,6 @@ Scene& Scene::operator=(Scene&& other)
 
 void Scene::_move_from(Scene&& other)
 {
-
     name              = std::move(other.name);
     description       = std::move(other.description);
     author            = std::move(other.author);
@@ -408,9 +401,7 @@ std::string Scene::to_dependency() const
 {
     std::stringstream dep_str {};
     std::string_view str_author { author.begin() };
-    if (str_author == "sys") {
-        dep_str << '@';
-    } else if (str_author.empty()) {
+    if (str_author.empty()) {
         dep_str << "local/";
     } else {
         dep_str << str_author << '/';

@@ -1,9 +1,8 @@
-#include <imgui.h>
-#include <imnodes.h>
-
 #include "core.h"
 #include "io.h"
 #include "ui/layout.h"
+#include <imgui.h>
+#include <imnodes.h>
 
 namespace lcs::ui {
 static bool is_dragging = false;

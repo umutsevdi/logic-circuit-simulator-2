@@ -1,9 +1,8 @@
-#include <imgui.h>
-#include <imnodes.h>
-
+#include "ui/util.h"
 #include "core.h"
 #include "io.h"
-#include "ui/util.h"
+#include <imgui.h>
+#include <imnodes.h>
 
 namespace lcs::ui {
 

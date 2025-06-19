@@ -14,8 +14,6 @@ static bool _not(const std::vector<bool>&);
 
 GateNode::GateNode(Scene* _scene, Node id, GateType type, sockid _max_in)
     : BaseNode { _scene, { id.id, NodeType::GATE } }
-    , inputs {}
-    , output {}
     , _type { type }
     , _value { State::DISABLED }
     , _is_disabled { true }
@@ -104,11 +102,10 @@ bool GateNode::decrement()
 
 std::ostream& operator<<(std::ostream& os, const GateNode& g)
 {
-
     os << g.id() << "( " << GateType_to_str(g.type()) << ", "
        << State_to_str(g._value) << " )";
     return os;
-};
+}
 
 static bool _and(const std::vector<bool>& in)
 {

@@ -1,12 +1,8 @@
-#include <cmath>
-
+#include "ui/components.h"
+#include "ui/util.h"
 #include <imgui.h>
 #include <imnodes.h>
-
-#include "common.h"
-#include "core.h"
-#include "ui/nodes.h"
-#include "ui/util.h"
+#include <cmath>
 
 namespace lcs::ui {
 
@@ -36,8 +32,7 @@ static inline ImNodesPinShape_ to_shape(bool value, bool is_input)
     return value ? ImNodesPinShape_QuadFilled : ImNodesPinShape_Quad;
 }
 
-template <>
-NodeView<ComponentContext>::NodeView(NRef<ComponentContext> node, bool)
+template <> void NodeView<ComponentContext>(NRef<ComponentContext> node, bool)
 {
     uint32_t compin  = Node { 0, COMPONENT_INPUT }.numeric();
     uint32_t compout = Node { 0, COMPONENT_OUTPUT }.numeric();
@@ -67,8 +62,7 @@ NodeView<ComponentContext>::NodeView(NRef<ComponentContext> node, bool)
     ImNodes::EndNode();
 }
 
-template <>
-NodeView<InputNode>::NodeView(NRef<InputNode> node, bool has_changes)
+template <> void NodeView<InputNode>(NRef<InputNode> node, bool has_changes)
 {
     uint32_t nodeid = node->id().numeric();
     ImNodes::BeginNode(nodeid);
@@ -104,8 +98,7 @@ NodeView<InputNode>::NodeView(NRef<InputNode> node, bool has_changes)
     ImNodes::EndNode();
 }
 
-template <>
-NodeView<OutputNode>::NodeView(NRef<OutputNode> node, bool has_changes)
+template <> void NodeView<OutputNode>(NRef<OutputNode> node, bool has_changes)
 {
     uint32_t nodeid = node->id().numeric();
     ImNodes::BeginNode(nodeid);
@@ -122,7 +115,7 @@ NodeView<OutputNode>::NodeView(NRef<OutputNode> node, bool has_changes)
     ImNodes::EndNode();
 }
 
-template <> NodeView<GateNode>::NodeView(NRef<GateNode> node, bool has_changes)
+template <> void NodeView<GateNode>(NRef<GateNode> node, bool has_changes)
 {
     uint32_t nodeid = node->id().numeric();
     ImNodes::BeginNode(nodeid);
@@ -149,6 +142,6 @@ template <> NodeView<GateNode>::NodeView(NRef<GateNode> node, bool has_changes)
     ImNodes::EndNode();
 }
 
-template <> NodeView<ComponentNode>::NodeView(NRef<ComponentNode>, bool) { }
+template <> void NodeView<ComponentNode>(NRef<ComponentNode>, bool) { }
 
 } // namespace lcs::ui

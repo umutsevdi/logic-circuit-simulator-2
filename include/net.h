@@ -9,47 +9,51 @@
  * Project: umutsevdi/logic-circuit-simulator-2.git
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
-#include <string>
 
 #include "common.h"
+#include "core.h"
+#include <string>
+
 namespace lcs::net {
 
 /** Initializes required libraries. */
 void init(void);
 
-struct Packet {
-    std::string url;
-    /** Bearer session token */
-    std::string session_token;
-};
-
-/** Send a get request to targeted URL.
- * @param pkt Required information to perform request.
+/** Send a GET request to targeted URL.
+ * @param url target URL.
  * @param resp response to update.
+ * @param authorization header, optional.
  * @returns Error on failure:
  *
  *  - Error::REQUEST_FAILED
  *  - Error::RESPONSE_ERROR
  */
-Error get(const Packet& pkt, std::string& resp);
-/** get for files*/
-Error get(const Packet& pkt, std::vector<unsigned char>& resp);
+Error get_request(const std::string& url, std::string& resp,
+    const std::string& authorization = "");
 
-/** Send a post request to targeted URL.
- * @param pkt Required information to perform request.
- * @param req request body.
+/** Send a GET request to desired URL. Intended for binary data.
+ * See net::get_request for more details. */
+Error get_request(const std::string& url, std::vector<unsigned char>& resp,
+    const std::string& authorization = "");
+
+/** Send a POST request to targeted URL.
+ * @param url target URL.
  * @param resp response to update.
+ * @param req request body, optional.
+ * @param authorization header, optional.
  * @returns Error on failure:
  *
  *  - Error::REQUEST_FAILED
  *  - Error::RESPONSE_ERROR
  */
-Error post(const Packet& pkt, const std::string& req, std::string& resp);
+Error post_request(const std::string& url, std::string& resp,
+    const std::string& req = "", const std::string& authorization = "");
 
 /** Device flow authenticates the device with non-blocking mechanism. */
-struct DeviceFlow {
-    enum PollState { DONE, POLLING, BROKEN, TIMEOUT };
-
+class AuthenticationFlow final : public Flow {
+public:
+    explicit AuthenticationFlow() { };
+    ~AuthenticationFlow() { };
     std::string client_id;
     std::string device_code;
     std::string user_code;
@@ -58,18 +62,20 @@ struct DeviceFlow {
     int interval;
     time_t start_time;
 
-    Error start(void);
-    /** Polls GitHub for session token. */
-    PollState poll(void);
-    PollState is_waiting(void) const { return _last_status; }
-    bool is_started(void) const { return _is_active; };
+    Error start(void) override;
+    State poll(void) override;
+    State get_state(void) const override;
+    void resolve(void) override;
+    const char* reason(void) const override;
+
+    /** Run authentication flow during initialization. */
+    Error start_existing(void);
 
 private:
     time_t _last_poll;
-    bool _is_active;
-    PollState _last_status;
+    State _last_status;
+    std::string _reason;
 };
-Error login_existing_session(void);
 
 struct Account {
     std::string login;
@@ -87,9 +93,19 @@ struct RepositoryInfo {
     std::string description;
     int version;
 };
+AuthenticationFlow& get_flow(void);
 
-const Account* get_account(void);
-bool is_logged_in(void);
+/** Returns the active account. */
+const Account& get_account(void);
+
+/** Returns whether the user is logged in.*/
+inline bool is_logged_in(void) { return get_flow().get_state() == Flow::DONE; }
+
+/**
+ * Opens up the given URL on the user's default web browser.
+ * @param url to open
+ */
 void open_browser(const std::string& url);
 
+Error upload_scene(NRef<const Scene> scene, std::string resp);
 } // namespace lcs::net

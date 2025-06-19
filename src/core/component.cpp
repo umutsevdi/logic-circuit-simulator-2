@@ -1,16 +1,13 @@
-#include <algorithm>
-#include <bitset>
-
 #include "common.h"
 #include "core.h"
+#include <algorithm>
+#include <bitset>
 
 namespace lcs {
 
 ComponentContext::ComponentContext(
     Scene* parent, sockid input_s, sockid output_s)
-    : inputs {}
-    , outputs {}
-    , _execution_input { 0 }
+    : _execution_input { 0 }
     , _execution_output { 0 }
     , _parent { parent }
 {

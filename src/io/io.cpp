@@ -1,14 +1,12 @@
+#include "io.h"
+#include "common.h"
+#include "core.h"
 #include <base64.h>
 #include <json/json.h>
-
 #include <fstream>
 #include <optional>
 #include <sstream>
 #include <string_view>
-
-#include "common.h"
-#include "core.h"
-#include "io.h"
 
 namespace lcs::io {
 

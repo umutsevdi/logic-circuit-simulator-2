@@ -1,22 +1,25 @@
-#include "base64.h"
 #include "common.h"
 #include "io.h"
 #include "net.h"
-#include "json/reader.h"
+#include <base64.h>
+#include <json/reader.h>
+#include <keychain/keychain.h>
 #include <ctime>
 #include <filesystem>
-#include <keychain/keychain.h>
 
 namespace lcs::net {
 
-Account account;
-std::string access_token = "";
-bool _is_logged_in       = false;
+struct AuthInfo {
+    Account account;
+    std::string access_token = "";
+};
+AuthInfo _auth;
+static AuthenticationFlow _flow;
 
 static Error get_client_id(std::string& id)
 {
     std::string resp;
-    Error err = get(Packet { API_ENDPOINT "/api/client_id", "" }, resp);
+    Error err = get_request(API_ENDPOINT "/api/client_id", resp);
     if (err) {
         L_INFO(resp);
         return err;
@@ -31,26 +34,35 @@ static Error get_client_id(std::string& id)
     return Error::OK;
 }
 
-Error DeviceFlow::start(void)
+Error AuthenticationFlow::start(void)
 {
-    L_INFO("Calling flow");
+    if (_last_status == DONE) {
+        return Error::OK;
+    } else if (_last_status != INACTIVE) {
+        return ERROR(Error::UNTERMINATED_FLOW);
+    }
+    _auth        = {};
+    _last_status = STARTED;
+    L_INFO("Starting flow");
     std::string _id;
     Error err = get_client_id(_id);
     if (err) {
+        _last_status = BROKEN;
         return err;
     }
     std::string body;
-    err = net::post(Packet { "https://github.com/login/device/code?client_id="
-                            + _id + "&scope=read:user",
-                        "" },
-        "", body);
+    err = net::post_request("https://github.com/login/device/code?client_id="
+            + _id + "&scope=read:user",
+        body);
 
     if (err) {
+        _last_status = BROKEN;
         return err;
     }
     Json::Value v;
     Json::Reader r;
     if (!r.parse(body, v)) {
+        _last_status = BROKEN;
         return ERROR(Error::JSON_PARSE_ERROR);
     }
     L_INFO("Received: " << v.toStyledString());
@@ -60,9 +72,8 @@ Error DeviceFlow::start(void)
     verification_uri = v["verification_uri"].asString();
     expires_in       = v["expires_in"].asInt();
     interval         = v["interval"].asInt();
-    start_time       = time(0);
+    start_time       = time(nullptr);
     _last_poll       = start_time;
-    _is_active       = true;
 
     L_INFO("Visit: https://github.com/login/device");
     L_INFO("Enter the code: " << v["user_code"].asString());
@@ -70,124 +81,122 @@ Error DeviceFlow::start(void)
     return Error::OK;
 }
 
-DeviceFlow::PollState DeviceFlow::poll(void)
+Flow::State AuthenticationFlow::poll(void)
 {
+    if (_last_status == STARTED) {
+        _last_status = POLLING;
+    }
+    if (_last_status == BROKEN || _last_status == TIMEOUT) {
+        return _last_status;
+    }
     time_t now = time(nullptr);
     if (difftime(now, this->start_time) > this->expires_in) {
-        _last_status = DeviceFlow::PollState::TIMEOUT;
-        return ERROR(DeviceFlow::PollState::TIMEOUT);
+        _last_status = (ERROR(Flow::State::TIMEOUT));
+        return _last_status;
     }
     if (difftime(now, this->_last_poll) < this->interval * 1.5) {
-        _last_status = DeviceFlow::PollState::POLLING;
-        return DeviceFlow::PollState::POLLING;
+        _last_status = Flow::State::POLLING;
+        return Flow::State::POLLING;
     }
     this->_last_poll = now;
 
-    std::string gh_access_token;
     {
         L_INFO("Get oauth access token");
         Json::Value req;
         req["client_id"]   = client_id;
         req["device_code"] = device_code;
         req["grant_type"]  = "urn:ietf:params:oauth:grant-type:device_code";
-
         L_INFO("Sending:" << req.toStyledString());
-        Error err
-            = post(Packet { "https://github.com/login/oauth/access_token", "" },
-                req.toStyledString(), gh_access_token);
+
+        std::string gh_resp_str;
+        Error err = post_request("https://github.com/login/oauth/access_token",
+            gh_resp_str, req.toStyledString());
         if (err) {
-            _last_status = DeviceFlow::PollState::BROKEN;
-            _is_active   = false;
-            L_WARN("Received " << gh_access_token);
-            return ERROR(DeviceFlow::PollState::BROKEN);
+            _reason = gh_resp_str;
+            L_WARN("Received " << _reason);
+            _last_status = (ERROR(Flow::State::BROKEN));
+            return _last_status;
         }
 
-        Json::Value resp_root;
-        Json::Reader resp {};
-        if (!resp.parse(gh_access_token, resp_root)) {
-            _last_status = DeviceFlow::PollState::BROKEN;
-            _is_active   = false;
-            return ERROR(DeviceFlow::PollState::BROKEN);
+        Json::Value gh_resp;
+        Json::Reader gh_resp_r {};
+        if (!gh_resp_r.parse(gh_resp_str, gh_resp)) {
+            _last_status = (ERROR(Flow::State::BROKEN));
+            return _last_status;
         }
-        if (resp_root["error"].isString()
-            && resp_root["error"].asString() == "authorization_pending") {
+        if (gh_resp["error"].isString()
+            && gh_resp["error"].asString() == "authorization_pending") {
             // TODO For other types of error codes change the to
-            // DeviceFlow::PollState::BROKEN
-            _last_status = DeviceFlow::PollState::POLLING;
-            return DeviceFlow::PollState::POLLING;
+            // Flow::State::BROKEN
+            _last_status = Flow::State::POLLING;
+            return _last_status;
+        } else if (gh_resp["error"].isString()) {
+            _reason = gh_resp["error_description"].asString();
         }
-        L_INFO("Received " << resp_root.toStyledString());
-        access_token = resp_root["access_token"].asString();
+        L_INFO("Received " << gh_resp.toStyledString());
+        _auth.access_token = gh_resp["access_token"].asString();
     }
 
     {
         L_INFO("Send token to session server");
         std::string session_resp;
-        Error err = get(
-            Packet { API_ENDPOINT "/api/login", access_token }, session_resp);
+        Error err = get_request(
+            API_ENDPOINT "/api/login", session_resp, _auth.access_token);
         if (err) {
-            _last_status = DeviceFlow::PollState::BROKEN;
-            _is_active   = false;
-            L_WARN("Received " << session_resp);
-            return ERROR(DeviceFlow::PollState::BROKEN);
+            _reason = session_resp;
+            L_WARN("Received " << _reason);
+            _last_status = (ERROR(Flow::State::BROKEN));
+            return _last_status;
         }
         Json::Value resp_root;
         Json::Reader resp {};
         if (!resp.parse(session_resp, resp_root)) {
-            _last_status = DeviceFlow::PollState::BROKEN;
-            _is_active   = false;
-            return ERROR(DeviceFlow::PollState::BROKEN);
+            _last_status = (ERROR(Flow::State::BROKEN));
+            return _last_status;
         }
         L_INFO("Received: " << resp_root.toStyledString());
         if (!resp_root["login"].isString()) {
-            _last_status = DeviceFlow::PollState::BROKEN;
-            _is_active   = false;
-            return ERROR(DeviceFlow::PollState::BROKEN);
+            _last_status = (ERROR(Flow::State::BROKEN));
+            return _last_status;
         }
 
-        account.login      = resp_root["login"].asString();
-        account.name       = resp_root["name"].asString();
-        account.email      = resp_root["email"].asString();
-        account.bio        = resp_root["bio"].asString();
-        account.url        = resp_root["url"].asString();
-        account.avatar_url = resp_root["avatarUrl"].asString();
+        _auth.account.login      = resp_root["login"].asString();
+        _auth.account.name       = resp_root["name"].asString();
+        _auth.account.email      = resp_root["email"].asString();
+        _auth.account.bio        = resp_root["bio"].asString();
+        _auth.account.url        = resp_root["url"].asString();
+        _auth.account.avatar_url = resp_root["avatarUrl"].asString();
         keychain::Error keyerr;
-        keychain::setPassword(
-            APP_PKG, APPNAME_LONG, account.login, access_token, keyerr);
+        keychain::setPassword(APP_PKG, APPNAME_LONG, _auth.account.login,
+            _auth.access_token, keyerr);
         if (keyerr.type != keychain::ErrorType::NoError) {
             L_WARN(keyerr.message);
         }
-        io::write(io::ROOT / ".login", account.login);
+        io::write(io::ROOT / ".login", _auth.account.login);
 
-        if (!std::filesystem::exists(
-                io::CACHE / (base64_encode(account.avatar_url) + ".jpeg"))) {
+        if (!std::filesystem::exists(io::CACHE
+                / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
             std::vector<unsigned char> data;
-            net::get(Packet { account.avatar_url, "" }, data);
+            net::get_request(_auth.account.avatar_url, data);
             if (!data.empty()) {
-                io::write(
-                    io::CACHE / (base64_encode(account.avatar_url) + ".jpeg"),
+                io::write(io::CACHE
+                        / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
                     data);
             }
         }
     }
 
-    _is_logged_in = true;
-    _is_active    = false;
-    _last_status  = DeviceFlow::PollState::DONE;
-    return DeviceFlow::PollState::DONE;
+    _last_status = Flow::State::DONE;
+    return Flow::State::DONE;
 }
 
-bool is_logged_in(void) { return _is_logged_in; }
-const Account* get_account(void)
-{
-    if (_is_logged_in) {
-        return &account;
-    };
-    return nullptr;
-}
+Flow::State AuthenticationFlow::get_state(void) const { return _last_status; }
 
-Error login_existing_session(void)
+const char* AuthenticationFlow::reason(void) const { return _reason.c_str(); }
+
+Error AuthenticationFlow::start_existing(void)
 {
+    _last_status      = STARTED;
     std::string login = io::read(io::ROOT / ".login");
     if (login == "") {
         return ERROR(Error::KEYCHAIN_NOT_FOUND);
@@ -201,8 +210,10 @@ Error login_existing_session(void)
     }
 
     std::string resp_str;
-    Error err = get(Packet { API_ENDPOINT "/api/login", pwd }, resp_str);
+    Error err = get_request(API_ENDPOINT "/api/login", resp_str, pwd);
     if (err) {
+        _reason = resp_str;
+        L_WARN("Received " << _reason);
         return err;
     }
     Json::Value resp_root;
@@ -211,26 +222,38 @@ Error login_existing_session(void)
         return ERROR(Error::JSON_PARSE_ERROR);
     }
     L_INFO("Received: " << resp_root.toStyledString());
-    access_token       = pwd;
-    account.login      = resp_root["login"].asString();
-    account.name       = resp_root["name"].asString();
-    account.email      = resp_root["email"].asString();
-    account.bio        = resp_root["bio"].asString();
-    account.url        = resp_root["url"].asString();
-    account.avatar_url = resp_root["avatarUrl"].asString();
-    _is_logged_in      = true;
+    _auth.access_token       = pwd;
+    _auth.account.login      = resp_root["login"].asString();
+    _auth.account.name       = resp_root["name"].asString();
+    _auth.account.email      = resp_root["email"].asString();
+    _auth.account.bio        = resp_root["bio"].asString();
+    _auth.account.url        = resp_root["url"].asString();
+    _auth.account.avatar_url = resp_root["avatarUrl"].asString();
 
     if (!std::filesystem::exists(
-            io::CACHE / (base64_encode(account.avatar_url) + ".jpeg"))) {
+            io::CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
         std::vector<unsigned char> data;
-        net::get(Packet { account.avatar_url, "" }, data);
+        net::get_request(_auth.account.avatar_url, data);
         if (!data.empty()) {
-            io::write(io::CACHE / (base64_encode(account.avatar_url) + ".jpeg"),
+            io::write(
+                io::CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
                 data);
         }
     }
+    _last_status = DONE;
     return Error::OK;
 }
+
+void AuthenticationFlow::resolve(void)
+{
+    _reason      = "";
+    _auth        = {};
+    _last_status = INACTIVE;
+}
+
+AuthenticationFlow& get_flow(void) { return _flow; }
+
+const Account& get_account(void) { return _auth.account; }
 
 void open_browser(const std::string& url)
 {
@@ -242,6 +265,12 @@ void open_browser(const std::string& url)
     std::string command = "xdg-open " + url; // For Linux
 #endif
     system(command.c_str());
+}
+
+Error upload_scene(NRef<const Scene> scene, std::string resp)
+{
+    return net::post_request(API_ENDPOINT "/api/upload", resp,
+        scene->to_json().toStyledString(), _auth.access_token);
 }
 
 } // namespace lcs::net

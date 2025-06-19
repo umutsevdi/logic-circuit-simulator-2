@@ -1,13 +1,11 @@
-#include <algorithm>
-#include <cmath>
-#include <json/json.h>
-
-#include <map>
-#include <optional>
-
 #include "common.h"
 #include "core.h"
 #include "io.h"
+#include <json/json.h>
+#include <algorithm>
+#include <cmath>
+#include <map>
+#include <optional>
 
 namespace lcs {
 /** Reads a JSON document and writes its values to a map */
