@@ -108,6 +108,8 @@ enum Error {
     ERROR_S
 };
 
+#define LCS_ERROR [[nodiscard("Error codes must be handled")]] Error
+
 /**
  * A custom container class that stores a pointer to an object defined
  * within a scene. Can not be stored, copied or assigned.
@@ -176,15 +178,15 @@ public:
     Flow& operator=(const Flow&) = delete;
 
     /** Starts the flow and resets it's variables.*/
-    virtual Error start(void) = 0;
+    LCS_ERROR virtual start(void) = 0;
     /** Run required steps for a single frame. Return current result.*/
-    virtual State poll(void) = 0;
+    State virtual poll(void) = 0;
     /** Get active state.*/
-    virtual State get_state(void) const = 0;
+    State virtual get_state(void) const = 0;
     /** Cleans the artifacts and prepares it for the next load.*/
-    virtual void resolve(void) = 0;
+    void virtual resolve(void) = 0;
     /** On error's returns the reason of the error.*/
-    virtual const char* reason(void) const = 0;
+    const virtual char* reason(void) const = 0;
 
 protected:
     Flow()          = default;

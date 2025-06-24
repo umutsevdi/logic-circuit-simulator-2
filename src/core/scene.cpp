@@ -1,5 +1,6 @@
 #include "common.h"
 #include "core.h"
+#include "io.h"
 #include <base64.h>
 #include <algorithm>
 #include <cstring>
@@ -264,7 +265,7 @@ Error Scene::_connect_with_id(
         break;
     default: return ERROR(Error::INVALID_TO_TYPE);
     }
-    return Error::OK;
+    return OK;
 }
 
 relid Scene::connect(
@@ -351,7 +352,7 @@ Error Scene::disconnect(relid id)
     default: lcs_assert(r->second.from_node.type == NodeType::INPUT); break;
     }
     _relations.erase(id);
-    return Error::OK;
+    return OK;
 }
 
 void Scene::signal(relid id, State value)
@@ -419,7 +420,7 @@ Error Scene::load_dependencies(void)
             return err;
         }
     }
-    return Error::OK;
+    return OK;
 }
 
 std::string Scene::to_filepath(void) const

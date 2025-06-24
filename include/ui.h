@@ -21,6 +21,6 @@ namespace ui {
     void before(ImGuiIO& io);
     void after(ImGuiIO& io);
     bool loop(ImGuiIO& io);
-    void set_style(ImGuiIO& io, int alpha, bool& is_dark);
+    void set_style(ImGuiIO& io, bool init = false);
 } // namespace ui
 } // namespace lcs

@@ -46,13 +46,13 @@ void NodeEditor(NRef<Scene> scene)
                 if (auto r = scene->get_rel(linkid);
                     ImGui::BeginTooltip() && r != nullptr) {
                     ImGui::PushFont(
-                        get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                        get_font(FontFlags::BOLD | FontFlags::NORMAL));
                     ImGui::Text("%s",
                         std::string { "Relation " + std::to_string(linkid) }
                             .c_str());
                     ImGui::Separator();
                     ImGui::PopFont();
-                    ImGui::PushFont(get_font(font_flags_t::NORMAL));
+                    ImGui::PushFont(get_font(FontFlags::NORMAL));
                     Field("From");
                     ImGui::SameLine();
                     NodeTypeTitle(r->from_node, r->from_sock);
@@ -74,11 +74,11 @@ void NodeEditor(NRef<Scene> scene)
                 if (NRef<BaseNode> n = scene->get_base(nodeid);
                     ImGui::BeginTooltip() && n != nullptr) {
                     ImGui::PushFont(
-                        get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                        get_font(FontFlags::BOLD | FontFlags::NORMAL));
                     NodeTypeTitle((Node)nodeid);
                     ImGui::Separator();
                     ImGui::PopFont();
-                    ImGui::PushFont(get_font(font_flags_t::NORMAL));
+                    ImGui::PushFont(get_font(FontFlags::NORMAL));
                     Field("Position");
                     ImGui::SameLine();
                     ImGui::Text("(%d, %d)", n->point.x, n->point.y);
@@ -118,12 +118,12 @@ void NodeEditor(NRef<Scene> scene)
                         ? nodeid.id
                         : sock;
                     ImGui::PushFont(
-                        get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                        get_font(FontFlags::BOLD | FontFlags::NORMAL));
                     ImGui::Text(
                         "%s Socket %u", is_out ? "Output" : "Input", sock);
                     ImGui::Separator();
                     ImGui::PopFont();
-                    ImGui::PushFont(get_font(font_flags_t::NORMAL));
+                    ImGui::PushFont(get_font(FontFlags::NORMAL));
                     Field("Owner");
                     ImGui::SameLine();
                     NodeTypeTitle(nodeid);

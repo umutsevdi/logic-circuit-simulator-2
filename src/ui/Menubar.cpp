@@ -13,8 +13,10 @@
 namespace lcs::ui {
 
 static void _show_device_flow_ui();
+static void _show_preferences_ui();
 
-bool df_show = false;
+bool pref_show = false;
+bool df_show   = false;
 void MenuBar(void)
 {
     ImGui::PushStyleColor(
@@ -24,7 +26,7 @@ void MenuBar(void)
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
         ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered));
 
-    ImGui::PushFont(get_font(font_flags_t::NORMAL));
+    ImGui::PushFont(get_font(FontFlags::NORMAL));
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (IconButton<NORMAL>(ICON_LC_PLUS, "New")) {
@@ -45,6 +47,9 @@ void MenuBar(void)
             if (IconButton<NORMAL>(ICON_LC_X, "Close")) {
                 close_flow();
             }
+            if (IconButton<NORMAL>(ICON_LC_SETTINGS_2, "Preferences")) {
+                pref_show = true;
+            }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit")) {
@@ -64,6 +69,7 @@ void MenuBar(void)
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
+    _show_preferences_ui();
 }
 
 void TabWindow(void)
@@ -156,14 +162,12 @@ static void _show_device_flow_ui()
         IconText<ULTRA>(icon, "");
         ImGui::SameLine();
         if (poll_result == Flow::BROKEN) {
-            ImGui ::PushFont(
-                get_font(font_flags_t ::BOLD | font_flags_t ::NORMAL));
+            ImGui ::PushFont(get_font(FontFlags ::BOLD | FontFlags ::NORMAL));
             ImGui ::TextColored(ImVec4(255, 0, 0, 255), "An error occurred.");
             ImGui ::PopFont();
             ImGui::Text("%s", net::get_flow().reason());
         } else if (poll_result == Flow::TIMEOUT) {
-            ImGui ::PushFont(
-                get_font(font_flags_t ::BOLD | font_flags_t ::NORMAL));
+            ImGui ::PushFont(get_font(FontFlags ::BOLD | FontFlags ::NORMAL));
             ImGui ::TextColored(ImVec4(255, 55, 55, 255),
                 "You have exceeded the time limit for entering your\n"
                 "passcode. Please try again to authenticate your\n"
@@ -173,7 +177,7 @@ static void _show_device_flow_ui()
             Field("Enter the code to your browser");
         }
         if (poll_result == Flow::POLLING) {
-            ImGui::PushFont(get_font(font_flags_t::LARGE | font_flags_t::BOLD));
+            ImGui::PushFont(get_font(FontFlags::LARGE | FontFlags::BOLD));
             ImGui::Text("%s", net::get_flow().user_code.c_str());
             ImGui::PopFont();
             ImGui::SameLine();
@@ -209,4 +213,21 @@ static void _show_device_flow_ui()
         ImGui::EndPopup();
     }
 }
+
+void _show_preferences_ui()
+{
+    if (pref_show) {
+        ImGui::OpenPopup("Preferences");
+    }
+    if (ImGui::BeginPopup("Preferences")) {
+        ImGui::Text("Party");
+        if (IconButton<NORMAL>(ICON_LC_ROTATE_CW, "Retry")) { }
+        ImGui::SameLine(ImGui::GetWindowSize().x / 2);
+        if (IconButton<NORMAL>(ICON_LC_CIRCLE_X, "Close")) {
+            pref_show = false;
+        }
+        ImGui::EndPopup();
+    }
+}
+
 } // namespace lcs::ui

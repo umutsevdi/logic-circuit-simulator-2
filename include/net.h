@@ -28,12 +28,12 @@ void init(void);
  *  - Error::REQUEST_FAILED
  *  - Error::RESPONSE_ERROR
  */
-Error get_request(const std::string& url, std::string& resp,
+LCS_ERROR get_request(const std::string& url, std::string& resp,
     const std::string& authorization = "");
 
 /** Send a GET request to desired URL. Intended for binary data.
  * See net::get_request for more details. */
-Error get_request(const std::string& url, std::vector<unsigned char>& resp,
+LCS_ERROR get_request(const std::string& url, std::vector<unsigned char>& resp,
     const std::string& authorization = "");
 
 /** Send a POST request to targeted URL.
@@ -46,7 +46,7 @@ Error get_request(const std::string& url, std::vector<unsigned char>& resp,
  *  - Error::REQUEST_FAILED
  *  - Error::RESPONSE_ERROR
  */
-Error post_request(const std::string& url, std::string& resp,
+LCS_ERROR post_request(const std::string& url, std::string& resp,
     const std::string& req = "", const std::string& authorization = "");
 
 /** Device flow authenticates the device with non-blocking mechanism. */
@@ -62,14 +62,14 @@ public:
     int interval;
     time_t start_time;
 
-    Error start(void) override;
+    LCS_ERROR start(void) override;
     State poll(void) override;
     State get_state(void) const override;
     void resolve(void) override;
     const char* reason(void) const override;
 
     /** Run authentication flow during initialization. */
-    Error start_existing(void);
+    LCS_ERROR start_existing(void);
 
 private:
     time_t _last_poll;
@@ -107,5 +107,5 @@ inline bool is_logged_in(void) { return get_flow().get_state() == Flow::DONE; }
  */
 void open_browser(const std::string& url);
 
-Error upload_scene(NRef<const Scene> scene, std::string resp);
+LCS_ERROR upload_scene(NRef<const Scene> scene, std::string resp);
 } // namespace lcs::net

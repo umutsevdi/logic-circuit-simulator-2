@@ -3,6 +3,7 @@
 #include "net.h"
 #include "ui.h"
 #include "ui/components.h"
+#include "ui/configuration.h"
 #include "ui/flows.h"
 #include "ui/layout.h"
 #include "ui/util.h"
@@ -18,6 +19,7 @@ float f;
 
 namespace lcs::ui {
 
+Style current;
 void before(ImGuiIO&)
 {
     ImNodes::CreateContext();
@@ -25,12 +27,58 @@ void before(ImGuiIO&)
     if (net::get_flow().start_existing()) {
         net::get_flow().resolve();
     };
+    current = get_config().dark_theme;
 }
 
 bool loop(ImGuiIO& io)
 {
-
-    ImGui::PushFont(get_font(font_flags_t::NORMAL));
+    if (ImGui::Begin("Color Table")) {
+        static const char* table[] = {
+            // Light Themes
+            "SEOUL256_LIGHT",
+            "ACME",
+            "GRUVBOX_LIGHT",
+            "ONE_LIGHT",
+            // Dark Themes
+            "SEASHELLS",
+            "XTERM",
+            "GRUVBOX_DARK",
+            "ONE_DARK",
+        };
+        if (ImGui::Combo("Select Theme", (int*)&current, table, (int)STYLE_S)) {
+            get_config().dark_theme = current;
+            get_config().is_applied = false;
+        }
+        const LcsStyle& style = ui::get_style(get_config().dark_theme);
+        ImGui::ColorButton("bg", style.bg);
+        ImGui::SameLine();
+        ImGui::ColorButton("fg", style.fg);
+        ImGui::ColorButton("black", style.black);
+        ImGui::SameLine();
+        ImGui::ColorButton("black_bright", style.black_bright);
+        ImGui::ColorButton("red", style.red);
+        ImGui::SameLine();
+        ImGui::ColorButton("red_bright", style.red_bright);
+        ImGui::ColorButton("green", style.green);
+        ImGui::SameLine();
+        ImGui::ColorButton("green_bright", style.green_bright);
+        ImGui::ColorButton("yellow", style.yellow);
+        ImGui::SameLine();
+        ImGui::ColorButton("yellow_bright", style.yellow_bright);
+        ImGui::ColorButton("blue", style.blue);
+        ImGui::SameLine();
+        ImGui::ColorButton("blue_bright", style.blue_bright);
+        ImGui::ColorButton("magenta", style.magenta);
+        ImGui::SameLine();
+        ImGui::ColorButton("magenta_bright", style.magenta_bright);
+        ImGui::ColorButton("cyan", style.cyan);
+        ImGui::SameLine();
+        ImGui::ColorButton("cyan_bright", style.cyan_bright);
+        ImGui::ColorButton("white", style.white);
+        ImGui::SameLine();
+        ImGui::ColorButton("white_bright", style.white_bright);
+        ImGui::End();
+    }
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse
         | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings
         | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoFocusOnAppearing
@@ -47,7 +95,6 @@ bool loop(ImGuiIO& io)
     io::scene::run_frame();
     if (scene == nullptr) {
         ImGui::End();
-        ImGui::PopFont();
         return true;
     }
 
@@ -56,16 +103,14 @@ bool loop(ImGuiIO& io)
             ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoTitleBar)) {
         if (ImGui::BeginChild(
                 "SceneInfo", ImVec2 { left_width, app_size.y * 0.85f / 2 })) {
-            ImGui::PushFont(
-                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
             ImGui::TextColored(ImVec4(200, 200, 0, 255), "Scene Name");
             ImGui::PopFont();
             if (ImGui::InputText("##SceneNameInputText", scene->name.data(),
                     scene->name.max_size(), ImGuiInputTextFlags_CharsNoBlank)) {
                 io::scene::notify_change();
             };
-            ImGui::PushFont(
-                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
             ImGui::TextColored(ImVec4(200, 200, 0, 255), "Description");
             ImGui::PopFont();
             if (ImGui::InputTextMultiline("##SceneDescInputText",
@@ -74,8 +119,7 @@ bool loop(ImGuiIO& io)
                         ImGui::CalcTextSize("\n\n\n").y))) {
                 io::scene::notify_change();
             };
-            ImGui::PushFont(
-                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+            ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
             ImGui::TextColored(ImVec4(200, 200, 0, 255), "Version");
             ImGui::PopFont();
             if (ImGui::InputInt("##SceneVersion", &scene->version)) {
@@ -84,8 +128,7 @@ bool loop(ImGuiIO& io)
             };
 
             if (scene->component_context.has_value()) {
-                ImGui::PushFont(
-                    get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
                 ImGui::TextColored(
                     ImVec4(200, 200, 0, 255), "Component Attributes");
                 ImGui::Separator();
@@ -95,8 +138,7 @@ bool loop(ImGuiIO& io)
                 size_t output_size = scene->component_context->outputs.size();
 
                 ImGui::InputInt("##CompInputSize", (int*)&input_size);
-                ImGui::PushFont(
-                    get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
                 ImGui::TextColored(ImVec4(200, 200, 0, 255), "Output Size");
                 ImGui::PopFont();
                 ImGui::InputInt("##CompOutputSize", (int*)&output_size);
@@ -168,7 +210,6 @@ bool loop(ImGuiIO& io)
 
     Palette();
     ImGui::End();
-    ImGui::PopFont();
 
     ImGui::Begin("Font Window");
     ImGui::PushFont(get_font(SMALL | ITALIC));
@@ -201,7 +242,6 @@ bool loop(ImGuiIO& io)
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
         1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
-
     return show_demo_window;
 }
 

@@ -15,6 +15,8 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "ui.h"
+#include "ui/configuration.h"
+#include "ui/util.h"
 #include <stdio.h>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -50,8 +52,9 @@ namespace ui {
     int main(int, char**)
     {
         glfwSetErrorCallback(glfw_error_callback);
-        if (!glfwInit())
+        if (!glfwInit()) {
             return 1;
+        }
 
         // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -85,10 +88,13 @@ namespace ui {
 #endif
 
         // Create window with graphics context
-        GLFWwindow* window = glfwCreateWindow(
-            1920, 1080, "Logic Circuit Simulator", nullptr, nullptr);
-        if (window == nullptr)
+        load_config();
+        Configuration& cfg = get_config();
+        GLFWwindow* window = glfwCreateWindow(cfg.startup_win_x,
+            cfg.startup_win_y, "Logic Circuit Simulator", nullptr, nullptr);
+        if (window == nullptr) {
             return 1;
+        }
         glfwMakeContextCurrent(window);
         glfwSwapInterval(1); // Enable vsync
 
@@ -97,15 +103,14 @@ namespace ui {
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         (void)io;
-        ui::before(io);
         io.ConfigFlags
             |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
         io.ConfigFlags
             |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        set_style(io, 1, is_dark);
+        ui::before(io);
+        set_style(io, true);
         // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
         // ImGui::StyleColorsLight();
 
         // Setup Platform/Renderer backends
@@ -199,8 +204,9 @@ namespace ui {
                                            // closing button that will clear the
                                            // bool when clicked)
                 ImGui::Text("Hello from another window!");
-                if (ImGui::Button("Close Me"))
+                if (ImGui::Button("Close Me")) {
                     show_another_window = false;
+                }
                 ImGui::End();
             }
 
@@ -215,6 +221,10 @@ namespace ui {
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+            if (!cfg.is_applied) {
+                L_INFO("Configuration changes were found!");
+                set_style(io);
+            }
             glfwSwapBuffers(window);
         }
 #ifdef __EMSCRIPTEN__

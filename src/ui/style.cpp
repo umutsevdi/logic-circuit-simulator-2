@@ -1,5 +1,6 @@
 #include "IconsLucide.h"
 #include "ui.h"
+#include "ui/configuration.h"
 #include "ui/util.h"
 #include <imgui.h>
 #include <imnodes.h>
@@ -21,38 +22,34 @@
 
 namespace lcs::ui {
 
-static ImFont* _FONT[font_flags_t::FONT_S]     = { 0 };
-static float _FONT_SIZES[font_flags_t::FONT_S] = { 0 };
+static ImFont* _FONT[FontFlags::FONT_S]     = {};
+static float _FONT_SIZES[FontFlags::FONT_S] = { 0 };
 
-static void _init_fonts(ImGuiIO& io)
+static void _init_fonts(ImGuiIO& io, Configuration& cfg)
 {
-    _FONT_SIZES[SMALL | REGULAR]     = 12.f;
-    _FONT_SIZES[SMALL | BOLD]        = 12.f;
-    _FONT_SIZES[SMALL | ITALIC]      = 12.f;
-    _FONT_SIZES[SMALL | BOLDITALIC]  = 12.f;
-    _FONT_SIZES[SMALL | ICON]        = 12.f;
-    _FONT_SIZES[NORMAL | REGULAR]    = 16.f;
-    _FONT_SIZES[NORMAL | BOLD]       = 16.f;
-    _FONT_SIZES[NORMAL | ITALIC]     = 16.f;
-    _FONT_SIZES[NORMAL | BOLDITALIC] = 16.f;
-    _FONT_SIZES[NORMAL | ICON]       = 16.f;
-    _FONT_SIZES[LARGE | REGULAR]     = 24.f;
-    _FONT_SIZES[LARGE | BOLD]        = 24.f;
-    _FONT_SIZES[LARGE | ITALIC]      = 24.f;
-    _FONT_SIZES[LARGE | BOLDITALIC]  = 24.f;
-    _FONT_SIZES[LARGE | ICON]        = 24.f;
+    _FONT_SIZES[SMALL | REGULAR]     = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | BOLD]        = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | ITALIC]      = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | BOLDITALIC]  = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | ICON]        = cfg.font_size - 4.0f;
+    _FONT_SIZES[NORMAL | REGULAR]    = cfg.font_size;
+    _FONT_SIZES[NORMAL | BOLD]       = cfg.font_size;
+    _FONT_SIZES[NORMAL | ITALIC]     = cfg.font_size;
+    _FONT_SIZES[NORMAL | BOLDITALIC] = cfg.font_size;
+    _FONT_SIZES[NORMAL | ICON]       = cfg.font_size;
+    _FONT_SIZES[LARGE | REGULAR]     = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | BOLD]        = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | ITALIC]      = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | BOLDITALIC]  = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | ICON]        = cfg.font_size + 8.f;
     _FONT_SIZES[ULTRA | ICON]        = 40.f;
 
     ImFontAtlas* atlas = io.Fonts;
     atlas->Clear();
     io.Fonts->AddFontDefault();
-
-    ImFontConfig config;
-    config.MergeMode = true;
-    config.GlyphMinAdvanceX
-        = 13.0f; // Use if you want to make the icon monospaced
     static const ImWchar icon_ranges[] = { ICON_MIN_LC, ICON_MAX_LC, 0 };
 #define FONTPATH "/usr/share/fonts/UbuntuSans/"
+
     LOAD_FONT_FOR(SMALL, REGULAR, nullptr);
     LOAD_FONT_FOR(SMALL, BOLD, nullptr, atlas->GetGlyphRangesDefault());
     LOAD_FONT_FOR(SMALL, ITALIC, nullptr);
@@ -78,104 +75,81 @@ static void _init_fonts(ImGuiIO& io)
         FONTPATH, _FONT_SIZES[ICON | LARGE], nullptr, icon_ranges);
     _FONT[ULTRA | ICON] = io.Fonts->AddFontFromFileTTF(
         FONTPATH, _FONT_SIZES[ICON | ULTRA], nullptr, icon_ranges);
+    atlas->Build();
+}
+
+static void _update_fonts(Configuration& cfg)
+{
+    _FONT_SIZES[SMALL | REGULAR]     = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | BOLD]        = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | ITALIC]      = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | BOLDITALIC]  = cfg.font_size - 4.0f;
+    _FONT_SIZES[SMALL | ICON]        = cfg.font_size - 4.0f;
+    _FONT_SIZES[NORMAL | REGULAR]    = cfg.font_size;
+    _FONT_SIZES[NORMAL | BOLD]       = cfg.font_size;
+    _FONT_SIZES[NORMAL | ITALIC]     = cfg.font_size;
+    _FONT_SIZES[NORMAL | BOLDITALIC] = cfg.font_size;
+    _FONT_SIZES[NORMAL | ICON]       = cfg.font_size;
+    _FONT_SIZES[LARGE | REGULAR]     = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | BOLD]        = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | ITALIC]      = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | BOLDITALIC]  = cfg.font_size + 8.f;
+    _FONT_SIZES[LARGE | ICON]        = cfg.font_size + 8.f;
+    _FONT_SIZES[ULTRA | ICON]        = 40.f;
+
+    _FONT[SMALL | REGULAR]->FontSize     = cfg.font_size - 4.0f;
+    _FONT[SMALL | BOLD]->FontSize        = cfg.font_size - 4.0f;
+    _FONT[SMALL | ITALIC]->FontSize      = cfg.font_size - 4.0f;
+    _FONT[SMALL | BOLDITALIC]->FontSize  = cfg.font_size - 4.0f;
+    _FONT[SMALL | ICON]->FontSize        = cfg.font_size - 4.0f;
+    _FONT[NORMAL | REGULAR]->FontSize    = cfg.font_size;
+    _FONT[NORMAL | BOLD]->FontSize       = cfg.font_size;
+    _FONT[NORMAL | ITALIC]->FontSize     = cfg.font_size;
+    _FONT[NORMAL | BOLDITALIC]->FontSize = cfg.font_size;
+    _FONT[NORMAL | ICON]->FontSize       = cfg.font_size;
+    _FONT[LARGE | REGULAR]->FontSize     = cfg.font_size + 8.f;
+    _FONT[LARGE | BOLD]->FontSize        = cfg.font_size + 8.f;
+    _FONT[LARGE | ITALIC]->FontSize      = cfg.font_size + 8.f;
+    _FONT[LARGE | BOLDITALIC]->FontSize  = cfg.font_size + 8.f;
+    _FONT[LARGE | ICON]->FontSize        = cfg.font_size + 8.f;
 }
 
 float get_font_size(int attributes) { return _FONT_SIZES[attributes]; }
 ImFont* get_font(int attributes) { return _FONT[attributes]; }
 
-void set_style(ImGuiIO& io, int alpha, bool& is_dark)
+void set_style(ImGuiIO& io, bool init)
 {
-    ImGuiStyle& style = ImGui::GetStyle();
+    Configuration& config      = get_config();
+    config.is_applied          = true;
+    ImGuiStyle& style          = ImGui::GetStyle();
+    const LcsStyle& stylesheet = ui::get_style(
+        config.preference == Configuration::ALWAYS_LIGHT ? config.light_theme
+                                                         : config.dark_theme);
+    style.Alpha = 1.0f;
 
-    // light style from Pacôme Danhiez (user itamago)
-    // https://github.com/ocornut/imgui/pull/511#issuecomment-175719267
-    style.Alpha                         = 1.0f;
-    style.FrameRounding                 = 3.0f;
-    style.Colors[ImGuiCol_Text]         = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-    style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-    style.Colors[ImGuiCol_WindowBg]     = ImVec4(0.94f, 0.94f, 0.94f, 0.94f);
-    //   style.Colors[ImGuiCol_ChildWindowBg]  = ImVec4(0.00f, 0.00f, 0.00f,
-    //   0.00f);
-    style.Colors[ImGuiCol_PopupBg]        = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
-    style.Colors[ImGuiCol_Border]         = ImVec4(0.00f, 0.00f, 0.00f, 0.39f);
-    style.Colors[ImGuiCol_BorderShadow]   = ImVec4(1.00f, 1.00f, 1.00f, 0.10f);
-    style.Colors[ImGuiCol_FrameBg]        = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
-    style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
-    style.Colors[ImGuiCol_FrameBgActive]  = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
-    style.Colors[ImGuiCol_TitleBg]        = ImVec4(0.96f, 0.96f, 0.96f, 1.00f);
-    style.Colors[ImGuiCol_TitleBgCollapsed]
-        = ImVec4(1.00f, 1.00f, 1.00f, 0.51f);
-    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.82f, 0.82f, 0.82f, 1.00f);
-    style.Colors[ImGuiCol_MenuBarBg]     = ImVec4(0.86f, 0.86f, 0.86f, 1.00f);
-    style.Colors[ImGuiCol_ScrollbarBg]   = ImVec4(0.98f, 0.98f, 0.98f, 0.53f);
-    style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.69f, 0.69f, 0.69f, 1.00f);
-    style.Colors[ImGuiCol_ScrollbarGrabHovered]
-        = ImVec4(0.59f, 0.59f, 0.59f, 1.00f);
-    style.Colors[ImGuiCol_ScrollbarGrabActive]
-        = ImVec4(0.49f, 0.49f, 0.49f, 1.00f);
-    //    style.Colors[ImGuiCol_ComboBg]    = ImVec4(0.86f, 0.86f, 0.86f,
-    //    0.99f);
-    style.Colors[ImGuiCol_CheckMark]  = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-    style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.24f, 0.52f, 0.88f, 1.00f);
-    style.Colors[ImGuiCol_SliderGrabActive]
-        = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-    style.Colors[ImGuiCol_Button]        = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
-    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-    style.Colors[ImGuiCol_ButtonActive]  = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
-    style.Colors[ImGuiCol_Header]        = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
-    style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
-    style.Colors[ImGuiCol_HeaderActive]  = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-    //    style.Colors[ImGuiCol_Column]        = ImVec4(0.39f, 0.39f,
-    //    0.39f, 1.00f);
-    //  style.Colors[ImGuiCol_ColumnHovered] = ImVec4(0.26f, 0.59f, 0.98f,
-    //  0.78f); style.Colors[ImGuiCol_ColumnActive]  = ImVec4(0.26f, 0.59f,
-    //  0.98f, 1.00f);
-    style.Colors[ImGuiCol_ResizeGrip] = ImVec4(1.00f, 1.00f, 1.00f, 0.50f);
-    style.Colors[ImGuiCol_ResizeGripHovered]
-        = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
-    style.Colors[ImGuiCol_ResizeGripActive]
-        = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-    //  style.Colors[ImGuiCol_CloseButton] = ImVec4(0.59f, 0.59f, 0.59f, 0.50f);
-    //  style.Colors[ImGuiCol_CloseButtonHovered] = ImVec4(0.98f, 0.39f,
-    //  0.36f, 1.00f);
-    //    style.Colors[ImGuiCol_CloseButtonActive] = ImVec4(0.98f, 0.39f,
-    //    0.36f, 1.00f);
-    style.Colors[ImGuiCol_PlotLines] = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
-    style.Colors[ImGuiCol_PlotLinesHovered]
-        = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
-    style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-    style.Colors[ImGuiCol_PlotHistogramHovered]
-        = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-    style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
-    //    style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f,
-    //    0.20f, 0.35f);
+    style.FrameRounding     = config.rounded_corners ? 4.0f : 0.f;
+    style.WindowRounding    = config.rounded_corners ? 4.0f : 0.f;
+    style.ChildRounding     = config.rounded_corners ? 4.0f : 0.f;
+    style.GrabRounding      = config.rounded_corners ? 4.0f : 0.f;
+    style.PopupRounding     = config.rounded_corners ? 4.0f : 0.f;
+    style.ScrollbarRounding = config.rounded_corners ? 4.0f : 0.f;
+    style.TabRounding       = config.rounded_corners ? 4.0f : 0.f;
 
-    if (is_dark) {
-        for (int i = 0; i <= ImGuiCol_COUNT; i++) {
-            ImVec4& col = style.Colors[i];
-            float H, S, V;
-            ImGui::ColorConvertRGBtoHSV(col.x, col.y, col.z, H, S, V);
+    style.WindowPadding    = ImVec2(15, 15);
+    style.FramePadding     = ImVec2(5, 5);
+    style.ItemSpacing      = ImVec2(8, 4);
+    style.ItemInnerSpacing = ImVec2(4, 2);
+    style.IndentSpacing    = 25.0f;
+    style.ScrollbarSize    = 10.0f;
+    style.GrabMinSize      = 5.0f;
 
-            if (S < 0.1f) {
-                V = 1.0f - V;
-            }
-            ImGui::ColorConvertHSVtoRGB(H, S, V, col.x, col.y, col.z);
-            if (col.w < 1.00f) {
-                col.w *= alpha;
-            }
-        }
+    if (init) {
+        _init_fonts(io, config);
     } else {
-        for (int i = 0; i <= ImGuiCol_COUNT; i++) {
-            ImVec4& col = style.Colors[i];
-            if (col.w < 1.00f) {
-                col.x *= alpha;
-                col.y *= alpha;
-                col.z *= alpha;
-                col.w *= alpha;
-            }
-        }
+        _update_fonts(config);
     }
-    _init_fonts(io);
+
+    io.FontDefault = _FONT[REGULAR | NORMAL];
     ImNodes::PushColorStyle(
         ImNodesCol_LinkSelected, IM_COL32(255, 255, 255, 255));
     ImNodes::PushColorStyle(

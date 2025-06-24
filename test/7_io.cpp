@@ -23,7 +23,7 @@ TEST_CASE("Save a scene and load")
     s->connect(g_and, 1, v1);
     s->connect(o, 0, g_or);
 
-    std::string s_str = s->to_json().toStyledString();
+    std::string s_str = to_json<Scene>(*s).toStyledString();
 
     REQUIRE_EQ(io::scene::save_as(io::TMP / "test.json"), lcs::Error::OK);
     REQUIRE_EQ(io::scene::close(), lcs::Error::OK);
@@ -31,7 +31,7 @@ TEST_CASE("Save a scene and load")
     REQUIRE_EQ(io::scene::open(io::TMP / "test.json", idx), lcs::Error::OK);
     io::scene::get(idx);
     REQUIRE(idx != -1);
-    REQUIRE_EQ(s_str, io::scene::get()->to_json().toStyledString());
+    REQUIRE_EQ(s_str, to_json<Scene>(*io::scene::get()).toStyledString());
 }
 
 TEST_CASE("Save a component and load")
@@ -49,7 +49,7 @@ TEST_CASE("Save a component and load")
     s->connect(s->component_context->get_output(0), 0, g_and);
     s->connect(s->component_context->get_output(1), 0, g_or);
 
-    std::string s_str  = s->to_json().toStyledString();
+    std::string s_str  = to_json<Scene>(*s).toStyledString();
     std::string depstr = s->to_dependency();
 
     REQUIRE_EQ(io::scene::save(s_handle), lcs::Error::OK);
@@ -57,7 +57,7 @@ TEST_CASE("Save a component and load")
     REQUIRE_EQ(io::component::fetch(depstr), lcs::Error::OK);
     auto compref = io::component::get(depstr);
     REQUIRE_NE(compref, nullptr);
-    REQUIRE_EQ(s_str, compref->to_json().toStyledString());
+    REQUIRE_EQ(s_str, to_json<Scene>(*compref).toStyledString());
 }
 
 TEST_CASE("Save a component, load it to a scene")
