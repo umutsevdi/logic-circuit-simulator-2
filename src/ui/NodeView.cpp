@@ -1,3 +1,4 @@
+#include "io.h"
 #include "ui/components.h"
 #include "ui/util.h"
 #include <imgui.h>
@@ -18,7 +19,7 @@ void _sync_position(NRef<BaseNode> node, bool has_changes)
         ImNodes::SetNodeGridSpacePos(node_id, pos);
         if (pos.x != node->point.x || pos.y != node->point.y) {
             node->point = { (int)pos.x, (int)pos.y };
-            lcs::io::scene::notify_change();
+            io::scene::notify_change();
         }
     }
 }

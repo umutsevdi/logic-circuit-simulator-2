@@ -55,7 +55,7 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
 {
     const static ImVec2 __table_l_size = ImGui::CalcTextSize("SOCKET COUNT");
 
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::LARGE));
+    ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::LARGE));
     NodeTypeTitle(node);
     ImGui::PopFont();
     if (node.type != COMPONENT_OUTPUT && node.type != COMPONENT_INPUT) {
@@ -275,7 +275,7 @@ static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
             TablePair(Field("%zu", i + 1));
             ImGui::SameLine();
             ImGui::PushFont(
-                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                get_font(FontFlags::BOLD | FontFlags::NORMAL));
             State value = State::DISABLED;
             if (inputs[i] != 0) {
                 NRef<Rel> r = scene->get_rel(inputs[i]);
@@ -320,7 +320,7 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGui ::TableNextRow();
             ImGui ::TableSetColumnIndex(0);
             ImGui::PushFont(
-                get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+                get_font(FontFlags::BOLD | FontFlags::NORMAL));
             if (outputs[i] == 0) {
                 ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISCONNECTED");
             } else {

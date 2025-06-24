@@ -69,11 +69,11 @@ void IconText(const char* icon, Args... args)
     }
 }
 
-void ShowIcon(font_flags_t size, const char* icon);
+void ShowIcon(FontFlags size, const char* icon);
 
 template <typename... Args> void Field(Args... args)
 {
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::NORMAL));
+    ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
     ImGui::TextColored(ImVec4(200, 200, 0, 255), args...);
     ImGui::PopFont();
 }

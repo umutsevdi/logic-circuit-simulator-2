@@ -50,7 +50,7 @@ namespace io {
          *  - Error::INVALID_GATE
          *  - Error::INVALID_JSON_FORMAT
          */
-        virtual Error from_json(const Json::Value&) = 0;
+        LCS_ERROR virtual from_json(const Json::Value&) = 0;
     };
 
     /**
@@ -104,7 +104,7 @@ namespace io {
      * - Serializable::from_json
      *
      */
-    Error load(const std::string& data, Scene& scene);
+    LCS_ERROR load(const std::string& data, Scene& scene);
 
     /***************************************************************************
                                         Scene
@@ -121,7 +121,7 @@ namespace io {
          *
          * - io::load
          */
-        Error open(const std::string& path, size_t& idx);
+        LCS_ERROR open(const std::string& path, size_t& idx);
 
         /**
          * Alerts the component cache about changes in a scene.
@@ -150,7 +150,7 @@ namespace io {
          *
          * - Error::NO_SAVE_PATH_DEFINED
          */
-        Error save(size_t idx = SIZE_MAX);
+        LCS_ERROR save(size_t idx = SIZE_MAX);
 
         /**
          * Updates the contents of given scene.
@@ -160,14 +160,14 @@ namespace io {
          *
          * - Error::NO_SAVE_PATH_DEFINED
          */
-        Error save_as(const std::string& new_path, size_t idx = SIZE_MAX);
+        LCS_ERROR save_as(const std::string& new_path, size_t idx = SIZE_MAX);
 
         /**
          * Closes the scene with selected path, erasing from memory.
          * @param idx index of the scene, active scene if not provided
          * @returns Error::OK
          */
-        Error close(size_t idx = SIZE_MAX);
+        LCS_ERROR close(size_t idx = SIZE_MAX);
 
         /**
          * Selects a scene as current.
@@ -226,7 +226,7 @@ namespace io {
          * - Error::NOT_A_COMPONENT
          * - io::load
          */
-        Error fetch(const std::string& name, bool invalidate = false);
+        LCS_ERROR fetch(const std::string& name, bool invalidate = false);
 
         /**
          * Fetches a component from given JSON document.
@@ -238,7 +238,7 @@ namespace io {
          * - Error::NOT_A_COMPONENT
          * - io::load
          */
-        Error fetch(const std::string& name, const std::string& data,
+        LCS_ERROR fetch(const std::string& name, const std::string& data,
             bool invalidate = false);
 
         /**

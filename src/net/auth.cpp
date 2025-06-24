@@ -1,6 +1,7 @@
 #include "common.h"
 #include "io.h"
 #include "net.h"
+#include "ui/configuration.h"
 #include <base64.h>
 #include <json/reader.h>
 #include <keychain/keychain.h>
@@ -16,10 +17,11 @@ struct AuthInfo {
 AuthInfo _auth;
 static AuthenticationFlow _flow;
 
-static Error get_client_id(std::string& id)
+Error static _get_client_id(std::string& id)
 {
     std::string resp;
-    Error err = get_request(API_ENDPOINT "/api/client_id", resp);
+    Error err
+        = get_request(ui::get_config().api_proxy + "/api/client_id", resp);
     if (err) {
         L_INFO(resp);
         return err;
@@ -31,13 +33,13 @@ static Error get_client_id(std::string& id)
         return ERROR(Error::JSON_PARSE_ERROR);
     }
     id = v["id"].asString();
-    return Error::OK;
+    return OK;
 }
 
 Error AuthenticationFlow::start(void)
 {
     if (_last_status == DONE) {
-        return Error::OK;
+        return OK;
     } else if (_last_status != INACTIVE) {
         return ERROR(Error::UNTERMINATED_FLOW);
     }
@@ -45,7 +47,7 @@ Error AuthenticationFlow::start(void)
     _last_status = STARTED;
     L_INFO("Starting flow");
     std::string _id;
-    Error err = get_client_id(_id);
+    Error err = _get_client_id(_id);
     if (err) {
         _last_status = BROKEN;
         return err;
@@ -78,7 +80,7 @@ Error AuthenticationFlow::start(void)
     L_INFO("Visit: https://github.com/login/device");
     L_INFO("Enter the code: " << v["user_code"].asString());
     open_browser(verification_uri);
-    return Error::OK;
+    return OK;
 }
 
 Flow::State AuthenticationFlow::poll(void)
@@ -140,8 +142,8 @@ Flow::State AuthenticationFlow::poll(void)
     {
         L_INFO("Send token to session server");
         std::string session_resp;
-        Error err = get_request(
-            API_ENDPOINT "/api/login", session_resp, _auth.access_token);
+        Error err = get_request(ui::get_config().api_proxy + "/api/login",
+            session_resp, _auth.access_token);
         if (err) {
             _reason = session_resp;
             L_WARN("Received " << _reason);
@@ -210,7 +212,8 @@ Error AuthenticationFlow::start_existing(void)
     }
 
     std::string resp_str;
-    Error err = get_request(API_ENDPOINT "/api/login", resp_str, pwd);
+    Error err
+        = get_request(ui::get_config().api_proxy + "/api/login", resp_str, pwd);
     if (err) {
         _reason = resp_str;
         L_WARN("Received " << _reason);
@@ -241,7 +244,7 @@ Error AuthenticationFlow::start_existing(void)
         }
     }
     _last_status = DONE;
-    return Error::OK;
+    return OK;
 }
 
 void AuthenticationFlow::resolve(void)
@@ -269,8 +272,8 @@ void open_browser(const std::string& url)
 
 Error upload_scene(NRef<const Scene> scene, std::string resp)
 {
-    return net::post_request(API_ENDPOINT "/api/upload", resp,
-        scene->to_json().toStyledString(), _auth.access_token);
+    return net::post_request(ui::get_config().api_proxy + "/api/upload", resp,
+        to_json<Scene>(*scene).toStyledString(), _auth.access_token);
 }
 
 } // namespace lcs::net

@@ -49,7 +49,7 @@ void init_paths(bool is_testing)
     // TODO For BSD & Mac
 #endif
     if (is_testing) {
-        time_t now = time(0);
+        time_t now = time(nullptr);
         tm* t      = localtime(&now);
         std::stringstream s_time { ".test_" };
         s_time << "run" << "_" << t->tm_hour << "_" << t->tm_min << "_"
@@ -162,7 +162,7 @@ Error load(const std::string& data, Scene& s)
     if (!reader.parse(data, root)) {
         return ERROR(Error::INVALID_JSON_FORMAT);
     }
-    return s.from_json(root);
+    return from_json<Scene>(root, s);
 }
 
 namespace scene {
@@ -176,7 +176,7 @@ namespace scene {
                     active_scene = idx;
                     _has_changes = true;
                 }
-                return Error::OK;
+                return OK;
             }
         }
         Inode inode { true, path, Scene {} };
@@ -189,7 +189,7 @@ namespace scene {
         idx          = SCENE_STORAGE.size() - 1;
         active_scene = idx;
         _has_changes = true;
-        return Error::OK;
+        return OK;
     }
 
     Error close(size_t idx)
@@ -203,7 +203,7 @@ namespace scene {
             active_scene--;
             _has_changes = true;
         }
-        return Error::OK;
+        return OK;
     }
 
     void notify_change(size_t idx)
@@ -236,14 +236,14 @@ namespace scene {
         Inode& inode = SCENE_STORAGE[idx];
         if (inode.is_saved) {
             L_INFO("Already saved!");
-            return Error::OK;
+            return OK;
         }
 
         if (inode.scene.component_context.has_value()) {
             inode.path = inode.scene.to_filepath();
         }
 
-        if (!write(inode.path, inode.scene.to_json().toStyledString())) {
+        if (!write(inode.path, to_json<Scene>(inode.scene).toStyledString())) {
             return ERROR(Error::NO_SAVE_PATH_DEFINED);
         }
         inode.is_saved = true;
@@ -253,11 +253,15 @@ namespace scene {
             if (auto compiter = COMPONENT_STORAGE.find(dependency_string);
                 compiter != COMPONENT_STORAGE.end()) {
                 COMPONENT_STORAGE.insert_or_assign(dependency_string, Scene {});
-                COMPONENT_STORAGE[dependency_string].from_json(
-                    inode.scene.to_json());
+                Scene s;
+                Error err = from_json<Scene>(to_json<Scene>(inode.scene),
+                    COMPONENT_STORAGE[dependency_string]);
+                if (err) { // FIXME later
+                    return err;
+                }
             }
         }
-        return Error::OK;
+        return OK;
     }
 
     Error save_as(const std::string& new_path, size_t idx)
@@ -268,7 +272,7 @@ namespace scene {
         lcs_assert(idx < SCENE_STORAGE.size());
         Inode& inode = SCENE_STORAGE[idx];
         if (inode.path == new_path) {
-            return Error::OK;
+            return OK;
         }
         inode.path     = new_path;
         inode.is_saved = false;
@@ -276,7 +280,7 @@ namespace scene {
         if (err) {
             return err;
         }
-        return Error::OK;
+        return OK;
     }
 
     NRef<Scene> get(size_t idx)
@@ -382,27 +386,27 @@ namespace component {
             return ERROR(Error::NOT_A_COMPONENT);
         }
         COMPONENT_STORAGE.insert_or_assign(s.to_dependency(), std::move(s));
-        return Error::OK;
+        return OK;
     }
 
-    Error _check_src(const std::string&) { return Error::NOT_FOUND; }
+    Error _check_src(const std::string&) { return NOT_FOUND; }
 
     Error fetch(const std::string& name, bool invalidate)
     {
         if (!invalidate) {
             if (auto cmp = COMPONENT_STORAGE.find(name);
                 cmp != COMPONENT_STORAGE.end()) {
-                return Error::OK;
+                return OK;
             }
         }
         Error err = _check_fs(name);
-        if (err == Error::COMPONENT_NOT_FOUND) {
+        if (err == COMPONENT_NOT_FOUND) {
             err = _check_src(name);
         }
         if (err) {
             return err;
         }
-        return Error::OK;
+        return OK;
     }
 
     Error fetch(
@@ -411,7 +415,7 @@ namespace component {
         if (!invalidate) {
             if (auto cmp = COMPONENT_STORAGE.find(name);
                 cmp != COMPONENT_STORAGE.end()) {
-                return Error::OK;
+                return OK;
             }
         }
         Scene s;
@@ -422,7 +426,7 @@ namespace component {
             return ERROR(Error::NOT_A_COMPONENT);
         }
         COMPONENT_STORAGE.insert_or_assign(name, std::move(s));
-        return Error::OK;
+        return OK;
     }
 
     uint64_t run(const std::string& name, uint64_t input)

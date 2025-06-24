@@ -34,7 +34,7 @@ void PositionSelector(NRef<BaseNode> node, const char* prefix)
 
 State ToggleButton(State state, bool clickable)
 {
-    ImGui::PushFont(get_font(font_flags_t::BOLD | font_flags_t::SMALL));
+    ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::SMALL));
     switch (state) {
     case State::TRUE:
         if (clickable) {
@@ -104,7 +104,7 @@ void NodeTypeTitle(Node n)
 
 void NodeTypeTitle(Node n, sockid sock)
 {
-    ImGui::PushFont(get_font(font_flags_t::REGULAR | font_flags_t::NORMAL));
+    ImGui::PushFont(get_font(FontFlags::REGULAR | FontFlags::NORMAL));
     NodeTypeTitle(n);
     ImGui::SameLine();
     ImGui::Text("sock:");

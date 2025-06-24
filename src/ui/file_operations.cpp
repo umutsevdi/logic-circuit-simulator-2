@@ -85,7 +85,7 @@ void new_flow(void)
 
             TablePair(Field("Author"),
                 ImGui::PushFont(
-                    get_font(font_flags_t::ITALIC | font_flags_t::NORMAL)),
+                    get_font(FontFlags::ITALIC | FontFlags::NORMAL)),
                 ImGui::InputText("##SceneCreate_Author", author, 60,
                     ImGuiInputTextFlags_ReadOnly),
                 ImGui::PopFont());

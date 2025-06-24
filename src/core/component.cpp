@@ -1,5 +1,6 @@
 #include "common.h"
 #include "core.h"
+#include "io.h"
 #include <algorithm>
 #include <bitset>
 
@@ -153,7 +154,7 @@ Error ComponentNode::set_component(const std::string& _path)
         outputs[i] = {};
     }
     path = _path;
-    return Error::OK;
+    return OK;
 }
 
 bool ComponentNode::is_connected() const

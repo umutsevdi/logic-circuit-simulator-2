@@ -11,14 +11,18 @@
  ******************************************************************************/
 
 #include "common.h"
-#include "io.h"
 #include <bitset>
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
 
+namespace Json {
+class Value;
+}
 namespace lcs {
+
 class Scene;
 
 /** id type for socket, sock_t = 0 means disconnected */
@@ -74,8 +78,8 @@ constexpr const char* NodeType_to_str(NodeType s)
  * Node is a handler that represents the index.
  * id is a non-zero identifier. Together with the type, represents a unique
  * node.
- * */
-struct Node final : public io::Serializable {
+ */
+struct Node final {
     Node(uint16_t _id = 0, NodeType _type = GATE);
     Node(Node&&)                 = default;
     Node(const Node&)            = default;
@@ -85,9 +89,6 @@ struct Node final : public io::Serializable {
     friend std::ostream& operator<<(std::ostream& os, const Node& r);
     bool operator<(const Node& n) const { return this->id < n.id; }
 
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
     inline uint32_t numeric(void) const { return id | (type << 16); }
 
     uint16_t id : 16;
@@ -138,20 +139,16 @@ constexpr const char* GateType_to_str(GateType g)
 }
 
 /** Position of a node or a curve in the surface */
-struct Point final : public io::Serializable {
+struct Point final {
     Point(int _x = 0, int _y = 0)
         : x { _x }
         , y { _y } { };
-
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
 
     int x;
     int y;
 };
 
-class BaseNode : public io::Serializable {
+class BaseNode {
 public:
     explicit BaseNode(Scene*, Node, Point _p = { 0, 0 });
     BaseNode(const BaseNode&)            = default;
@@ -163,19 +160,17 @@ public:
 
     inline Node id(void) const { return _id; }
     /** Returns whether all nodes are connected */
-    virtual bool is_connected(void) const = 0;
+    bool virtual is_connected(void) const = 0;
     /** Get the current status */
-    virtual State get(sockid slot = 0) const = 0;
+    State virtual get(sockid slot = 0) const = 0;
 
     inline void reload(Scene* s) { _parent = s; }
     BaseNode* base(void) { return dynamic_cast<BaseNode*>(this); };
     /**
      * Updates the internal data and send out signals to all connected nodes.
      */
-    virtual void on_signal(void) = 0;
+    void virtual on_signal(void) = 0;
 
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
     Point point;
 
 protected:
@@ -190,16 +185,12 @@ protected:
  * the connected output is a Component, since components
  * can have multiple output sockets.
  */
-struct Rel final : public io::Serializable {
+struct Rel final {
     explicit Rel(relid _id, Node _from_node, Node _to_node, sockid _from_sock,
         sockid _to_sock);
     Rel();
     ~Rel() = default;
     friend std::ostream& operator<<(std::ostream& os, const Rel& r);
-
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
 
     relid id;
     Node from_node;
@@ -207,7 +198,6 @@ struct Rel final : public io::Serializable {
     sockid from_sock;
     sockid to_sock;
     State value;
-    std::vector<Point> curve_points;
 };
 
 /**
@@ -234,9 +224,6 @@ public:
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
     void on_signal(void) override;
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
 
     /** max_in number of inputs, denoted with relation id */
     std::vector<relid> inputs;
@@ -264,15 +251,12 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const ComponentNode& g);
 
     /** Assigns configurations of given component to this node. */
-    Error set_component(const std::string& path);
+    LCS_ERROR set_component(const std::string& path);
 
     /* BaseNode */
     void on_signal(void) override;
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
 
     std::vector<relid> inputs;
     std::map<sockid, std::vector<relid>> outputs;
@@ -285,7 +269,8 @@ private:
 
 /**
  * An input node where it's value can be arbitrarily changed. If
- * InputNode::_freq is defined, it will be toggled automatically.  */
+ * InputNode::_freq is defined, it will be toggled automatically.
+ */
 class InputNode : public BaseNode {
 public:
     InputNode(
@@ -309,9 +294,6 @@ public:
     void on_signal(void) override;
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
 
     std::vector<relid> output;
 
@@ -336,9 +318,6 @@ public:
     void on_signal(void) override;
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
 
     relid input;
 
@@ -355,7 +334,7 @@ private:
  * ComponentContext::get_output(sockid) methods where it is
  * virtually increased by one.
  */
-struct ComponentContext final : public io::Serializable {
+struct ComponentContext final {
     ComponentContext(Scene* parent, sockid input_s = 0, sockid output_s = 0);
 
     inline void reload(Scene* parent) { _parent = parent; }
@@ -393,10 +372,6 @@ struct ComponentContext final : public io::Serializable {
     /** Update the value of an output slot */
     void set_value(Node id, State value);
 
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
-
     std::vector<std::vector<relid>> inputs;
     std::vector<relid> outputs;
 
@@ -426,7 +401,7 @@ template <typename T> constexpr NodeType as_node_type(void)
     return NodeType::NODE_S;
 }
 
-class Scene final : public io::Serializable {
+class Scene final {
 public:
     Scene(const std::string& name = "", const std::string& author = "",
         const std::string& description = "", int _version = 1);
@@ -519,7 +494,7 @@ public:
      * - Error::REL_NOT_FOUND
      * - Error::NOT_CONNECTED
      */
-    Error disconnect(relid id);
+    LCS_ERROR disconnect(relid id);
 
     /**
      * Trigger a signal for the given relation while updating it's value.
@@ -539,11 +514,7 @@ public:
      * - io::component::fetch
      *
      */
-    Error load_dependencies(void);
-
-    /* Serializable interface */
-    Json::Value to_json(void) const override;
-    Error from_json(const Json::Value&) override;
+    LCS_ERROR load_dependencies(void);
 
     std::array<char, 128> name;
     std::array<char, 512> description;
@@ -560,6 +531,31 @@ public:
     std::map<relid, Rel> _relations;
     /** key = Node::id, value: internal clock counter */
     std::map<Node, float> _timerlist;
+
+    /**
+     * Attempts to connect two nodes from their given sockets. On success
+     * relationship with given id is inserted.
+     *
+     * NOTE: Leave from_sock empty if from is not a Component.
+     *
+     * @param id of relationship
+     * @param to_node target node
+     * @param to_sock socket of the target node
+     * @param from_node source node
+     * @param from_sock socket of the source node
+     * @returns Error on failure:
+     *
+     * - Error::INVALID_FROM_TYPE
+     * - Error::INVALID_NODEID
+     * - Error::NOT_A_COMPONENT
+     * - Error::ALREADY_CONNECTED
+     * - Error::INVALID_TO_TYPE
+     */
+    LCS_ERROR _connect_with_id(relid id, Node to_node, sockid to_sock,
+        Node from_node, sockid from_sock = 0);
+
+    Node _last_node[NodeType::NODE_S];
+    relid _last_rel;
 
 private:
     /** The helper method for move constructor and move assignment */
@@ -582,31 +578,29 @@ private:
             return _outputs;
         }
     }
-
-    /**
-     * Attempts to connect two nodes from their given sockets. On success
-     * relationship with given id is inserted.
-     *
-     * NOTE: Leave from_sock empty if from is not a Component.
-     *
-     * @param id of relationship
-     * @param to_node target node
-     * @param to_sock socket of the target node
-     * @param from_node source node
-     * @param from_sock socket of the source node
-     * @returns Error on failure:
-     *
-     * - Error::INVALID_FROM_TYPE
-     * - Error::INVALID_NODEID
-     * - Error::NOT_A_COMPONENT
-     * - Error::ALREADY_CONNECTED
-     * - Error::INVALID_TO_TYPE
-     */
-    Error _connect_with_id(relid id, Node to_node, sockid to_sock,
-        Node from_node, sockid from_sock = 0);
-
-    Node _last_node[NodeType::NODE_S];
-    relid _last_rel;
 };
+
+/**
+ * Converts given object to a Json::Value
+ * @returns Json document
+ */
+template <typename T> Json::Value to_json(const T&);
+/**
+ * Reads contents of the document and updates its fields.
+ * @returns Error on failure:
+ *
+ *  - Error::INVALID_SCENE
+ *  - Error::REL_CONNECT_ERROR
+ *  - Error::UNDEFINED_DEPENDENCY
+ *  - Error::INVALID_NODE
+ *  - Error::INVALID_NODE
+ *  - Error::INVALID_NODE
+ *  - Error::INVALID_COMPONENT
+ *  - Error::INVALID_INPUT
+ *  - Error::INVALID_COMPONENT
+ *  - Error::INVALID_GATE
+ *  - Error::INVALID_JSON_FORMAT
+ */
+template <typename T> LCS_ERROR from_json(const Json::Value&, T&);
 
 } // namespace lcs
