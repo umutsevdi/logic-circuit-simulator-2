@@ -16,7 +16,7 @@
 
 namespace lcs::ui {
 
-void PositionSelector(NRef<BaseNode> node, const char* prefix);
+bool PositionSelector(Point& point, const char* prefix);
 State ToggleButton(State, bool clickable = false);
 void NodeTypeTitle(Node n);
 void NodeTypeTitle(Node n, sockid sock);
@@ -26,7 +26,6 @@ template <typename T> void NodeView(NRef<T> base_node, bool has_changes);
 template <int SIZE, typename... Args>
 bool IconButton(const char* icon, Args... args)
 {
-
     bool has_text           = strnlen(get_first<const char*>(args...), 5);
     static char buffer[256] = "##";
     ImVec2 text_s           = { 0, 0 };
@@ -69,13 +68,40 @@ void IconText(const char* icon, Args... args)
     }
 }
 
+template <typename... Args> inline void Section(Args... args)
+{
+    static char buffer[1024] = "##";
+    snprintf(buffer + 2, 1022, args...);
+    ImGui::PushFont(get_font(FontFlags::LARGE | FontFlags::REGULAR));
+    ImGui::TextUnformatted(buffer + 2);
+    ImGui::PopFont();
+    ImGui::BeginChild(buffer, ImVec2(0, 0),
+        ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+}
+
+template <typename... Args> inline void SubSection(Args... args)
+{
+    static char buffer[1024] = "##";
+    snprintf(buffer + 2, 1022, args...);
+    ImGui::PushFont(get_font(FontFlags::NORMAL | FontFlags::BOLD));
+    ImGui::TextUnformatted(buffer + 2);
+    ImGui::PopFont();
+    ImGui::BeginChild(buffer, ImVec2(0, 0),
+        ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+    L_INFO(buffer);
+}
+
+inline void EndSection() { ImGui::EndChild(); }
+
 void ShowIcon(FontFlags size, const char* icon);
 
 template <typename... Args> void Field(Args... args)
 {
     ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
-    ImGui::TextColored(ImVec4(200, 200, 0, 255), args...);
+    ImGui::PushStyleColor(ImGuiCol_Text, get_active_style().magenta);
+    ImGui::Text(args...);
     ImGui::PopFont();
+    ImGui::PopStyleColor();
 }
 
 #define TablePair(KEY, ...)                                                    \

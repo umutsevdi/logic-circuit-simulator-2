@@ -11,11 +11,10 @@
  ******************************************************************************/
 
 #include "common.h"
-#include "io.h"
 #include "ui/util.h"
 
 namespace lcs::ui {
-class Configuration final : public lcs::io::Serializable {
+class Configuration {
 public:
     enum ThemePreference {
         FOLLOW_OS,
@@ -24,9 +23,6 @@ public:
     };
     Configuration()  = default;
     ~Configuration() = default;
-
-    Json::Value to_json(void) const override;
-    LCS_ERROR from_json(const Json::Value&) override;
 
     float font_size            = 16.0f;
     Style light_theme          = Style::SEOUL256_LIGHT;
@@ -38,12 +34,12 @@ public:
     std::string language       = "en_us"; // TODO
     int startup_win_x          = 1980;
     int startup_win_y          = 1080;
-    bool is_fullscr            = false;
     bool is_saved              = true;
     bool is_applied            = true;
 };
 
 Configuration& get_config(void);
+void set_config(const Configuration&);
 void save_config(void);
 void load_config(void);
 

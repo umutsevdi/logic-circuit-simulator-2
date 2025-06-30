@@ -6,7 +6,7 @@
 
 namespace lcs::ui {
 
-void PositionSelector(NRef<BaseNode> node, const char* prefix)
+bool PositionSelector(Point& point, const char* prefix)
 {
     const static ImVec2 __selector_size = ImGui::CalcTextSize("-000000000000");
 
@@ -16,54 +16,54 @@ void PositionSelector(NRef<BaseNode> node, const char* prefix)
     ImGui::Text("( x: ");
     ImGui::SameLine();
     ImGui::PushItemWidth(__selector_size.x);
-    if (ImGui::InputInt(
-            (s_prefix + "X").c_str(), &node->point.x, 1.0f, 10.0f, 0)) {
-        io::scene::notify_change();
-    };
+    bool change_x
+        = ImGui::InputInt((s_prefix + "X").c_str(), &point.x, 1.0f, 10.0f, 0);
     ImGui::SameLine();
     ImGui::Text(", y:");
     ImGui::SameLine();
-    if (ImGui::InputInt(
-            (s_prefix + "Y").c_str(), &node->point.y, 1.0f, 10.0f, 0)) {
-        io::scene::notify_change();
-    };
+    bool change_y
+        = ImGui::InputInt((s_prefix + "Y").c_str(), &point.y, 1.0f, 10.0f, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text(")");
+    return change_x || change_y;
 }
 
 State ToggleButton(State state, bool clickable)
 {
+    const LcsStyle& style = get_active_style();
     ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::SMALL));
     switch (state) {
     case State::TRUE:
         if (clickable) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 1, 0, 1));
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
+            ImGui::PushStyleColor(ImGuiCol_Button, style.green);
+            ImGui::PushStyleColor(ImGuiCol_Text, style.fg);
             if (ImGui::Button("TRUE ")) {
                 state = FALSE;
             };
             ImGui::PopStyleColor();
         } else {
-            ImGui::TextColored(ImVec4(0, 1, 0, 1), "TRUE");
+            ImGui::TextColored(style.green, "TRUE");
         }
         break;
     case State::FALSE:
         if (clickable) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 1));
+            ImGui::PushStyleColor(ImGuiCol_Button, style.red);
             if (ImGui::Button("FALSE")) {
                 state = TRUE;
             };
         } else {
-            ImGui::TextColored(ImVec4(1, 0, 0, 1), "FALSE");
+            ImGui::TextColored(style.red, "FALSE");
         }
         break;
     case State::DISABLED:
         if (clickable) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3, 0.3, 0.3, 1));
+            ImGui::PushStyleColor(ImGuiCol_Button, style.black_bright);
+            ImGui::PushStyleColor(ImGuiCol_Text, style.white_bright);
             ImGui::Button("DISCONNECTED");
+            ImGui::PopStyleColor();
         } else {
-            ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISCONNECTED");
+            ImGui::TextColored(style.black_bright, "DISCONNECTED");
         }
         break;
     }

@@ -41,16 +41,6 @@ Node decode_pair(int pair_code, sockid* sock = nullptr, bool* is_out = nullptr);
 
 ImFont* get_font(int attributes);
 float get_font_size(int attributes);
-constexpr ImVec4 NodeType_to_color(mode_t type)
-{
-    switch (type) {
-    case NodeType::GATE: return ImVec4(0, 1, 1, 1);
-    case NodeType::INPUT: return ImVec4(0.3, 0.3, 0.7, 1);
-    case NodeType::OUTPUT: return ImVec4(0.6, 0.0, 0.6, 1);
-    case NodeType::COMPONENT: return ImVec4(0.3, 0.7, 0.3, 1);
-    default: return ImVec4(0.8, 0.6, 0.1, 1);
-    }
-}
 
 enum Style {
     // Light Themes
@@ -86,8 +76,22 @@ struct LcsStyle {
     ImVec4 magenta_bright;
     ImVec4 cyan_bright;
     ImVec4 white_bright;
+    bool is_dark = false;
 };
 const LcsStyle& get_style(Style);
+const LcsStyle& get_active_style();
+
+inline ImVec4 NodeType_to_color(mode_t type)
+{
+    const LcsStyle& style = get_active_style();
+    switch (type) {
+    case NodeType::GATE: return style.red;
+    case NodeType::INPUT: return style.green;
+    case NodeType::OUTPUT: return style.yellow;
+    case NodeType::COMPONENT: return style.magenta;
+    default: return style.cyan;
+    }
+}
 
 void SceneType(NRef<Scene>);
 

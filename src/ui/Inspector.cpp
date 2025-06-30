@@ -1,7 +1,9 @@
 #include "IconsLucide.h"
+#include "core.h"
 #include "imnodes.h"
 #include "io.h"
 #include "ui/components.h"
+#include "ui/util.h"
 #include <imgui.h>
 #include <cmath>
 
@@ -19,6 +21,9 @@ static void _inspector_tab(NRef<Scene>, Node);
 
 void Inspector(NRef<Scene> scene)
 {
+    if (scene == nullptr) {
+        return;
+    }
     static int node_list[1 << 20] = { 0 };
     static char buffer[128];
 
@@ -45,7 +50,6 @@ void Inspector(NRef<Scene> scene)
         ImGui::EndTabBar();
     } else if (selection_s) {
         Node node = decode_pair(node_list[0]);
-        L_INFO("Selecting: " << node);
         _inspector_tab(&scene, node);
     }
     ImGui::End();
@@ -55,22 +59,25 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
 {
     const static ImVec2 __table_l_size = ImGui::CalcTextSize("SOCKET COUNT");
 
-    ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::LARGE));
-    NodeTypeTitle(node);
-    ImGui::PopFont();
+    Section("%s@%d", NodeType_to_str_full(node.type), node.id);
+    if (IconButton<NORMAL>(ICON_LC_EYE, "Focus")) {
+        ImNodes::ClearNodeSelection();
+        switch (node.type) {
+        case COMPONENT_INPUT:
+        case COMPONENT_OUTPUT:
+            ImNodes::SelectNode(Node { 0, node.type }.numeric());
+            break;
+        default: ImNodes::SelectNode(node.numeric()); break;
+        }
+    }
     if (node.type != COMPONENT_OUTPUT && node.type != COMPONENT_INPUT) {
         ImGui::SameLine();
-        if (IconButton<NORMAL>(ICON_LC_TRASH_2, "")) {
+        if (IconButton<NORMAL>(ICON_LC_TRASH_2, "Delete Node")) {
             ImNodes::ClearNodeSelection(node.numeric());
             scene->remove_node(node);
             return;
         }
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-            ImGui::SetTooltip("Delete Node");
-        }
     }
-    ImGui::Separator();
-
     if (ImGui::BeginTable(
             "##InspectorTable", 2, ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableSetupColumn(
@@ -84,7 +91,9 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
 
         if (node.type != COMPONENT_INPUT && node.type != COMPONENT_OUTPUT) {
             TablePair(Field("Position"));
-            PositionSelector(scene->get_base(node), "Inspector");
+            if (PositionSelector(scene->get_base(node)->point, "Inspector")) {
+                io::scene::notify_change();
+            }
         }
 
         switch (node.type) {
@@ -97,6 +106,7 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
         default: _inspector_component_context_node(&scene, node); break;
         }
     };
+    EndSection();
 }
 static void _inspector_input_node(NRef<Scene> scene, Node node)
 {
@@ -274,8 +284,7 @@ static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
         for (size_t i = 0; i < inputs.size(); i++) {
             TablePair(Field("%zu", i + 1));
             ImGui::SameLine();
-            ImGui::PushFont(
-                get_font(FontFlags::BOLD | FontFlags::NORMAL));
+            ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
             State value = State::DISABLED;
             if (inputs[i] != 0) {
                 NRef<Rel> r = scene->get_rel(inputs[i]);
@@ -319,10 +328,10 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
         for (size_t i = 0; i < outputs.size(); i++) {
             ImGui ::TableNextRow();
             ImGui ::TableSetColumnIndex(0);
-            ImGui::PushFont(
-                get_font(FontFlags::BOLD | FontFlags::NORMAL));
+            ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
             if (outputs[i] == 0) {
-                ImGui::TextColored(ImVec4(0.3, 0.3, 0.3, 1), "DISCONNECTED");
+                ImGui::TextColored(
+                    get_active_style().black_bright, "DISCONNECTED");
             } else {
                 NRef<Rel> r = scene->get_rel(outputs[i]);
                 NodeTypeTitle(r->to_node, r->to_sock);

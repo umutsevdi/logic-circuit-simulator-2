@@ -52,15 +52,15 @@ LCS_ERROR post_request(const std::string& url, std::string& resp,
 /** Device flow authenticates the device with non-blocking mechanism. */
 class AuthenticationFlow final : public Flow {
 public:
-    explicit AuthenticationFlow() { };
-    ~AuthenticationFlow() { };
+    AuthenticationFlow()  = default;
+    ~AuthenticationFlow() = default;
     std::string client_id;
     std::string device_code;
     std::string user_code;
     std::string verification_uri;
-    int expires_in;
-    int interval;
-    time_t start_time;
+    int expires_in    = 0;
+    int interval      = 0;
+    time_t start_time = 0L;
 
     LCS_ERROR start(void) override;
     State poll(void) override;
@@ -72,7 +72,7 @@ public:
     LCS_ERROR start_existing(void);
 
 private:
-    time_t _last_poll;
+    time_t _last_poll = 0L;
     State _last_status;
     std::string _reason;
 };

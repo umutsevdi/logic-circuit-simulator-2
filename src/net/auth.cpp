@@ -17,24 +17,90 @@ struct AuthInfo {
 AuthInfo _auth;
 static AuthenticationFlow _flow;
 
-Error static _get_client_id(std::string& id)
-{
-    std::string resp;
-    Error err
-        = get_request(ui::get_config().api_proxy + "/api/client_id", resp);
-    if (err) {
-        L_INFO(resp);
+namespace gh {
+    LCS_ERROR
+    static _get_device_code(Json::Value& response, const std::string& _id)
+    {
+        Error err = OK;
+        ;
+        std::string body;
+        err = net::post_request(
+            "https://github.com/login/device/code?client_id=" + _id
+                + "&scope=read:user",
+            body);
+        L_INFO("Received: " << body);
+        if (err) {
+            return err;
+        }
+        Json::Reader parser;
+        if (!parser.parse(body, response)) {
+            return ERROR(Error::JSON_PARSE_ERROR);
+        }
         return err;
     }
-    L_INFO("Received " << resp);
-    Json::Value v;
-    Json::Reader r;
-    if (!r.parse(resp, v)) {
-        return ERROR(Error::JSON_PARSE_ERROR);
+
+    LCS_ERROR
+    static _get_access_token(Json::Value& response,
+        const std::string& client_id, const std::string& device_code)
+    {
+        L_INFO("Get oauth access token");
+        Json::Value req;
+        req["client_id"]   = client_id;
+        req["device_code"] = device_code;
+        req["grant_type"]  = "urn:ietf:params:oauth:grant-type:device_code";
+        L_INFO("Sending:" << req.toStyledString());
+
+        std::string body;
+        Error err = post_request("https://github.com/login/oauth/access_token",
+            body, req.toStyledString());
+        L_INFO("Received " << body);
+        Json::Reader parser {};
+        if (!parser.parse(body, response)) {
+            return ERROR(Error::JSON_PARSE_ERROR);
+        }
+        if (err) {
+            return err;
+        }
+        return OK;
     }
-    id = v["id"].asString();
-    return OK;
-}
+
+}; // namespace gh
+namespace api {
+    LCS_ERROR
+    static _get_client_id(Json::Value& response)
+    {
+        std::string resp;
+        Error err
+            = get_request(ui::get_config().api_proxy + "/api/client_id", resp);
+        L_INFO("Received " << resp);
+        if (err) {
+            return err;
+        }
+        Json::Reader parser;
+        if (!parser.parse(resp, response)) {
+            return ERROR(Error::JSON_PARSE_ERROR);
+        }
+        return OK;
+    }
+
+    LCS_ERROR
+    static _login(Json::Value& response, const std::string& token = "")
+    {
+        L_INFO("Send token to session server");
+        std::string resp;
+        Error err = get_request(
+            ui::get_config().api_proxy + "/api/login", resp, token);
+        L_INFO("Received: " << resp);
+        if (err) {
+            return err;
+        }
+        Json::Reader parser {};
+        if (!parser.parse(resp, response)) {
+            return ERROR(Error::JSON_PARSE_ERROR);
+        }
+        return OK;
+    }
+} // namespace api
 
 Error AuthenticationFlow::start(void)
 {
@@ -46,28 +112,18 @@ Error AuthenticationFlow::start(void)
     _auth        = {};
     _last_status = STARTED;
     L_INFO("Starting flow");
-    std::string _id;
-    Error err = _get_client_id(_id);
-    if (err) {
-        _last_status = BROKEN;
-        return err;
-    }
-    std::string body;
-    err = net::post_request("https://github.com/login/device/code?client_id="
-            + _id + "&scope=read:user",
-        body);
-
-    if (err) {
-        _last_status = BROKEN;
-        return err;
-    }
     Json::Value v;
-    Json::Reader r;
-    if (!r.parse(body, v)) {
+    Error err = api::_get_client_id(v);
+    if (err) {
         _last_status = BROKEN;
-        return ERROR(Error::JSON_PARSE_ERROR);
+        return err;
     }
-    L_INFO("Received: " << v.toStyledString());
+    std::string _id = v["id"].asString();
+    err             = gh::_get_device_code(v, _id);
+    if (err) {
+        _last_status = BROKEN;
+        return err;
+    }
     client_id        = _id;
     device_code      = v["device_code"].asString();
     user_code        = v["user_code"].asString();
@@ -103,71 +159,50 @@ Flow::State AuthenticationFlow::poll(void)
     this->_last_poll = now;
 
     {
-        L_INFO("Get oauth access token");
-        Json::Value req;
-        req["client_id"]   = client_id;
-        req["device_code"] = device_code;
-        req["grant_type"]  = "urn:ietf:params:oauth:grant-type:device_code";
-        L_INFO("Sending:" << req.toStyledString());
-
-        std::string gh_resp_str;
-        Error err = post_request("https://github.com/login/oauth/access_token",
-            gh_resp_str, req.toStyledString());
+        Json::Value resp;
+        Error err = gh::_get_access_token(resp, client_id, device_code);
         if (err) {
-            _reason = gh_resp_str;
+            if (resp["error"].isString()) {
+                _reason = resp["error"].asString();
+            }
             L_WARN("Received " << _reason);
             _last_status = (ERROR(Flow::State::BROKEN));
             return _last_status;
         }
 
-        Json::Value gh_resp;
-        Json::Reader gh_resp_r {};
-        if (!gh_resp_r.parse(gh_resp_str, gh_resp)) {
-            _last_status = (ERROR(Flow::State::BROKEN));
-            return _last_status;
-        }
-        if (gh_resp["error"].isString()
-            && gh_resp["error"].asString() == "authorization_pending") {
+        if (resp["error"].isString()
+            && resp["error"].asString() == "authorization_pending") {
             // TODO For other types of error codes change the to
             // Flow::State::BROKEN
             _last_status = Flow::State::POLLING;
             return _last_status;
-        } else if (gh_resp["error"].isString()) {
-            _reason = gh_resp["error_description"].asString();
+        } else if (resp["error"].isString()) {
+            _reason = resp["error_description"].asString();
         }
-        L_INFO("Received " << gh_resp.toStyledString());
-        _auth.access_token = gh_resp["access_token"].asString();
+        _auth.access_token = resp["access_token"].asString();
     }
 
     {
-        L_INFO("Send token to session server");
-        std::string session_resp;
-        Error err = get_request(ui::get_config().api_proxy + "/api/login",
-            session_resp, _auth.access_token);
+        Json::Value v;
+        Error err = api::_login(v, _auth.access_token);
         if (err) {
-            _reason = session_resp;
-            L_WARN("Received " << _reason);
+            if (v["message"].isString()) {
+                _reason = v["message"].asString();
+            }
             _last_status = (ERROR(Flow::State::BROKEN));
             return _last_status;
         }
-        Json::Value resp_root;
-        Json::Reader resp {};
-        if (!resp.parse(session_resp, resp_root)) {
-            _last_status = (ERROR(Flow::State::BROKEN));
-            return _last_status;
-        }
-        L_INFO("Received: " << resp_root.toStyledString());
-        if (!resp_root["login"].isString()) {
+        if (!v["login"].isString()) {
             _last_status = (ERROR(Flow::State::BROKEN));
             return _last_status;
         }
 
-        _auth.account.login      = resp_root["login"].asString();
-        _auth.account.name       = resp_root["name"].asString();
-        _auth.account.email      = resp_root["email"].asString();
-        _auth.account.bio        = resp_root["bio"].asString();
-        _auth.account.url        = resp_root["url"].asString();
-        _auth.account.avatar_url = resp_root["avatarUrl"].asString();
+        _auth.account.login      = v["login"].asString();
+        _auth.account.name       = v["name"].asString();
+        _auth.account.email      = v["email"].asString();
+        _auth.account.bio        = v["bio"].asString();
+        _auth.account.url        = v["url"].asString();
+        _auth.account.avatar_url = v["avatarUrl"].asString();
         keychain::Error keyerr;
         keychain::setPassword(APP_PKG, APPNAME_LONG, _auth.account.login,
             _auth.access_token, keyerr);
@@ -179,8 +214,8 @@ Flow::State AuthenticationFlow::poll(void)
         if (!std::filesystem::exists(io::CACHE
                 / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
             std::vector<unsigned char> data;
-            net::get_request(_auth.account.avatar_url, data);
-            if (!data.empty()) {
+            if (net::get_request(_auth.account.avatar_url, data) == OK
+                && !data.empty()) {
                 io::write(io::CACHE
                         / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
                     data);
@@ -211,33 +246,27 @@ Error AuthenticationFlow::start_existing(void)
         return (Error)(keyerr + KEYCHAIN_GENERIC_ERROR - 1);
     }
 
-    std::string resp_str;
-    Error err
-        = get_request(ui::get_config().api_proxy + "/api/login", resp_str, pwd);
+    Json::Value v;
+    Error err = api::_login(v, pwd);
     if (err) {
-        _reason = resp_str;
-        L_WARN("Received " << _reason);
+        if (v["message"].isString()) {
+            _reason = v["message"].asString();
+        }
         return err;
     }
-    Json::Value resp_root;
-    Json::Reader resp {};
-    if (!resp.parse(resp_str, resp_root)) {
-        return ERROR(Error::JSON_PARSE_ERROR);
-    }
-    L_INFO("Received: " << resp_root.toStyledString());
     _auth.access_token       = pwd;
-    _auth.account.login      = resp_root["login"].asString();
-    _auth.account.name       = resp_root["name"].asString();
-    _auth.account.email      = resp_root["email"].asString();
-    _auth.account.bio        = resp_root["bio"].asString();
-    _auth.account.url        = resp_root["url"].asString();
-    _auth.account.avatar_url = resp_root["avatarUrl"].asString();
+    _auth.account.login      = v["login"].asString();
+    _auth.account.name       = v["name"].asString();
+    _auth.account.email      = v["email"].asString();
+    _auth.account.bio        = v["bio"].asString();
+    _auth.account.url        = v["url"].asString();
+    _auth.account.avatar_url = v["avatarUrl"].asString();
 
     if (!std::filesystem::exists(
             io::CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
         std::vector<unsigned char> data;
-        net::get_request(_auth.account.avatar_url, data);
-        if (!data.empty()) {
+        if (net::get_request(_auth.account.avatar_url, data) == OK
+            && !data.empty()) {
             io::write(
                 io::CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
                 data);
@@ -249,6 +278,15 @@ Error AuthenticationFlow::start_existing(void)
 
 void AuthenticationFlow::resolve(void)
 {
+    if (_auth.account.login != "") {
+        keychain::Error err;
+        keychain::deletePassword(
+            APP_PKG, APPNAME_LONG, _auth.account.login, err);
+        if (err.type != keychain::ErrorType::NoError) {
+            L_ERROR("Error while cleaning password. " << err.message);
+        }
+        io::write(io::ROOT / ".login", "");
+    }
     _reason      = "";
     _auth        = {};
     _last_status = INACTIVE;

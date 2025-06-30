@@ -33,6 +33,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0xaf5fff),
         .cyan_bright    = to_imvec4(0x00afaf),
         .white_bright   = to_imvec4(0xffffff),
+        .is_dark        = false,
     },
     // Style::ACME
     LcsStyle {
@@ -55,6 +56,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0x505050),
         .cyan_bright    = to_imvec4(0xafffd7),
         .white_bright   = to_imvec4(0xfcfcce),
+        .is_dark        = false,
     },
     // Style::GRUVBOX_LIGHT
     LcsStyle {
@@ -77,6 +79,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0x8f3f71),
         .cyan_bright    = to_imvec4(0x427b58),
         .white_bright   = to_imvec4(0x3c3836),
+        .is_dark        = false,
     },
     // Style::ONE_LIGHT]
     LcsStyle {
@@ -99,6 +102,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0xa00095),
         .cyan_bright    = to_imvec4(0x3e953a),
         .white_bright   = to_imvec4(0xffffff),
+        .is_dark        = false,
     },
     // Style::SEASHELLS
     LcsStyle {
@@ -123,6 +127,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0xc6e8f1),
         .cyan_bright    = to_imvec4(0x97b9c0),
         .white_bright   = to_imvec4(0xffe9d7),
+        .is_dark        = true,
     },
     // Style::XTERM
     LcsStyle {
@@ -145,6 +150,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0xff00ff),
         .cyan_bright    = to_imvec4(0x00ffff),
         .white_bright   = to_imvec4(0xffffff),
+        .is_dark        = true,
     },
     // Style::GRUVBOX_DARK
     LcsStyle {
@@ -167,6 +173,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0xd3869b),
         .cyan_bright    = to_imvec4(0x8ec07c),
         .white_bright   = to_imvec4(0xebdbb2),
+        .is_dark        = true,
     },
     // Style::ONE_DARK
     LcsStyle {
@@ -189,6 +196,7 @@ const LcsStyle COLORMAP[Style::STYLE_S] = {
         .magenta_bright = to_imvec4(0xc678dd),
         .cyan_bright    = to_imvec4(0x56b6c2),
         .white_bright   = to_imvec4(0xffffff),
+        .is_dark        = true,
     },
 };
 const LcsStyle& get_style(Style s) { return COLORMAP[s]; }

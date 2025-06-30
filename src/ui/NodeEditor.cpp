@@ -1,5 +1,7 @@
+#include "core.h"
 #include "io.h"
 #include "ui/components.h"
+#include "ui/layout.h"
 #include "ui/util.h"
 #include <imgui.h>
 #include <imnodes.h>
@@ -8,8 +10,16 @@ namespace lcs::ui {
 
 void NodeEditor(NRef<Scene> scene)
 {
-    if (ImGui::BeginChild("NodeEditor")) {
+    ImGui::Begin("Node Editor", nullptr,
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration);
+    {
+        const LcsStyle& style = get_active_style();
         ImNodes::BeginNodeEditor();
+        if (scene == nullptr) {
+            ImNodes::EndNodeEditor();
+            ImGui::End();
+            return;
+        }
         bool has_changes = io::scene::has_changes();
         if (scene->component_context.has_value()) {
             NodeView<ComponentContext>(
@@ -28,11 +38,12 @@ void NodeEditor(NRef<Scene> scene)
             NodeView<ComponentNode>(&out.second, has_changes);
         }
         for (auto& r : scene->_relations) {
+
             ImNodes::PushColorStyle(ImNodesCol_Link,
-                r.second.value == State::TRUE ? IM_COL32(0, 255, 100, 255)
+                r.second.value == State::TRUE ? ImGui::GetColorU32(style.green)
                     : r.second.value == State::FALSE
-                    ? IM_COL32(255, 0, 100, 255)
-                    : IM_COL32(55, 55, 55, 255));
+                    ? ImGui::GetColorU32(style.red)
+                    : ImGui::GetColorU32(style.black_bright));
             ImNodes::Link(r.first,
                 encode_pair(r.second.from_node, r.second.from_sock, true),
                 encode_pair(r.second.to_node, r.second.to_sock, false));
@@ -44,15 +55,8 @@ void NodeEditor(NRef<Scene> scene)
             int linkid = 0;
             if (ImNodes::IsLinkHovered(&linkid)) {
                 if (auto r = scene->get_rel(linkid);
-                    ImGui::BeginTooltip() && r != nullptr) {
-                    ImGui::PushFont(
-                        get_font(FontFlags::BOLD | FontFlags::NORMAL));
-                    ImGui::Text("%s",
-                        std::string { "Relation " + std::to_string(linkid) }
-                            .c_str());
-                    ImGui::Separator();
-                    ImGui::PopFont();
-                    ImGui::PushFont(get_font(FontFlags::NORMAL));
+                    r != nullptr && ImGui::BeginTooltip()) {
+                    SubSection("Relation %d", linkid);
                     Field("From");
                     ImGui::SameLine();
                     NodeTypeTitle(r->from_node, r->from_sock);
@@ -62,7 +66,7 @@ void NodeEditor(NRef<Scene> scene)
                     Field("Value");
                     ImGui::SameLine();
                     ToggleButton(r->value);
-                    ImGui::PopFont();
+                    EndSection();
                     ImGui::EndTooltip();
                 }
             }
@@ -72,13 +76,9 @@ void NodeEditor(NRef<Scene> scene)
                 Node nodeid { static_cast<uint16_t>(0xFFFF & nodeid_encoded),
                     (NodeType)(nodeid_encoded >> 16) };
                 if (NRef<BaseNode> n = scene->get_base(nodeid);
-                    ImGui::BeginTooltip() && n != nullptr) {
-                    ImGui::PushFont(
-                        get_font(FontFlags::BOLD | FontFlags::NORMAL));
-                    NodeTypeTitle((Node)nodeid);
-                    ImGui::Separator();
-                    ImGui::PopFont();
-                    ImGui::PushFont(get_font(FontFlags::NORMAL));
+                    n != nullptr && ImGui::BeginTooltip()) {
+                    SubSection("Node %s@%d", NodeType_to_str_full(nodeid.type),
+                        nodeid.id);
                     Field("Position");
                     ImGui::SameLine();
                     ImGui::Text("(%d, %d)", n->point.x, n->point.y);
@@ -99,10 +99,7 @@ void NodeEditor(NRef<Scene> scene)
                         }
                         ImGui::Text(")");
                     }
-
-                    ImGui::PopFont();
-                    ImGui::EndTooltip();
-                } else {
+                    EndSection();
                     ImGui::EndTooltip();
                 }
             }
@@ -117,13 +114,8 @@ void NodeEditor(NRef<Scene> scene)
                             || nodeid.type == COMPONENT_OUTPUT
                         ? nodeid.id
                         : sock;
-                    ImGui::PushFont(
-                        get_font(FontFlags::BOLD | FontFlags::NORMAL));
-                    ImGui::Text(
+                    SubSection(
                         "%s Socket %u", is_out ? "Output" : "Input", sock);
-                    ImGui::Separator();
-                    ImGui::PopFont();
-                    ImGui::PushFont(get_font(FontFlags::NORMAL));
                     Field("Owner");
                     ImGui::SameLine();
                     NodeTypeTitle(nodeid);
@@ -138,7 +130,7 @@ void NodeEditor(NRef<Scene> scene)
                             ToggleButton(scene->get_base(nodeid)->get(sock));
                         }
                     }
-                    ImGui::PopFont();
+                    EndSection();
                     ImGui::EndTooltip();
                 }
             }
@@ -153,7 +145,7 @@ void NodeEditor(NRef<Scene> scene)
                 }
             };
         }
-        ImGui::EndChild();
+        ImGui::End();
     }
 }
 

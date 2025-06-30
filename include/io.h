@@ -27,32 +27,6 @@ namespace io {
     extern std::filesystem::path LOCAL;
     extern std::filesystem::path CACHE;
 
-    /** An interface that provides utilities to serialize/deserialize nodes */
-    class Serializable {
-        /**
-         * Converts given object to a Json::Value
-         * @returns Json document
-         */
-        virtual Json::Value to_json(void) const = 0;
-        /**
-         * Reads contents of the document and updates its fields.
-         * @returns Error on failure:
-         *
-         *  - Error::INVALID_SCENE
-         *  - Error::REL_CONNECT_ERROR
-         *  - Error::UNDEFINED_DEPENDENCY
-         *  - Error::INVALID_NODE
-         *  - Error::INVALID_NODE
-         *  - Error::INVALID_NODE
-         *  - Error::INVALID_COMPONENT
-         *  - Error::INVALID_INPUT
-         *  - Error::INVALID_COMPONENT
-         *  - Error::INVALID_GATE
-         *  - Error::INVALID_JSON_FORMAT
-         */
-        LCS_ERROR virtual from_json(const Json::Value&) = 0;
-    };
-
     /**
      * Initializes required folder structure for the application.
      * If testing flag is enabled files are saved to a temporary location.

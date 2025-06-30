@@ -221,7 +221,7 @@ namespace ui {
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-            if (!cfg.is_applied) {
+            if (!get_config().is_applied) {
                 L_INFO("Configuration changes were found!");
                 set_style(io);
             }
