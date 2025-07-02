@@ -50,6 +50,7 @@ bool loop(ImGuiIO& imio)
         NodeEditor(&scene);
         Inspector(&scene);
         Palette();
+        Logger();
 
         ImGui::Begin("Font Window");
         {

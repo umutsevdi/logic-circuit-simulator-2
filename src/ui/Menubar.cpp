@@ -82,8 +82,7 @@ void MenuBar(void)
             ImGui::SetCursorPosY(ImGui::GetStyle().ItemSpacing.y
                 - ImGui::GetStyle().ItemInnerSpacing.y);
             if (ImGui::BeginMenu(net::get_account().login.c_str())) {
-                if (IconButton<NORMAL>(
-                        "##Settings", ICON_LC_SETTINGS_2, "Settings")) { }
+                if (IconButton<NORMAL>(ICON_LC_SETTINGS_2, "Settings")) { }
                 if (IconButton<NORMAL>(ICON_LC_LOG_OUT, "Log out")) {
                     net::get_flow().resolve();
                 }
@@ -97,6 +96,7 @@ void MenuBar(void)
             ImGui::SetCursorPosY(ImGui::GetStyle().ItemSpacing.y
                 + ImGui::GetStyle().ItemInnerSpacing.y);
             if (IconButton<NORMAL>(ICON_LC_LOG_IN, "Login")) {
+                L_INFO("Login button pressed");
                 df_show = true;
             }
             ImGui::EndDisabled();
@@ -161,9 +161,10 @@ void TabWindow(void)
 
 static void _show_device_flow_ui()
 {
-    Error err = Error::OK;
+    bool df_show_cancel = true;
+    Error err           = Error::OK;
     if (net::get_flow().get_state() == Flow::INACTIVE) {
-        net::get_flow().start();
+        err = net::get_flow().start();
     }
     if (err) {
         df_show = false;
@@ -177,24 +178,17 @@ static void _show_device_flow_ui()
     }
     ImGui::OpenPopup("Login");
     if (ImGui::BeginPopupModal(
-            "Login", nullptr, ImGuiWindowFlags_NoSavedSettings)) {
-
-        const char* icon;
-        switch (poll_result) {
-        case Flow::TIMEOUT: icon = ICON_LC_CLOCK_ALERT; break;
-        case Flow::BROKEN: icon = ICON_LC_TRIANGLE_ALERT; break;
-        default: icon = ICON_LC_GITHUB; break;
-        }
-        IconText<ULTRA>(icon, "");
-        ImGui::SameLine();
+            "Login", &df_show_cancel, ImGuiWindowFlags_NoSavedSettings)) {
+        static const float modal_size
+            = ImGui::CalcTextSize("Enter the code to your browser").x;
         if (poll_result == Flow::BROKEN) {
             ImGui ::PushFont(get_font(FontFlags ::BOLD | FontFlags ::NORMAL));
-            ImGui ::TextColored(ImVec4(255, 0, 0, 255), "An error occurred.");
+            ImGui ::TextColored(get_active_style().red, "An error occurred.");
             ImGui ::PopFont();
             ImGui::Text("%s", net::get_flow().reason());
         } else if (poll_result == Flow::TIMEOUT) {
             ImGui ::PushFont(get_font(FontFlags ::BOLD | FontFlags ::NORMAL));
-            ImGui ::TextColored(ImVec4(255, 55, 55, 255),
+            ImGui ::TextColored(get_active_style().red,
                 "You have exceeded the time limit for entering your\n"
                 "passcode. Please try again to authenticate your\n"
                 "session. ");
@@ -202,41 +196,58 @@ static void _show_device_flow_ui()
         } else {
             Field("Enter the code to your browser");
         }
+        const char* icon;
+        switch (poll_result) {
+        case Flow::TIMEOUT: icon = ICON_LC_CLOCK_ALERT; break;
+        case Flow::BROKEN: icon = ICON_LC_TRIANGLE_ALERT; break;
+        default: icon = ICON_LC_GITHUB; break;
+        }
+        IconText<ULTRA>(icon, "");
+
+        float icon_h = 0.f;
+        {
+            ImGui::PushFont(get_font(ULTRA | ICON));
+            icon_h = ImGui::CalcTextSize(ICON_LC_GITHUB).y;
+            ImGui::PopFont();
+        }
         if (poll_result == Flow::POLLING) {
+            ImGui::SameLine();
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + icon_h / 2
+                - ImGui::CalcTextSize("Enter").y);
             ImGui::PushFont(get_font(FontFlags::LARGE | FontFlags::BOLD));
             ImGui::Text("%s", net::get_flow().user_code.c_str());
             ImGui::PopFont();
-            ImGui::SameLine();
-            if (IconButton<LARGE>(
-                    "##CopyToClipboard", ICON_LC_CLIPBOARD_COPY, "")) {
-                ImGui::SetClipboardText(net::get_flow().user_code.c_str());
-            }
+            ImGui::SetNextItemWidth(modal_size);
             ImGui::ProgressBar(1.0f
                     - static_cast<float>(
                           difftime(time(nullptr), net::get_flow().start_time))
                         / static_cast<float>(net::get_flow().expires_in),
-                ImVec2 { ImGui::GetWindowSize().x,
-                    ImGui::CalcTextSize("Remaining").y },
+                ImVec2 { modal_size, ImGui::CalcTextSize("Remaining").y },
                 ("Remaining: "
                     + std::to_string(net::get_flow().expires_in
                         - static_cast<int>(difftime(
                             time(nullptr), net::get_flow().start_time)))
                     + " seconds")
                     .c_str());
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + modal_size / 2);
+            if (IconButton<LARGE>(ICON_LC_CLIPBOARD_COPY, "Copy")) {
+                ImGui::SetClipboardText(net::get_flow().user_code.c_str());
+            }
         }
         if (poll_result == Flow::State::BROKEN
             || poll_result == Flow::State::TIMEOUT) {
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + modal_size / 2);
             if (IconButton<NORMAL>(ICON_LC_ROTATE_CW, "Retry")) {
                 df_show = true;
                 net::get_flow().resolve();
             }
-            ImGui::SameLine(ImGui::GetWindowSize().x / 2);
-            if (IconButton<NORMAL>(ICON_LC_CIRCLE_X, "Cancel")) {
-                df_show = false;
-                net::get_flow().resolve();
-            }
         }
         ImGui::EndPopup();
+    }
+    if (!df_show_cancel) {
+        L_INFO("User pressed cancel");
+        df_show = false;
+        net::get_flow().resolve();
     }
 }
 

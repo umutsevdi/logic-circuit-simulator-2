@@ -13,7 +13,7 @@ void Palette()
 
     auto scene = io::scene::get();
 
-    ImGui::Begin("Node Palette", nullptr, ImGuiWindowFlags_NoResize);
+    ImGui::Begin("Node Palette", nullptr);
     if (scene == nullptr) {
         ImGui::BeginDisabled();
     }

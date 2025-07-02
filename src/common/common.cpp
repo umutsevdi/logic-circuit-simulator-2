@@ -4,9 +4,10 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <variant>
 
-std::optional<std::ofstream> TESTLOG = std::nullopt;
-static bool COLORS_ENABLED           = true;
+std::variant<std::ofstream, std::ostringstream> FLOG;
+static bool COLORS_ENABLED = true;
 bool is_color_enabled(void) { return COLORS_ENABLED; }
 
 static std::string parse_function(std::string_view fnname)
@@ -36,16 +37,19 @@ std::ostream& _log_pre(std::ostream& stream, const char* status,
 std::ostream& _log_pre_f(
     const char* status, const char* file_name, int line, const char* function)
 {
-    if (TESTLOG.has_value()) {
-        COLORS_ENABLED = false;
-        std::ostringstream oss {};
-        oss << file_name << ":" << std::left << std::setw(3) << line;
-        TESTLOG.value() << status << std::left << std::setw(20)
-                        << strlimit(oss.str(), 20) << " | " << std::setw(40)
-                        << strlimit(parse_function(function), 36) << " | ";
-        return TESTLOG.value();
+    COLORS_ENABLED = false;
+    std::ostringstream oss {};
+    std::ostringstream fullstr {};
+    oss << file_name << ":" << std::left << std::setw(3) << line;
+    fullstr << status << std::left << std::setw(20) << strlimit(oss.str(), 20)
+            << " | " << std::setw(40) << strlimit(parse_function(function), 36)
+            << " | ";
+
+    if (FLOG.index() == 0) {
+        return std::get<std::ofstream>(FLOG) << fullstr.str();
+    } else {
+        return std::get<std::ostringstream>(FLOG) << fullstr.str();
     }
-    return std::cout;
 }
 
 int __expect(std::function<bool(void)> expr, const char* function,
@@ -68,10 +72,8 @@ int __expect(std::function<bool(void)> expr, const char* function,
     }
     _log_pre(std::cerr, __F_FATAL, file, line, function) << F_RED F_BOLD
         "Assertion " << str_expr << " failed!" F_RESET << std::endl;
-    if (TESTLOG.has_value()) {
-        _log_pre_f(_FATAL, file, line, function)
-            << "Assertion " << str_expr << " failed!" << std::endl;
-    }
+    _log_pre_f(_FATAL, file, line, function)
+        << "Assertion " << str_expr << " failed!" << std::endl;
     return 1;
 }
 

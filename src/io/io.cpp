@@ -63,7 +63,11 @@ void init_paths(bool is_testing)
             ;
         ROOT = TMP / s_time.str();
         TMP  = TMP / s_time.str() / "tmp";
+
+        FLOG = std::ofstream { ROOT / "log.txt" };
         L_INFO("Creating testing environment at:" << ROOT);
+    } else {
+        FLOG = std::ostringstream {};
     }
     LIBRARY = ROOT / "lib";
     LOCAL   = ROOT / "local";
@@ -86,9 +90,6 @@ void init_paths(bool is_testing)
         if (!fs::exists(CACHE)) {
             L_INFO("Creating" << CACHE);
             fs::create_directories(CACHE);
-        }
-        if (is_testing) {
-            TESTLOG.emplace(ROOT / "log.txt");
         }
     } catch (const std::exception& e) {
         L_ERROR("Directory creation failed: " << e.what());

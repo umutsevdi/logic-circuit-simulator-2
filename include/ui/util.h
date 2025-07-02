@@ -97,4 +97,33 @@ void SceneType(NRef<Scene>);
 
 int hash_pair(Node node, sockid sock, bool is_out);
 
+struct ImageHandle {
+    uint32_t gl_id = 0;
+    int w          = 0;
+    int h          = 0;
+    inline ImVec2 size(void) const { return ImVec2 { (float)w, (float)h }; }
+};
+
+/**
+ * Read a texture from given given vector and load as OpenGL texture.
+ * @param key to obtain image back
+ * @param buffer to read from
+ *
+ */
+bool load_texture(const std::string& key, std::vector<unsigned char>& buffer);
+
+/**
+ * Read a texture from given file and load as OpenGL texture.
+ * @param key to obtain image back
+ * @param file_path to read from
+ *
+ */
+bool load_texture(const std::string& key, const std::string& file_path);
+
+/**
+ * Get a reference to the loaded image with given name.
+ *
+ */
+const ImageHandle* get_texture(const std::string& key);
+
 } // namespace lcs::ui

@@ -26,6 +26,7 @@ template <typename T> void NodeView(NRef<T> base_node, bool has_changes);
 template <int SIZE, typename... Args>
 bool IconButton(const char* icon, Args... args)
 {
+    ImGui::BeginGroup();
     bool has_text           = strnlen(get_first<const char*>(args...), 5);
     static char buffer[256] = "##";
     ImVec2 text_s           = { 0, 0 };
@@ -52,12 +53,14 @@ bool IconButton(const char* icon, Args... args)
                 btnpos.y + (btn_s.y - text_s.y) / 2),
             ImGui::GetColorU32(ImGuiCol_Text), buffer + 2);
     }
+    ImGui::EndGroup();
     return pressed;
 }
 
 template <int SIZE, typename... Args>
 void IconText(const char* icon, Args... args)
 {
+    ImGui::BeginGroup();
     bool has_text = strnlen(get_first<const char*>(args...), 5);
     ImGui::PushFont(get_font(ICON | SIZE));
     ImGui::Text("%s", icon);
@@ -66,10 +69,12 @@ void IconText(const char* icon, Args... args)
         ImGui::SameLine();
         ImGui::Text(args...);
     }
+    ImGui::EndGroup();
 }
 
 template <typename... Args> inline void Section(Args... args)
 {
+    ImGui::BeginGroup();
     static char buffer[1024] = "##";
     snprintf(buffer + 2, 1022, args...);
     ImGui::PushFont(get_font(FontFlags::LARGE | FontFlags::REGULAR));
@@ -81,6 +86,7 @@ template <typename... Args> inline void Section(Args... args)
 
 template <typename... Args> inline void SubSection(Args... args)
 {
+    ImGui::BeginGroup();
     static char buffer[1024] = "##";
     snprintf(buffer + 2, 1022, args...);
     ImGui::PushFont(get_font(FontFlags::NORMAL | FontFlags::BOLD));
@@ -88,20 +94,25 @@ template <typename... Args> inline void SubSection(Args... args)
     ImGui::PopFont();
     ImGui::BeginChild(buffer, ImVec2(0, 0),
         ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
-    L_INFO(buffer);
 }
 
-inline void EndSection() { ImGui::EndChild(); }
+inline void EndSection()
+{
+    ImGui::EndChild();
+    ImGui::EndGroup();
+}
 
 void ShowIcon(FontFlags size, const char* icon);
 
 template <typename... Args> void Field(Args... args)
 {
+    ImGui::BeginGroup();
     ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
     ImGui::PushStyleColor(ImGuiCol_Text, get_active_style().magenta);
     ImGui::Text(args...);
     ImGui::PopFont();
     ImGui::PopStyleColor();
+    ImGui::EndGroup();
 }
 
 #define TablePair(KEY, ...)                                                    \

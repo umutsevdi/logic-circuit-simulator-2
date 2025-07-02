@@ -12,7 +12,7 @@
 
 #include <functional>
 #include <iostream>
-#include <optional>
+#include <variant>
 
 #define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
@@ -203,7 +203,7 @@ std::vector<std::string> split(std::string& s, const char delimiter);
 ******************************************************************************/
 
 #include <fstream>
-extern std::optional<std::ofstream> TESTLOG;
+extern std::variant<std::ofstream, std::ostringstream> FLOG;
 /** Returns whether the logging target supports colors or not. */
 bool is_color_enabled(void);
 
@@ -237,9 +237,8 @@ std::ostream& _log_pre_f(
 #define __LLOG_CUSTOM__(status, stream, file, line, function, ...)             \
     ((_log_pre(stream, (__F_##status), file, line, function)                   \
          << __VA_ARGS__ << std::endl),                                         \
-        (TESTLOG.has_value()                                                   \
-            && _log_pre_f((_##status), file, line, function)                   \
-                << __VA_ARGS__ << std::endl))
+        (_log_pre_f((_##status), file, line, function)                         \
+            << __VA_ARGS__ << std::endl))
 
 #define __LLOG__(STATUS, _STREAM, ...)                                         \
     __LLOG_CUSTOM__(STATUS, _STREAM, __FILE_NAME__, __LINE__,                  \

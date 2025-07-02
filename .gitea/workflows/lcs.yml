@@ -16,19 +16,18 @@ jobs:
         with:
           submodules: recursive
       - name: Update Packages
-        run:  sudo apt-get update -y
-      - name: Install Packages
-        run:  sudo apt-get install -y ninja-build doxygen graphviz build-essential cmake
-      - name: Install Dynamic Dependencies
-        run:  sudo apt-get install -y libsecret-1-dev
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ninja-build doxygen graphviz build-essential cmake
+          sudo apt-get install -y libsecret-1-dev
       - name: Build
-        run:  cmake -S . -B build/ -DCMAKE_BUILD_TYPE=Release -G Ninja -DLCS_GUI=False
-      - name: Run ninja
-        run:  ninja -C build/ release/LogicCircuitSimulator.tst
-      - name: Run the test file
+        run:  |
+          cmake -S . -B build/ -DCMAKE_BUILD_TYPE=Release -G Ninja -DLCS_GUI=False
+          ninja -C build/ release/LogicCircuitSimulator.tst
+      - name: Run Tests
         run:  build/release/LogicCircuitSimulator.tst
       - name: Upload artifact
         run: |
           cd build
-          zip -r "lcs.zip" docs
-          curl -X POST -F "file=@lcs.zip" "http://home.internal:9696/" -H "Filename: lcs.zip"
+          zip -r "lcs2.zip" docs
+          curl -X POST -F "file=@lcs2.zip" "http://home.internal:9696/docs?file=lcs2.zip"
