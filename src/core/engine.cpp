@@ -26,41 +26,6 @@ Rel::Rel()
 {
 }
 
-std::ostream& operator<<(std::ostream& os, const Rel& r)
-{
-    if (is_color_enabled()) {
-        os << F_GREEN F_BOLD;
-    }
-    os << "Rel@" << r.id;
-    if (is_color_enabled()) {
-        os << F_RESET;
-    }
-    os << "( from: " << r.from_node;
-    if (is_color_enabled()) {
-        os << F_BLUE;
-    }
-    os << "::" << std::to_string(r.from_sock);
-    if (is_color_enabled()) {
-        os << F_RESET;
-    }
-    os << ",\tto: " << r.to_node;
-    if (is_color_enabled()) {
-        os << F_BLUE;
-    }
-    os << "::" << std::to_string(r.to_sock);
-    if (is_color_enabled()) {
-        os << F_RESET;
-    }
-    os << ",\tvalue: " << State_to_str(r.value) << ")";
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const BaseNode& g)
-{
-    os << g._id;
-    return os;
-}
-
 /******************************************************************************
                                 InputNode
 *****************************************************************************/
@@ -73,16 +38,6 @@ InputNode::InputNode(Scene* _scene, Node id, std::optional<float> freq)
     if (_freq.has_value()) {
         _parent->_timerlist.emplace(_id, 0);
     }
-}
-
-std::ostream& operator<<(std::ostream& os, const InputNode& g)
-{
-    os << g.id() << "( value: " << State_to_str((State)g._value);
-    if (g._freq.has_value()) {
-        os << ", freq:" << g._freq.value();
-    }
-    os << " )";
-    return os;
 }
 
 void InputNode::set(bool v)
@@ -101,8 +56,7 @@ void InputNode::on_signal()
 {
     State result = _value ? State::TRUE : State::FALSE;
     for (relid& out : output) {
-        L_INFO(CLASS "Sending " << State_to_str((State)_value)
-                                << " signal to rel@" << out);
+        L_MSG("Sending %s signal to rel@%d", State_to_str((State)_value), out);
         _parent->signal(out, result);
     }
 }
@@ -125,12 +79,6 @@ OutputNode::OutputNode(Scene* _scene, Node _id)
 {
 }
 
-std::ostream& operator<<(std::ostream& os, const OutputNode& g)
-{
-    os << g.id() << "( " << State_to_str(g._value) << " )";
-    return os;
-}
-
 State OutputNode::get(sockid) const { return _value; }
 
 bool OutputNode::is_connected() const { return input != 0; }
@@ -138,7 +86,7 @@ bool OutputNode::is_connected() const { return input != 0; }
 void OutputNode::on_signal()
 {
     _value = input ? _parent->get_rel(input)->value : State::DISABLED;
-    L_INFO(CLASS "Received " << State_to_str(_value) << " signal");
+    L_MSG("Received %s signal", State_to_str(_value));
 }
 
 /******************************************************************************
@@ -162,16 +110,10 @@ Node::Node(uint16_t _id, NodeType _type)
 {
 }
 
-std::ostream& operator<<(std::ostream& os, const Node& r)
+std::string Node::to_str(void) const
 {
-    if (is_color_enabled()) {
-        os << F_GREEN F_BOLD;
-    }
-    os << NodeType_to_str(r.type) << "@" << r.id;
-    if (is_color_enabled()) {
-        os << F_RESET;
-    }
-    return os;
+    return std::string { NodeType_to_str_full(type) } + "@"
+        + std::to_string(id);
 }
 
 } // namespace lcs

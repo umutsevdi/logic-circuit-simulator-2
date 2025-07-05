@@ -1,4 +1,4 @@
-file(GLOB COMMON_RES common.cpp)
+file(GLOB COMMON_RES ./*.cpp)
 include_directories(../include/)
 include_directories(../../external/tfd)
 add_library(common ${COMMON_RES})

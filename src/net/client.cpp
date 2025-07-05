@@ -26,7 +26,7 @@ static size_t _write_cb(
 Error get_request(
     const std::string& url, std::string& resp, const std::string& authorization)
 {
-    L_INFO("Sending GET to " << url << "\tAuth:" << authorization);
+    L_INFO("Sending GET to %s\tAuth: %s", url.c_str(), authorization.c_str());
     CURL* curl = curl_easy_init();
     if (!curl) {
         resp = "";
@@ -60,7 +60,7 @@ Error get_request(
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (response_code != 200) {
         resp = readBuffer;
-        L_INFO("Received: " << response_code << " Payload: " << readBuffer);
+        L_INFO("Received: %d Payload: %s", response_code, readBuffer.c_str());
         curl_easy_cleanup(curl);
         return ERROR(Error::RESPONSE_ERROR);
     }
@@ -73,8 +73,8 @@ Error get_request(
 Error post_request(const std::string& url, std::string& resp,
     const std::string& req, const std::string& authorization)
 {
-    L_INFO("Sending POST to " << url << "\tAuth:" << authorization
-                              << "\tReq:" << req);
+    L_INFO("Sending POST to %s\tAuth:%s\tReq: %s", url.c_str(),
+        authorization.c_str(), req.c_str());
     CURL* curl = curl_easy_init();
     if (!curl) {
         resp = "";
@@ -108,7 +108,7 @@ Error post_request(const std::string& url, std::string& resp,
     long response_code;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (response_code != 200) {
-        L_INFO("Received: " << response_code << " Payload: " << readBuffer);
+        L_INFO("Received: %d Payload: %s", response_code, readBuffer.c_str());
         resp = "";
         curl_easy_cleanup(curl);
         return ERROR(Error::RESPONSE_ERROR);

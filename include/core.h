@@ -25,76 +25,6 @@ namespace lcs {
 
 class Scene;
 
-/** id type for socket, sock_t = 0 means disconnected */
-typedef uint8_t sockid;
-
-/** Relationship identifier. Id is a non-zero identifier. */
-typedef uint32_t relid;
-
-/** Type of a node in a scene. */
-enum NodeType : uint8_t {
-    /** Logic gate. */
-    GATE,
-    /** A component that has been loaded externally. */
-    COMPONENT,
-    /** An input node that can be switched manually or by a clock. */
-    INPUT,
-    /** An output node. */
-    OUTPUT,
-    /** Input slot of a component. NOTE: Only available in Component Scenes. */
-    COMPONENT_INPUT,
-    /** Output slot of a component. NOTE: Only available in Component Scenes. */
-    COMPONENT_OUTPUT,
-
-    NODE_S
-};
-
-constexpr const char* NodeType_to_str_full(NodeType s)
-{
-    switch (s) {
-    case NodeType::GATE: return "Gate";
-    case NodeType::COMPONENT: return "Component";
-    case NodeType::INPUT: return "Input";
-    case NodeType::OUTPUT: return "Output";
-    case NodeType::COMPONENT_INPUT: return "Component Input";
-    case NodeType::COMPONENT_OUTPUT: return "Component Output";
-    default: return "Unknown";
-    }
-}
-constexpr const char* NodeType_to_str(NodeType s)
-{
-    switch (s) {
-    case NodeType::GATE: return "Gate";
-    case NodeType::COMPONENT: return "Comp";
-    case NodeType::INPUT: return "In";
-    case NodeType::OUTPUT: return "Out";
-    case NodeType::COMPONENT_INPUT: return "Cin";
-    case NodeType::COMPONENT_OUTPUT: return "Cout";
-    default: return "Unknown";
-    }
-}
-
-/**
- * Node is a handler that represents the index.
- * id is a non-zero identifier. Together with the type, represents a unique
- * node.
- */
-struct Node final {
-    Node(uint16_t _id = 0, NodeType _type = GATE);
-    Node(Node&&)                 = default;
-    Node(const Node&)            = default;
-    Node& operator=(Node&&)      = default;
-    Node& operator=(const Node&) = default;
-
-    friend std::ostream& operator<<(std::ostream& os, const Node& r);
-    bool operator<(const Node& n) const { return this->id < n.id; }
-
-    inline uint32_t numeric(void) const { return id | (type << 16); }
-
-    uint16_t id : 16;
-    NodeType type : 4;
-};
-
 enum State {
     /** Socket evaluated to false. */
     FALSE,
@@ -156,7 +86,6 @@ public:
     BaseNode& operator=(BaseNode&&)      = default;
     BaseNode& operator=(const BaseNode&) = default;
     virtual ~BaseNode()                  = default;
-    friend std::ostream& operator<<(std::ostream& os, const BaseNode& r);
 
     inline Node id(void) const { return _id; }
     /** Returns whether all nodes are connected */
@@ -190,7 +119,6 @@ struct Rel final {
         sockid _to_sock);
     Rel();
     ~Rel() = default;
-    friend std::ostream& operator<<(std::ostream& os, const Rel& r);
 
     relid id;
     Node from_node;
@@ -211,8 +139,6 @@ public:
     GateNode& operator=(GateNode&&)      = default;
     GateNode& operator=(const GateNode&) = default;
     ~GateNode()                          = default;
-
-    friend std::ostream& operator<<(std::ostream& os, const GateNode& g);
 
     /** Adds a new input socket */
     bool increment(void);
@@ -248,7 +174,6 @@ public:
     ComponentNode& operator=(ComponentNode&&)      = default;
     ComponentNode& operator=(const ComponentNode&) = default;
     ~ComponentNode()                               = default;
-    friend std::ostream& operator<<(std::ostream& os, const ComponentNode& g);
 
     /** Assigns configurations of given component to this node. */
     LCS_ERROR set_component(const std::string& path);
@@ -280,7 +205,6 @@ public:
     InputNode& operator=(InputNode&&)      = default;
     InputNode& operator=(const InputNode&) = default;
     ~InputNode()                           = default;
-    friend std::ostream& operator<<(std::ostream& os, const InputNode& g);
 
     bool is_timer(void) const { return _freq.has_value(); }
     /** Set the value, and notify connected nodes.
@@ -312,7 +236,6 @@ public:
     OutputNode& operator=(OutputNode&&)      = default;
     OutputNode& operator=(const OutputNode&) = default;
     ~OutputNode()                            = default;
-    friend std::ostream& operator<<(std::ostream& os, const OutputNode& g);
 
     /* BaseNode */
     void on_signal(void) override;
@@ -413,7 +336,6 @@ public:
     Scene(const Scene&)            = delete;
     Scene& operator=(const Scene&) = delete;
     ~Scene()                       = default;
-    friend std::ostream& operator<<(std::ostream& os, const Scene&);
 
     /** Run a frame for the scene. */
     void run_timers(void);

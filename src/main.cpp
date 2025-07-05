@@ -5,7 +5,7 @@
 using namespace lcs;
 int main(int argc, char* argv[])
 {
-    io::init_paths();
+    init_paths();
     net::init();
     return ui::main(argc, argv);
 }

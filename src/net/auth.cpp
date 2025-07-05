@@ -28,7 +28,7 @@ namespace gh {
             "https://github.com/login/device/code?client_id=" + _id
                 + "&scope=read:user",
             body);
-        L_INFO("Received: " << body);
+        L_INFO("Received: %s", body.c_str());
         if (err) {
             return err;
         }
@@ -48,12 +48,12 @@ namespace gh {
         req["client_id"]   = client_id;
         req["device_code"] = device_code;
         req["grant_type"]  = "urn:ietf:params:oauth:grant-type:device_code";
-        L_INFO("Sending:" << req.toStyledString());
+        L_INFO("Sending: %s", req.toStyledString().c_str());
 
         std::string body;
         Error err = post_request("https://github.com/login/oauth/access_token",
             body, req.toStyledString());
-        L_INFO("Received " << body);
+        L_INFO("Received %s", body.c_str());
         Json::Reader parser {};
         if (!parser.parse(body, response)) {
             return ERROR(Error::JSON_PARSE_ERROR);
@@ -72,7 +72,7 @@ namespace api {
         std::string resp;
         Error err
             = get_request(ui::get_config().api_proxy + "/api/client_id", resp);
-        L_INFO("Received " << resp);
+        L_INFO("Received %s", resp.c_str());
         if (err) {
             return err;
         }
@@ -90,7 +90,7 @@ namespace api {
         std::string resp;
         Error err = get_request(
             ui::get_config().api_proxy + "/api/login", resp, token);
-        L_INFO("Received: " << resp);
+        L_INFO("Received: %s", resp.c_str());
         if (err) {
             return err;
         }
@@ -134,7 +134,7 @@ Error AuthenticationFlow::start(void)
     _last_poll       = start_time;
 
     L_INFO("Visit: https://github.com/login/device");
-    L_INFO("Enter the code: " << v["user_code"].asString());
+    L_INFO("Enter the code: %s", v["user_code"].asCString());
     open_browser(verification_uri);
     return OK;
 }
@@ -165,7 +165,7 @@ Flow::State AuthenticationFlow::poll(void)
             if (resp["error"].isString()) {
                 _reason = resp["error"].asString();
             }
-            L_WARN("Received " << _reason);
+            L_WARN("Received %s", _reason);
             _last_status = (ERROR(Flow::State::BROKEN));
             return _last_status;
         }
@@ -207,17 +207,17 @@ Flow::State AuthenticationFlow::poll(void)
         keychain::setPassword(APP_PKG, APPNAME_LONG, _auth.account.login,
             _auth.access_token, keyerr);
         if (keyerr.type != keychain::ErrorType::NoError) {
-            L_WARN(keyerr.message);
+            L_WARN("%s", keyerr.message);
         }
-        io::write(io::ROOT / ".login", _auth.account.login);
+        write(ROOT / ".login", _auth.account.login);
 
-        if (!std::filesystem::exists(io::CACHE
-                / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
+        if (!std::filesystem::exists(
+                CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
             std::vector<unsigned char> data;
             if (net::get_request(_auth.account.avatar_url, data) == OK
                 && !data.empty()) {
-                io::write(io::CACHE
-                        / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
+                write(
+                    CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
                     data);
             }
         }
@@ -234,7 +234,7 @@ const char* AuthenticationFlow::reason(void) const { return _reason.c_str(); }
 Error AuthenticationFlow::start_existing(void)
 {
     _last_status      = STARTED;
-    std::string login = io::read(io::ROOT / ".login");
+    std::string login = read(ROOT / ".login");
     if (login == "") {
         return ERROR(Error::KEYCHAIN_NOT_FOUND);
     }
@@ -242,7 +242,7 @@ Error AuthenticationFlow::start_existing(void)
     std::string pwd
         = keychain::getPassword(APP_PKG, APPNAME_LONG, login, keyerr);
     if (keyerr.type != keychain::ErrorType::NoError) {
-        L_WARN(keyerr.message);
+        L_WARN("%s", keyerr.message);
         return (Error)(keyerr + KEYCHAIN_GENERIC_ERROR - 1);
     }
 
@@ -263,12 +263,11 @@ Error AuthenticationFlow::start_existing(void)
     _auth.account.avatar_url = v["avatarUrl"].asString();
 
     if (!std::filesystem::exists(
-            io::CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
+            CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
         std::vector<unsigned char> data;
         if (net::get_request(_auth.account.avatar_url, data) == OK
             && !data.empty()) {
-            io::write(
-                io::CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
+            write(CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"),
                 data);
         }
     }
@@ -283,9 +282,9 @@ void AuthenticationFlow::resolve(void)
         keychain::deletePassword(
             APP_PKG, APPNAME_LONG, _auth.account.login, err);
         if (err.type != keychain::ErrorType::NoError) {
-            L_ERROR("Error while cleaning password. " << err.message);
+            L_ERROR("Error while cleaning password. %s", err.message.c_str());
         }
-        io::write(io::ROOT / ".login", "");
+        write(ROOT / ".login", "");
     }
     _reason      = "";
     _auth        = {};
@@ -310,7 +309,7 @@ void open_browser(const std::string& url)
 
 Error upload_scene(NRef<const Scene> scene, std::string resp)
 {
-    return net::post_request(ui::get_config().api_proxy + "/api/upload", resp,
+    return net::post_request(ui::get_config().api_proxy + "/api/scene", resp,
         to_json<Scene>(*scene).toStyledString(), _auth.access_token);
 }
 

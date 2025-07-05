@@ -14,6 +14,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "io.h"
 #include "ui.h"
 #include "ui/configuration.h"
 #include "ui/util.h"
@@ -101,15 +102,16 @@ namespace ui {
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        (void)io;
-        io.ConfigFlags
+        ImGuiIO& imio = ImGui::GetIO();
+        (void)imio;
+        imio.IniFilename = INI.c_str();
+        imio.ConfigFlags
             |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-        io.ConfigFlags
+        imio.ConfigFlags
             |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        ui::before(io);
-        set_style(io, true);
+        imio.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        ui::before(imio);
+        set_style(imio, true);
         // Setup Dear ImGui style
         // ImGui::StyleColorsLight();
 
@@ -168,7 +170,6 @@ namespace ui {
         while (!glfwWindowShouldClose(window))
 #endif
         {
-
             // Poll and handle events (inputs, window resize, etc.)
             // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard
             // flags to tell if dear imgui wants to use your inputs.
@@ -193,7 +194,7 @@ namespace ui {
             ImGui::NewFrame();
             ImGui::ShowDemoWindow(&show_demo_window);
             if (show_demo_window) {
-                show_demo_window = ui::loop(io);
+                show_demo_window = ui::loop(imio);
             }
 
             // 3. Show another simple window.
@@ -223,14 +224,14 @@ namespace ui {
 
             if (!get_config().is_applied) {
                 L_INFO("Configuration changes were found!");
-                set_style(io);
+                set_style(imio);
             }
             glfwSwapBuffers(window);
         }
 #ifdef __EMSCRIPTEN__
         EMSCRIPTEN_MAINLOOP_END;
 #endif
-        ui::after(io);
+        ui::after(imio);
 
         // Cleanup
         ImGui_ImplOpenGL3_Shutdown();

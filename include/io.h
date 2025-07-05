@@ -12,7 +12,6 @@
 
 #include "common.h"
 #include <cstdint>
-#include <filesystem>
 
 namespace Json {
 class Value;
@@ -20,51 +19,6 @@ class Value;
 namespace lcs {
 class Scene;
 namespace io {
-
-    extern std::filesystem::path ROOT;
-    extern std::filesystem::path TMP;
-    extern std::filesystem::path LIBRARY;
-    extern std::filesystem::path LOCAL;
-    extern std::filesystem::path CACHE;
-
-    /**
-     * Initializes required folder structure for the application.
-     * If testing flag is enabled files are saved to a temporary location.
-     * @param is_testing whether testing mode is enabled or not
-     */
-    void init_paths(bool is_testing = false);
-
-    /**
-     * Reads contents of the given JSON file and returns it as a string.
-     * @param path to read
-     * @returns data
-     */
-    std::string read(const std::string& path);
-
-    /**
-     * Reads contents of the given binary file and writes it to the buffer.
-     * @param path to read
-     * @param data to save
-     * @returns whether reading is successful or not
-     */
-    bool read(const std::string& path, std::vector<unsigned char>& data);
-
-    /**
-     * Write contents of data to the desired path.
-     * @param path to save
-     * @param data to save
-     * @returns Whether the operation is successful or not
-     */
-    bool write(const std::string& path, const std::string& data);
-
-    /**
-     * Write contents of data to the desired path. Used for binary files.
-     * @param path to save
-     * @param data to save
-     * @returns Whether the operation is successful or not
-     */
-    bool write(const std::string& path, std::vector<unsigned char>& data);
-
     /**
      * Parse a component from given string data, if it's a valid component
      * insert it to _loaded_components

@@ -93,7 +93,7 @@ void ComponentContext::set_value(Node id, State value)
 
 uint64_t ComponentContext::run()
 {
-    L_INFO("Execute component: " << _execution_input);
+    L_INFO("Execute component: %b", _execution_input.to_ullong());
     _execution_output = 0;
     for (size_t i = 0; i < inputs.size(); i++) {
         State result = _execution_input[i] ? State::TRUE : State::FALSE;
@@ -108,7 +108,7 @@ uint64_t ComponentContext::run()
                 i, _parent->get_rel(outputs[i])->value == State::TRUE);
         }
     }
-    L_INFO("Component result: " << _execution_output);
+    L_INFO("Execute output: %b", _execution_output.to_ullong());
     return _execution_output.to_ullong();
 }
 
@@ -199,17 +199,11 @@ void ComponentNode::on_signal()
 
     for (auto sock : outputs) {
         for (relid out : sock.second) {
-            L_INFO(CLASS "Sending " << State_to_str(get(sock.first))
-                                    << " signal to rel@" << out);
+            L_MSG("Sending %s signal to rel@%d", State_to_str(get(sock.first)),
+                out);
             _parent->signal(out, get(sock.first));
         }
     }
-}
-
-std::ostream& operator<<(std::ostream& os, const ComponentNode& g)
-{
-    os << g._id << "( " << strlimit(g.path, 15) << " )";
-    return os;
 }
 
 } // namespace lcs

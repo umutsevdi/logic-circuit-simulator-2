@@ -3,9 +3,8 @@
 #include "core.h"
 #include <base64.h>
 #include <json/json.h>
-#include <fstream>
+#include <filesystem>
 #include <optional>
-#include <sstream>
 #include <string_view>
 
 namespace lcs::io {
@@ -23,135 +22,11 @@ struct Inode {
     std::string path;
     Scene scene;
 };
-
-fs::path TMP;
-fs::path ROOT;
-fs::path LIBRARY;
-fs::path LOCAL;
-fs::path CACHE;
-
 static std::string current_path;
 static std::map<std::string, Scene> COMPONENT_STORAGE;
 static std::vector<Inode> SCENE_STORAGE;
 static size_t active_scene = SIZE_MAX;
 static bool _has_changes   = false;
-
-void init_paths(bool is_testing)
-{
-    const char* home = std::getenv("HOME");
-#ifdef _WIN32
-    // TODO
-#elif defined(__linux__)
-    TMP  = "/tmp/" APPNAME_LONG;
-    ROOT = home ? std::string(home) + "/.local/share/" APPNAME_LONG
-                : "/tmp/" APPNAME_LONG;
-#elif defined(__unix__)
-    // TODO For BSD & Mac
-#endif
-    if (is_testing) {
-        time_t now = time(nullptr);
-        tm* t      = localtime(&now);
-        std::stringstream s_time { ".test_" };
-        s_time << "run" << "_" << t->tm_hour << "_" << t->tm_min << "_"
-               << t->tm_sec;
-        s_time <<
-#ifdef NDEBUG
-            "_rel"
-#else
-            "_dbg"
-#endif
-            ;
-        ROOT = TMP / s_time.str();
-        TMP  = TMP / s_time.str() / "tmp";
-
-        FLOG = std::ofstream { ROOT / "log.txt" };
-        L_INFO("Creating testing environment at:" << ROOT);
-    } else {
-        FLOG = std::ostringstream {};
-    }
-    LIBRARY = ROOT / "lib";
-    LOCAL   = ROOT / "local";
-    CACHE   = ROOT / ".cache";
-    try {
-        if (!fs::exists(TMP)) {
-            L_INFO("Creating" << TMP);
-
-            fs::create_directories(TMP);
-        }
-        if (!fs::exists(LIBRARY)) {
-            L_INFO("Creating" << LIBRARY);
-            fs::create_directories(LIBRARY);
-        }
-        if (!fs::exists(LOCAL)) {
-            L_INFO("Creating" << LOCAL);
-
-            fs::create_directories(LOCAL);
-        }
-        if (!fs::exists(CACHE)) {
-            L_INFO("Creating" << CACHE);
-            fs::create_directories(CACHE);
-        }
-    } catch (const std::exception& e) {
-        L_ERROR("Directory creation failed: " << e.what());
-    }
-}
-
-bool write(const std::string& path, const std::string& data)
-{
-    L_INFO("Saving to " << path);
-    try {
-        fs::create_directories(std::string {
-            path.begin(), path.begin() + path.find_last_of("/") });
-        std::ofstream outfile { path };
-        if (outfile) {
-            outfile << data;
-            return true;
-        }
-        L_ERROR("Failed to open file for writing: " << path);
-    } catch (const std::exception& e) {
-        L_ERROR("Exception in write_component: " << e.what());
-    }
-    return false;
-}
-
-bool write(const std::string& path, std::vector<unsigned char>& data)
-{
-    L_INFO("Saving to " << path);
-    try {
-        fs::create_directories(std::string {
-            path.begin(), path.begin() + path.find_last_of("/") });
-        std::ofstream outfile { path, std::ios::binary };
-        if (outfile) {
-            outfile.write((char*)data.data(), data.size());
-            return true;
-        }
-        L_ERROR("Failed to open file for writing: " << path);
-    } catch (const std::exception& e) {
-        L_ERROR("Exception in write_component: " << e.what());
-    }
-    return false;
-}
-
-std::string read(const std::string& path)
-{
-    L_INFO("Reading from " << path);
-    fs::path json_path = fs::path(path);
-    std::ifstream infile { json_path };
-    std::string content((std::istreambuf_iterator<char>(infile)),
-        std::istreambuf_iterator<char>());
-    return content;
-}
-
-bool read(const std::string& path, std::vector<unsigned char>& data)
-{
-    L_INFO("Reading from " << path);
-    fs::path json_path = fs::path(path);
-    std::ifstream infile { json_path, std::ios::binary };
-    std::vector<unsigned char> buffer(
-        std::istreambuf_iterator<char>(infile), {});
-    data = std::move(buffer);
-    return !data.empty();
-}
 
 Error load(const std::string& data, Scene& s)
 {
@@ -209,7 +84,6 @@ namespace scene {
 
     void notify_change(size_t idx)
     {
-        L_INFO("Change happened");
         if (idx == SIZE_MAX) {
             idx = active_scene;
         }
@@ -345,8 +219,8 @@ namespace scene {
     bool has_changes(void)
     {
         if (_has_changes) {
-            L_INFO("Updating tab(" << active_scene << ") at "
-                                   << SCENE_STORAGE[active_scene].path);
+            L_DEBUG("Updating tab(%d). Tab[%s]", active_scene,
+                SCENE_STORAGE[active_scene].path.c_str());
             _has_changes = false;
             return true;
         }

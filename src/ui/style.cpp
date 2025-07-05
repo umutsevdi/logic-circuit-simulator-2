@@ -177,9 +177,6 @@ static void _update_fonts(Configuration& cfg)
 static void _set_colors(
     ImVec4 clr_gui[ImGuiCol_COUNT], ImU32 clr_node[ImNodesCol_COUNT])
 {
-#define V4MUL(vec, pct, ...)                                                   \
-    ImVec4((vec).x*(pct), (vec).y*(pct), (vec).z*(pct), (vec).w __VA_ARGS__)
-#define DL(_a, _b) (t.is_dark ? (_a) : (_b))
     const LcsStyle& t = get_active_style();
 
     clr_gui[ImGuiCol_WindowBg]       = t.bg;
@@ -229,8 +226,8 @@ static void _set_colors(
     clr_gui[ImGuiCol_TitleBgActive]    = V4MUL(DL(t.black, t.white), 0.9f);
     clr_gui[ImGuiCol_TitleBgCollapsed] = t.bg;
 
-    clr_gui[ImGuiCol_Border]            = V4MUL(t.fg, 1.2f);
-    clr_gui[ImGuiCol_ResizeGrip]        = V4MUL(t.fg, 1.2f);
+    clr_gui[ImGuiCol_Border]            = V4MUL(DL(t.black, t.white), 0.9f);
+    clr_gui[ImGuiCol_ResizeGrip]        = V4MUL(DL(t.black, t.white), 0.9f);
     clr_gui[ImGuiCol_ResizeGripHovered] = t.fg;
     clr_gui[ImGuiCol_ResizeGripActive]  = t.fg;
     clr_gui[ImGuiCol_Separator]         = V4MUL(t.fg, 1.2f);
@@ -252,12 +249,11 @@ static void _set_colors(
         = V4MUL(DL(t.green, t.yellow_bright), 1.0f);
 
 #define CLRU32(...) ImGui::GetColorU32(__VA_ARGS__)
-    clr_node[ImNodesCol_GridBackground]
-        = CLRU32(V4MUL(t.bg, DL(1.2f, 0.8f)));
-    clr_node[ImNodesCol_GridLine]              = CLRU32(V4MUL(t.fg, 0.5f));
-    clr_node[ImNodesCol_GridLinePrimary]       = CLRU32(ImGuiCol_FrameBgActive);
-    clr_node[ImNodesCol_NodeBackground]        = CLRU32(ImGuiCol_WindowBg);
-    clr_node[ImNodesCol_NodeBackgroundHovered] = CLRU32(V4MUL(t.bg, 1.3f));
+    clr_node[ImNodesCol_GridBackground]  = CLRU32(V4MUL(t.bg, DL(1.2f, 0.8f)));
+    clr_node[ImNodesCol_GridLine]        = CLRU32(V4MUL(t.fg, 0.5f));
+    clr_node[ImNodesCol_GridLinePrimary] = CLRU32(ImGuiCol_FrameBgActive);
+    clr_node[ImNodesCol_NodeBackground]  = CLRU32(ImGuiCol_WindowBg);
+    clr_node[ImNodesCol_NodeBackgroundHovered]  = CLRU32(V4MUL(t.bg, 1.3f));
     clr_node[ImNodesCol_NodeBackgroundSelected] = CLRU32(V4MUL(t.bg, 1.5f));
 
     clr_node[ImNodesCol_NodeOutline] = CLRU32(V4MUL(t.fg, 0.5f));

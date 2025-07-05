@@ -21,36 +21,31 @@ static void _inspector_tab(NRef<Scene>, Node);
 
 void Inspector(NRef<Scene> scene)
 {
-    if (scene == nullptr) {
-        return;
-    }
-    static int node_list[1 << 20] = { 0 };
+    static int nodeids[1 << 20] = { 0 };
     static char buffer[128];
 
-    if (ImNodes::NumSelectedNodes() == 0) {
-        return;
-    }
-    int selection_s = ImNodes::NumSelectedNodes();
-    ImNodes::GetSelectedNodes(node_list);
-
     ImGui::Begin("Inspector", nullptr);
-    if (selection_s > 1) {
-        ImGui::BeginTabBar("InspectorTabs");
-        for (int i = 0; i < ImNodes::NumSelectedNodes(); i++) {
-            Node node = decode_pair(node_list[i]);
-            snprintf(
-                buffer, 128, "%s@%u", NodeType_to_str_full(node.type), node.id);
-            NodeType_to_str_full(node.type);
-            if (ImGui::BeginTabItem(
-                    buffer, nullptr, ImGuiTabItemFlags_NoReorder)) {
-                _inspector_tab(&scene, node);
-                ImGui::EndTabItem();
-            };
+    if (scene != nullptr && ImNodes::NumSelectedNodes() > 0) {
+        int len = ImNodes::NumSelectedNodes();
+        ImNodes::GetSelectedNodes(nodeids);
+        if (len > 1) {
+            ImGui::BeginTabBar("InspectorTabs");
+            for (int i = 0; i < ImNodes::NumSelectedNodes(); i++) {
+                Node node = decode_pair(nodeids[i]);
+                snprintf(buffer, 128, "%s@%u", NodeType_to_str_full(node.type),
+                    node.id);
+                NodeType_to_str_full(node.type);
+                if (ImGui::BeginTabItem(
+                        buffer, nullptr, ImGuiTabItemFlags_NoReorder)) {
+                    _inspector_tab(&scene, node);
+                    ImGui::EndTabItem();
+                };
+            }
+            ImGui::EndTabBar();
+        } else {
+            Node node = decode_pair(nodeids[0]);
+            _inspector_tab(&scene, node);
         }
-        ImGui::EndTabBar();
-    } else if (selection_s) {
-        Node node = decode_pair(node_list[0]);
-        _inspector_tab(&scene, node);
     }
     ImGui::End();
 }

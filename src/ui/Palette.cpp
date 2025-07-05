@@ -59,7 +59,7 @@ void Palette()
     }
     if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) { }
     if (is_dragging) {
-        L_INFO(dragged_node);
+        L_INFO("%s", dragged_node.to_str());
         ImNodes::SetNodeGridSpacePos(
             dragged_node.numeric(), ImGui::GetCursorPos());
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {

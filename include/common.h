@@ -10,9 +10,11 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
-#include <variant>
 
 #define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
@@ -26,89 +28,221 @@
 #endif
 #endif
 
+#include "errors.h"
 namespace lcs {
+/******************************************************************************
+                                    IO/
+******************************************************************************/
 
-enum Error {
-    /** Operation is successful. */
-    OK,
-    /** Object has 0 as node id. */
-    INVALID_NODEID,
-    /** Object has 0 as rel id. */
-    INVALID_RELID,
-    /** Given relationship does not exist within that scene. */
-    REL_NOT_FOUND,
-    /** Given node does not exist within that scene. */
-    NODE_NOT_FOUND,
-    /** Outputs can not be used as a from type. */
-    INVALID_FROM_TYPE,
-    /** Only components can have NodeType::COMPONENT_INPUT and
-       NodeType::COMPONENT_OUTPUT. */
-    NOT_A_COMPONENT,
-    /** Inputs can not be used as a to type. */
-    INVALID_TO_TYPE,
-    /** Attempted to bind a already connected input socket. */
-    ALREADY_CONNECTED,
-    /** Component socket is not connected. */
-    NOT_CONNECTED,
-    /** Attempted to execute or load a component that does not exist. */
-    COMPONENT_NOT_FOUND,
-    /** Deserialized node does not fulfill its requirements. */
-    INVALID_NODE,
-    /** Deserialized input does not fulfill its requirements. */
-    INVALID_INPUT,
-    /** Deserialized gate does not fulfill its requirements. */
-    INVALID_GATE,
-    /** Deserialized scene does not fulfill its requirements. */
-    INVALID_SCENE,
-    /** Deserialized scene name exceeds the character limits. */
-    INVALID_SCENE_NAME,
-    /** Deserialized name of the scene's author exceeds the character limits. */
-    INVALID_AUTHOR_NAME,
-    /** Deserialized description of the scene exceeds the character limits. */
-    INVALID_DESCRIPTION,
-    /** Deserialized component does not fulfill its requirements. */
-    INVALID_COMPONENT,
-    /** An error occurred while connecting a node during serialization. */
-    REL_CONNECT_ERROR,
-    /** Invalid dependency string. */
-    INVALID_DEPENDENCY_FORMAT,
-    /** Component contains a undefined dependency. */
-    UNDEFINED_DEPENDENCY,
-    /** Not a valid JSON document. */
-    INVALID_JSON_FORMAT,
-    /** Invalid file format */
-    NOT_A_JSON,
-    /** No such file or directory in given path */
-    NOT_FOUND,
-    /** Failed to save file*/
-    NO_SAVE_PATH_DEFINED,
-    /** Failed to send the request to the server. Request didn't arrive to the
-       server. */
-    REQUEST_FAILED,
-    /** Request was sent successfully to the server but the server responded
-     * with non 200 code message.*/
-    RESPONSE_ERROR,
-    /** Response is not a valid JSON string. */
-    JSON_PARSE_ERROR,
+extern std::filesystem::path ROOT;
+extern std::filesystem::path TMP;
+extern std::filesystem::path LIBRARY;
+extern std::filesystem::path LOCAL;
+extern std::filesystem::path CACHE;
+extern std::string INI;
+extern bool is_testing;
 
-    /** See error message.*/
-    KEYCHAIN_GENERIC_ERROR,
-    /** Key not found.*/
-    KEYCHAIN_NOT_FOUND,
-    /** Occurs on Windows when the number of characters in password is too
-       long.*/
-    KEYCHAIN_TOO_LONG,
-    /** Occurs on MacOS when the application fails to pass certain conditions.*/
-    KEYCHAIN_ACCESS_DENIED,
-    /** Attempted to start a flow that was already active. */
-    UNTERMINATED_FLOW,
+/**
+ * Initializes required folder structure for the application.
+ * If testing flag is enabled files are saved to a temporary location.
+ * @param is_testing whether testing mode is enabled or not
+ */
+void init_paths(bool is_testing = false);
 
-    /** Represents the how many types of error codes exists. Not a valid error
-       code.*/
-    ERROR_S
+/**
+ * Reads contents of the given JSON file and returns it as a string.
+ * @param path to read
+ * @returns data
+ */
+std::string read(const std::string& path);
+
+/**
+ * Reads contents of the given binary file and writes it to the buffer.
+ * @param path to read
+ * @param data to save
+ * @returns whether reading is successful or not
+ */
+bool read(const std::string& path, std::vector<unsigned char>& data);
+
+/**
+ * Write contents of data to the desired path.
+ * @param path to save
+ * @param data to save
+ * @returns Whether the operation is successful or not
+ */
+bool write(const std::string& path, const std::string& data);
+
+/**
+ * Write contents of data to the desired path. Used for binary files.
+ * @param path to save
+ * @param data to save
+ * @returns Whether the operation is successful or not
+ */
+bool write(const std::string& path, std::vector<unsigned char>& data);
+
+/******************************************************************************
+                                    TYPES
+******************************************************************************/
+
+/** id type for socket, sock_t = 0 means disconnected */
+typedef uint8_t sockid;
+
+/** Relationship identifier. Id is a non-zero identifier. */
+typedef uint32_t relid;
+
+/** Type of a node in a scene. */
+enum NodeType : uint8_t {
+    /** Logic gate. */
+    GATE,
+    /** A component that has been loaded externally. */
+    COMPONENT,
+    /** An input node that can be switched manually or by a clock. */
+    INPUT,
+    /** An output node. */
+    OUTPUT,
+    /** Input slot of a component. NOTE: Only available in Component Scenes. */
+    COMPONENT_INPUT,
+    /** Output slot of a component. NOTE: Only available in Component Scenes. */
+    COMPONENT_OUTPUT,
+
+    NODE_S
 };
 
-#define LCS_ERROR [[nodiscard("Error codes must be handled")]] Error
+constexpr const char* NodeType_to_str_full(NodeType s)
+{
+    switch (s) {
+    case NodeType::GATE: return "Gate";
+    case NodeType::COMPONENT: return "Component";
+    case NodeType::INPUT: return "Input";
+    case NodeType::OUTPUT: return "Output";
+    case NodeType::COMPONENT_INPUT: return "Component Input";
+    case NodeType::COMPONENT_OUTPUT: return "Component Output";
+    default: return "Unknown";
+    }
+}
+constexpr const char* NodeType_to_str(NodeType s)
+{
+    switch (s) {
+    case NodeType::GATE: return "Gate";
+    case NodeType::COMPONENT: return "Comp";
+    case NodeType::INPUT: return "In";
+    case NodeType::OUTPUT: return "Out";
+    case NodeType::COMPONENT_INPUT: return "Cin";
+    case NodeType::COMPONENT_OUTPUT: return "Cout";
+    default: return "Unknown";
+    }
+}
+
+/**
+ * Node is a handler that represents the index.
+ * id is a non-zero identifier. Together with the type, represents a unique
+ * node.
+ */
+struct Node {
+    Node(uint16_t _id = 0, NodeType _type = GATE);
+    Node(Node&&)                 = default;
+    Node(const Node&)            = default;
+    Node& operator=(Node&&)      = default;
+    Node& operator=(const Node&) = default;
+
+    bool operator<(const Node& n) const { return this->id < n.id; }
+
+    inline uint32_t numeric(void) const { return id | (type << 16); }
+    std::string to_str(void) const;
+
+    uint16_t id : 16;
+    NodeType type : 4;
+};
+
+/******************************************************************************
+                                  LOGGING/
+******************************************************************************/
+
+extern std::ofstream __TEST_LOG__;
+enum LogLevel { DEBUG, INFO, WARN, ERROR };
+static constexpr const char* LogLevel_str(LogLevel l)
+{
+    switch (l) {
+    case DEBUG: return "DEBUG";
+    case INFO: return "INFO ";
+    case WARN: return "WARN ";
+    default: return "ERROR";
+    }
+}
+
+struct Line {
+    LogLevel severity = DEBUG;
+    Node node         = 0;
+    std::array<char, 6> log_level_str {};
+    std::array<char, 30> obj {};
+    std::array<char, 36> file_line {};
+    std::array<char, 36> fn {};
+    std::array<char, 512> expr {};
+
+    template <typename... Args>
+    Line(LogLevel l, const char* file, int line, const char* _fn,
+        /*optional*/ Node object, const char* fmt, Args... args)
+    {
+        severity = l;
+        std::strncpy(log_level_str.data(), LogLevel_str(l),
+            log_level_str.max_size() - 1);
+        std::snprintf(
+            file_line.data(), file_line.max_size() - 1, "%s:%3d", file, line);
+        std::strncpy(fn.data(), _fn, fn.max_size() - 1);
+        snprintf(expr.data(), expr.max_size() - 1, fmt, args...);
+
+        if (object.id != 0 || object.type != 0) {
+            std::strncpy(
+                obj.data(), object.to_str().c_str(), obj.max_size() - 1);
+            node = object;
+        }
+    }
+    Line() = default;
+};
+
+void l_push(LogLevel l, Line&& line);
+
+void l_iterate(std::function<void(const Line& l)> f);
+
+/** Runs an assertion, displays an error message on failure. Intended for
+ * macros. */
+int __expect(std::function<bool(void)> expr, const char* function,
+    const char* file, int line, const char* str_expr) noexcept;
+
+#define __LLOG__(STATUS, ...)                                                  \
+    l_push(STATUS,                                                             \
+        Line { STATUS, __FILE_NAME__, __LINE__, __FUNCTION__, __VA_ARGS__ })
+
+#define L_DEBUG(...) __LLOG__(DEBUG, 0, __VA_ARGS__)
+#define L_INFO(...) __LLOG__(INFO, 0, __VA_ARGS__)
+#define L_WARN(...) __LLOG__(WARN, 0, __VA_ARGS__)
+#define L_ERROR(...) __LLOG__(ERROR, 0, __VA_ARGS__)
+#define L_MSG(...) __LLOG__(INFO, this->id(), __VA_ARGS__)
+
+#ifndef NDEBUG
+/** Runs an assertion. Displays an error message on failure. In debug builds
+ * also crashes the application. */
+#define lcs_assert(expr)                                                       \
+    {                                                                          \
+        if (__expect([&]() mutable -> bool { return expr; },                   \
+                __PRETTY_FUNCTION__, __FILE_NAME__, __LINE__, #expr)) {        \
+            exit(1);                                                           \
+        }                                                                      \
+    }
+#else
+#define L_DEBUG(...)
+#define lcs_assert(expr)                                                       \
+    if ((expr) == 0) {                                                         \
+        L_ERROR("Assertion " #expr " failed!");                                \
+    }
+#endif
+
+#define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
+#define ERROR(err) (L_ERROR(#err)), err
+#define VEC_TO_STR(os, vec, ...)                                               \
+    for (const auto& iter : vec) {                                             \
+        os << __VA_ARGS__(iter) << ",\t";                                      \
+    }
 
 /**
  * A custom container class that stores a pointer to an object defined
@@ -135,18 +269,6 @@ public:
     inline T* operator&() { return _v; }
     inline T& operator*() { return *_v; }
     inline const T& operator*() const { return *_v; }
-
-    friend std::ostream& operator<<(std::ostream& os, const NRef<T>& g)
-    {
-        os << "NRef(";
-        if (g._v != nullptr) {
-            os << *g._v;
-        } else {
-            os << "null";
-        }
-        os << ")";
-        return os;
-    }
 
 private:
     T* _v;
@@ -194,87 +316,6 @@ protected:
 };
 
 } // namespace lcs
-
-std::vector<std::string> split(std::string& s, const std::string& delimiter);
-std::vector<std::string> split(std::string& s, const char delimiter);
-
-/******************************************************************************
-                                  LOGGING/
-******************************************************************************/
-
-#include <fstream>
-extern std::variant<std::ofstream, std::ostringstream> FLOG;
-/** Returns whether the logging target supports colors or not. */
-bool is_color_enabled(void);
-
-/** Runs an assertion, displays an error message on failure. Intended for
- * macros. */
-int __expect(std::function<bool(void)> expr, const char* function,
-    const char* file, int line, const char* str_expr) noexcept;
-/** Generates the logger prefix, Intended for macros. */
-std::ostream& _log_pre(std::ostream& stream, const char* status,
-    const char* file_name, int line, const char* function);
-/** Generates the logger prefix for tests, Intended for macros. */
-std::ostream& _log_pre_f(
-    const char* status, const char* file_name, int line, const char* function);
-
-#define F_BOLD "\033[1m"
-#define F_UNDERLINE "\033[4m"
-#define F_RED "\033[31m"
-#define F_GREEN "\033[32m"
-#define F_BLUE "\033[34m"
-#define F_RESET "\033[0m"
-
-#define _INFO "INFO  | "
-#define _WARN "WARN  | "
-#define _ERROR "ERROR | "
-#define _FATAL "FATAL | "
-#define __F_INFO F_GREEN _INFO F_RESET
-#define __F_WARN F_GREEN _WARN F_RESET
-#define __F_ERROR F_RED _ERROR F_RESET
-#define __F_FATAL F_RED _FATAL F_RESET
-
-#define __LLOG_CUSTOM__(status, stream, file, line, function, ...)             \
-    ((_log_pre(stream, (__F_##status), file, line, function)                   \
-         << __VA_ARGS__ << std::endl),                                         \
-        (_log_pre_f((_##status), file, line, function)                         \
-            << __VA_ARGS__ << std::endl))
-
-#define __LLOG__(STATUS, _STREAM, ...)                                         \
-    __LLOG_CUSTOM__(STATUS, _STREAM, __FILE_NAME__, __LINE__,                  \
-        __PRETTY_FUNCTION__, __VA_ARGS__)
-
-#define CLASS *this << "\t"
-
-#define L_WARN(...) __LLOG__(WARN, std::cout, __VA_ARGS__)
-#define L_ERROR(...) __LLOG__(ERROR, std::cerr, __VA_ARGS__)
-
-#ifndef NDEBUG
-#define L_INFO(...) __LLOG__(INFO, std::cout, __VA_ARGS__)
-/** Runs an assertion. Displays an error message on failure. In debug builds
- * also crashes the application. */
-#define lcs_assert(expr)                                                       \
-    {                                                                          \
-        if (__expect([&]() mutable -> bool { return expr; },                   \
-                __PRETTY_FUNCTION__, __FILE_NAME__, __LINE__, #expr)) {        \
-            exit(1);                                                           \
-        }                                                                      \
-    }
-#else
-#define L_INFO(...)
-#define lcs_assert(expr)                                                       \
-    if ((expr) == 0) {                                                         \
-        L_ERROR(F_RED F_BOLD "Assertion " << #expr << " failed!" F_RESET);     \
-    }
-#endif
-
-#define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
-#define ERROR(err) (L_ERROR(#err)), err
-#define VEC_TO_STR(os, vec, ...)                                               \
-    for (const auto& iter : vec) {                                             \
-        os << __VA_ARGS__(iter) << ",\t";                                      \
-    }
-
 /******************************************************************************
                                   /LOGGING
 ******************************************************************************/
@@ -297,3 +338,6 @@ template <typename... Args> const char* get_first(const char* first, Args...)
 {
     return first;
 }
+
+std::vector<std::string> split(std::string& s, const std::string& delimiter);
+std::vector<std::string> split(std::string& s, const char delimiter);

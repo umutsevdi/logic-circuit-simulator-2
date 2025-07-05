@@ -362,7 +362,6 @@ void Scene::signal(relid id, State value)
     }
     if (auto r = _relations.find(id); r != _relations.end()) {
         r->second.value = value;
-        L_INFO(r->second);
         if (r->second.to_node.type != NodeType::COMPONENT_OUTPUT) {
             auto n = get_base(r->second.to_node);
             if (n != nullptr) {
@@ -431,9 +430,9 @@ std::string Scene::to_filepath(void) const
     file_name = base64_encode(file_name + "/" + std::to_string(version), true)
         + ".json";
     if (str_author.empty() || str_author == "local") {
-        p = io::LOCAL / file_name;
+        p = LOCAL / file_name;
     } else {
-        p = io::LIBRARY / str_author / file_name;
+        p = LIBRARY / str_author / file_name;
     }
     return p;
 }

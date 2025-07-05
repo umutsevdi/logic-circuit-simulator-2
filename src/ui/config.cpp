@@ -122,11 +122,11 @@ LCS_ERROR lcs::from_json<ui::Configuration>(
 namespace ui {
     void load_config(void)
     {
-        std::string data = io::read(io::ROOT / "config.json");
+        std::string data = read(ROOT / "config.json");
         if (data == "") {
-            L_ERROR("Configuration file was not found at "
-                << io::ROOT / "config.json");
-            io::write(io::ROOT / "config.json",
+            L_ERROR(
+                "Configuration file was not found at %s", ROOT / "config.json");
+            write(ROOT / "config.json",
                 to_json<Configuration>(_config).toStyledString());
             return;
         }
@@ -135,7 +135,7 @@ namespace ui {
         Json::Reader r;
         if (!r.parse(data, v)) {
             L_ERROR("Invalid configuration file format. Overwriting.");
-            io::write(io::ROOT / "config.json",
+            write(ROOT / "config.json",
                 to_json<Configuration>(_config).toStyledString());
             return;
         }
@@ -156,7 +156,7 @@ namespace ui {
 
     void save_config(void)
     {
-        io::write(io::ROOT / "config.json",
+        write(ROOT / "config.json",
             to_json<Configuration>(_config).toStyledString());
     }
 } // namespace ui

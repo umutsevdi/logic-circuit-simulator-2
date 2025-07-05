@@ -13,7 +13,9 @@
 #include "common.h"
 #include "ui/util.h"
 
+
 namespace lcs::ui {
+
 class Configuration {
 public:
     enum ThemePreference {

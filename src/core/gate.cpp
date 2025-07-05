@@ -68,8 +68,7 @@ void GateNode::on_signal()
         _is_disabled = true;
     }
     for (relid& out : output) {
-        L_INFO(CLASS "Sending " << State_to_str(get()) << " signal to rel@"
-                                << out);
+        L_MSG("Sending %s signal to rel@%d", State_to_str(get()), out);
         _parent->signal(out, get());
     }
 }
@@ -98,13 +97,6 @@ bool GateNode::decrement()
     inputs.pop_back();
     on_signal();
     return true;
-}
-
-std::ostream& operator<<(std::ostream& os, const GateNode& g)
-{
-    os << g.id() << "( " << GateType_to_str(g.type()) << ", "
-       << State_to_str(g._value) << " )";
-    return os;
 }
 
 static bool _and(const std::vector<bool>& in)

@@ -12,8 +12,8 @@ static const char* _PATH_FILTER[1] = { "*.json" };
 
 void open_flow()
 {
-    const char* path = tinyfd_openFileDialog("Select a scene",
-        io::LIBRARY.c_str(), 1, _PATH_FILTER, "LCS Scene File", 0);
+    const char* path = tinyfd_openFileDialog("Select a scene", LIBRARY.c_str(),
+        1, _PATH_FILTER, "LCS Scene File", 0);
     if (path != nullptr) {
         size_t idx;
         Error err = io::scene::open(path, idx);
@@ -26,7 +26,7 @@ bool save_as_flow(const char* title)
 {
 
     const char* new_path = tinyfd_saveFileDialog(
-        title, io::LOCAL.c_str(), 1, _PATH_FILTER, "Save the scene as");
+        title, LOCAL.c_str(), 1, _PATH_FILTER, "Save the scene as");
     if (new_path != nullptr) {
         std::string path_as_str { new_path };
         if (path_as_str.find(".json") != std::string::npos) {

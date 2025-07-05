@@ -11,7 +11,8 @@ namespace lcs::ui {
 void NodeEditor(NRef<Scene> scene)
 {
     ImGui::Begin("Node Editor", nullptr,
-        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration);
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration
+            | ImGuiWindowFlags_NoBringToFrontOnFocus);
     {
         const LcsStyle& style = get_active_style();
         ImNodes::BeginNodeEditor();

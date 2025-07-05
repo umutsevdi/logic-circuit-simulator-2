@@ -14,6 +14,10 @@
 #include <imgui.h>
 namespace lcs::ui {
 
+#define V4MUL(vec, pct, ...)                                                   \
+    ImVec4((vec).x*(pct), (vec).y*(pct), (vec).z*(pct), (vec).w __VA_ARGS__)
+#define DL(_a, _b) (t.is_dark ? (_a) : (_b))
+
 enum FontFlags {
     /** Size Flag: SMALL */
     SMALL = 0b00000,

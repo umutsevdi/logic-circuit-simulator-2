@@ -25,10 +25,10 @@ TEST_CASE("Save a scene and load")
 
     std::string s_str = to_json<Scene>(*s).toStyledString();
 
-    REQUIRE_EQ(io::scene::save_as(io::TMP / "test.json"), lcs::Error::OK);
+    REQUIRE_EQ(io::scene::save_as(TMP / "test.json"), lcs::Error::OK);
     REQUIRE_EQ(io::scene::close(), lcs::Error::OK);
     size_t idx = -1;
-    REQUIRE_EQ(io::scene::open(io::TMP / "test.json", idx), lcs::Error::OK);
+    REQUIRE_EQ(io::scene::open(TMP / "test.json", idx), lcs::Error::OK);
     io::scene::get(idx);
     REQUIRE(idx != -1);
     REQUIRE_EQ(s_str, to_json<Scene>(*io::scene::get()).toStyledString());
