@@ -13,6 +13,7 @@ fs::path ROOT;
 fs::path LIBRARY;
 fs::path LOCAL;
 fs::path CACHE;
+fs::path MISC;
 std::string INI;
 std::ofstream __TEST_LOG__;
 
@@ -49,28 +50,33 @@ void init_paths(bool _is_testing)
         TMP  = TMP / s_time.str() / "tmp";
 
         __TEST_LOG__ = std::ofstream { ROOT / "log.txt" };
-        L_INFO("Creating testing environment at %s", ROOT.c_str());
+        L_DEBUG("Creating testing environment at %s", ROOT.c_str());
     }
-    LIBRARY = ROOT / "lib";
-    LOCAL   = ROOT / "local";
+    LIBRARY = ROOT / "pkg" / "lib";
+    LOCAL   = ROOT / "pkg" / "local";
     CACHE   = ROOT / ".cache";
     INI     = ROOT / "loc.ini";
+    MISC    = ROOT / "misc";
     try {
         if (!fs::exists(TMP)) {
-            L_INFO("Creating %s directory.", TMP.c_str());
+            L_DEBUG("Creating %s directory.", TMP.c_str());
             fs::create_directories(TMP);
         }
+        if (!fs::exists(MISC)) {
+            L_DEBUG("Creating %s directory.", MISC.c_str());
+            fs::create_directories(MISC);
+        }
         if (!fs::exists(LIBRARY)) {
-            L_INFO("Creating %s directory.", LIBRARY.c_str());
+            L_DEBUG("Creating %s directory.", LIBRARY.c_str());
             fs::create_directories(LIBRARY);
         }
         if (!fs::exists(LOCAL)) {
-            L_INFO("Creating %s directory.", LOCAL.c_str());
+            L_DEBUG("Creating %s directory.", LOCAL.c_str());
 
             fs::create_directories(LOCAL);
         }
         if (!fs::exists(CACHE)) {
-            L_INFO("Creating %s directory.", CACHE.c_str());
+            L_DEBUG("Creating %s directory.", CACHE.c_str());
             fs::create_directories(CACHE);
         }
         if (!fs::exists(INI)) {
@@ -78,9 +84,9 @@ void init_paths(bool _is_testing)
 #include "default_ini.txt"
                 ;
             lcs::write(INI, _default_ini);
-            L_INFO("Placing default layout");
+            L_DEBUG("Placing default layout");
         }
-        L_INFO(APPNAME_LONG " file system is ready.");
+        L_DEBUG(APPNAME_LONG " file system is ready.");
     } catch (const std::exception& e) {
         L_ERROR("Directory creation failed. %s ", e.what());
     }
@@ -88,7 +94,7 @@ void init_paths(bool _is_testing)
 
 bool write(const std::string& path, const std::string& data)
 {
-    L_INFO("Save %s.", path.c_str());
+    L_DEBUG("Save %s.", path.c_str());
     try {
         fs::create_directories(std::string {
             path.begin(), path.begin() + path.find_last_of("/") });
@@ -106,7 +112,7 @@ bool write(const std::string& path, const std::string& data)
 
 bool write(const std::string& path, std::vector<unsigned char>& data)
 {
-    L_INFO("Save %s.", path.c_str());
+    L_DEBUG("Save %s.", path.c_str());
     try {
         fs::create_directories(std::string {
             path.begin(), path.begin() + path.find_last_of("/") });
@@ -124,7 +130,7 @@ bool write(const std::string& path, std::vector<unsigned char>& data)
 
 std::string read(const std::string& path)
 {
-    L_INFO("Reading %s.", path.c_str());
+    L_DEBUG("Opening %s.", path.c_str());
     fs::path json_path = fs::path(path);
     std::ifstream infile { json_path };
     std::string content((std::istreambuf_iterator<char>(infile)),
@@ -134,7 +140,7 @@ std::string read(const std::string& path)
 
 bool read(const std::string& path, std::vector<unsigned char>& data)
 {
-    L_INFO("Reading %s.", path.c_str());
+    L_DEBUG("Opening %s.", path.c_str());
     fs::path json_path = fs::path(path);
     std::ifstream infile { json_path, std::ios::binary };
     std::vector<unsigned char> buffer(

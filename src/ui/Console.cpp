@@ -24,8 +24,9 @@ void Console(void)
     }
     const LcsStyle& style = get_active_style();
     ImGui::Begin("Console", &is_open);
-    ImGui::BeginTable(
-        "##Logger", 4, ImGuiTableFlags_Reorderable | ImGuiTableFlags_Borders);
+    ImGui::BeginTable("##Logger", 4,
+        ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersInner
+            | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY);
     ImGui::TableHeader("##Console");
     ImGui::TableSetupColumn("Severity", ImGuiTableColumnFlags_WidthFixed);
     ImGui::NextColumn();
@@ -36,14 +37,16 @@ void Console(void)
     ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
 
-    lcs::l_iterate([&style](const Line& l) {
+    lcs::l_iterate([&style](size_t idx, const Line& l) {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::TextColored(
             log_color(style, l.severity), "%s", l.log_level_str.begin());
         if (!std::string_view { l.obj.data() }.empty()) {
             ImGui::TableSetColumnIndex(1);
+            ImGui::PushID(idx);
             NodeTypeTitle(l.node);
+            ImGui::PopID();
         }
         ImGui::TableSetColumnIndex(2);
         ImGui::TextColored(style.cyan, "%s", l.fn.begin());
@@ -51,6 +54,8 @@ void Console(void)
         ImGui::TextUnformatted(l.expr.begin());
     });
     ImGui::EndTable();
+    ImGuiIO imio = ImGui::GetIO();
+    ImGui::Text("(%.1f FPS)", imio.Framerate);
     ImGui::End();
 }
 

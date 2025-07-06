@@ -77,9 +77,7 @@ template <> void NodeView<InputNode>(NRef<InputNode> node, bool has_changes)
     if (node->is_timer()) {
         float freq_value = node->_freq.value();
         ImGui::PushItemWidth(60);
-        if (ImGui::InputFloat("Hz", &freq_value, 0.25f, 1.0f, "%.2f")) {
-            freq_value = std::max(
-                0.25f, std::min(std::round(freq_value * 4.0f) / 4.0f, 10.0f));
+        if (ImGui::SliderFloat("Hz", &freq_value, 0.1f, 5.0f, "%.1f")) {
             if (freq_value != node->_freq.value()) {
                 node->_freq = freq_value;
                 io::scene::notify_change();
@@ -93,7 +91,7 @@ template <> void NodeView<InputNode>(NRef<InputNode> node, bool has_changes)
         }
     }
     ImGui::SameLine();
-    ImGui::Text("%d", 0);
+    ImGui::Text("%d", 1);
     ImNodes::EndOutputAttribute();
 
     ImNodes::EndNode();
@@ -110,7 +108,7 @@ template <> void NodeView<OutputNode>(NRef<OutputNode> node, bool has_changes)
 
     ImNodes::BeginInputAttribute(encode_pair(node->id(), 0, false),
         to_shape(node->is_connected(), false));
-    ImGui::Text("%d", 0);
+    ImGui::Text("%d", 1);
     ImNodes::EndInputAttribute();
 
     ImNodes::EndNode();
@@ -131,12 +129,12 @@ template <> void NodeView<GateNode>(NRef<GateNode> node, bool has_changes)
                 to_shape(node->output.size() > 0, false));
             ImGui::SetCursorPosX(
                 ImGui::GetCursorPosX() + ImGui::CalcTextSize("         ").x);
-            ImGui::Text("0");
+            ImGui::Text("1");
             ImNodes::EndOutputAttribute();
         }
         ImNodes::BeginInputAttribute(encode_pair(node->id(), i, false),
             to_shape(node->is_connected(), true));
-        ImGui::Text("%zu", i);
+        ImGui::Text("%zu", i + 1);
         ImNodes::EndInputAttribute();
     }
 

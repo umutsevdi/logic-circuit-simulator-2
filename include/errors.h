@@ -86,9 +86,55 @@ enum Error {
     KEYCHAIN_ACCESS_DENIED,
     /** Attempted to start a flow that was already active. */
     UNTERMINATED_FLOW,
-
+    /** Couldn't complete the flow in expected duration. */
+    FLOW_TIMEOUT,
+    /** Flow failed. */
+    FLOW_FAILURE,
     /** Represents the how many types of error codes exists. Not a valid error
        code.*/
     ERROR_S
+};
+
+constexpr const char* errmsg(Error e)
+{
+    switch (e) {
+    case OK: return "Operation is successful.";
+    case INVALID_NODEID: return "Object has invalid ID.";
+    case INVALID_RELID: return "Object has invalid relaitonship ID.";
+    case REL_NOT_FOUND: return "The relationship was not found.";
+    case NODE_NOT_FOUND: return "The nodewas not found.";
+    case INVALID_FROM_TYPE: return "Outputs can not be used as a from type.";
+    case NOT_A_COMPONENT: return "Only components can have CIN or COUT.";
+    case INVALID_TO_TYPE: return "Inputs can not be used as a to type.";
+    case ALREADY_CONNECTED: return "Input socket is already connected.";
+    case NOT_CONNECTED: return "Component socket is not connected. ";
+    case COMPONENT_NOT_FOUND: return "Component was not found.";
+    case INVALID_NODE: return "Invalid node format.";
+    case INVALID_INPUT: return "Invalid InputNode format.";
+    case INVALID_GATE: return "Invalid GateNode format.";
+    case INVALID_SCENE: return "Invalid scene format. ";
+    case INVALID_SCENE_NAME: return "Scene name is too long.";
+    case INVALID_AUTHOR_NAME: return "Author name is too long.";
+    case INVALID_DESCRIPTION: return "Description is too long.";
+    case INVALID_COMPONENT: return "Invalid component.";
+    case REL_CONNECT_ERROR: return "An error occurred while connecting a node.";
+    case INVALID_DEPENDENCY_FORMAT: return "Invalid dependency string. ";
+    case UNDEFINED_DEPENDENCY: return "Undefined dependency.";
+    case INVALID_JSON_FORMAT: return "Invalid JSON document.";
+    case NOT_A_JSON: return "Invalid file format.";
+    case NOT_FOUND: return "No such file or directory.";
+    case NO_SAVE_PATH_DEFINED: return "Failed to save file.";
+    case REQUEST_FAILED: return "Failed to send the request.";
+    case RESPONSE_ERROR: return "Bad request.";
+    case JSON_PARSE_ERROR: return "Response is not a valid JSON string.";
+    case KEYCHAIN_GENERIC_ERROR: return "Keychain couldn't load the password.";
+    case KEYCHAIN_NOT_FOUND: return "Key was not found.";
+    case KEYCHAIN_TOO_LONG: return "[WindowsOnly] key is too long.";
+    case KEYCHAIN_ACCESS_DENIED: return "[AppleOnly] Authorization failure.";
+    case UNTERMINATED_FLOW: return "Already active flowl.";
+    case FLOW_TIMEOUT: return "The flow exceeded the expected time limit.";
+    case FLOW_FAILURE: return "The flow encountered an error.";
+    default: return "Unknown Error.";
+    }
 };
 } // namespace lcs

@@ -26,7 +26,7 @@ static size_t _write_cb(
 Error get_request(
     const std::string& url, std::string& resp, const std::string& authorization)
 {
-    L_INFO("Sending GET to %s\tAuth: %s", url.c_str(), authorization.c_str());
+    L_DEBUG("Sending GET to %s\tAuth: %s", url.c_str(), authorization.c_str());
     CURL* curl = curl_easy_init();
     if (!curl) {
         resp = "";
@@ -58,9 +58,9 @@ Error get_request(
 
     long response_code;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+    L_DEBUG("Received: %d Payload: %s", response_code, readBuffer.c_str());
     if (response_code != 200) {
         resp = readBuffer;
-        L_INFO("Received: %d Payload: %s", response_code, readBuffer.c_str());
         curl_easy_cleanup(curl);
         return ERROR(Error::RESPONSE_ERROR);
     }
@@ -73,7 +73,7 @@ Error get_request(
 Error post_request(const std::string& url, std::string& resp,
     const std::string& req, const std::string& authorization)
 {
-    L_INFO("Sending POST to %s\tAuth:%s\tReq: %s", url.c_str(),
+    L_DEBUG("Sending POST to %s\tAuth:%s\tReq: %s", url.c_str(),
         authorization.c_str(), req.c_str());
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -107,8 +107,8 @@ Error post_request(const std::string& url, std::string& resp,
 
     long response_code;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+    L_DEBUG("Received: %d Payload: %s", response_code, readBuffer.c_str());
     if (response_code != 200) {
-        L_INFO("Received: %d Payload: %s", response_code, readBuffer.c_str());
         resp = "";
         curl_easy_cleanup(curl);
         return ERROR(Error::RESPONSE_ERROR);
@@ -131,22 +131,23 @@ static size_t write_bin_cb(
 Error get_request(const std::string& url, std::vector<unsigned char>& resp,
     const std::string&)
 {
-    CURL* curl;
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        resp.clear();
+        return ERROR(Error::REQUEST_FAILED);
+    }
     CURLcode res;
 
-    curl = curl_easy_init();
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_bin_cb);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            curl_easy_cleanup(curl);
-            return ERROR(Error::REQUEST_FAILED);
-        }
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_bin_cb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
         curl_easy_cleanup(curl);
+        return ERROR(Error::REQUEST_FAILED);
     }
+    curl_easy_cleanup(curl);
     return Error::OK;
 }
 

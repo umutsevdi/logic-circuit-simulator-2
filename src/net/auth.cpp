@@ -28,7 +28,7 @@ namespace gh {
             "https://github.com/login/device/code?client_id=" + _id
                 + "&scope=read:user",
             body);
-        L_INFO("Received: %s", body.c_str());
+        L_DEBUG("Received: %s", body.c_str());
         if (err) {
             return err;
         }
@@ -48,12 +48,12 @@ namespace gh {
         req["client_id"]   = client_id;
         req["device_code"] = device_code;
         req["grant_type"]  = "urn:ietf:params:oauth:grant-type:device_code";
-        L_INFO("Sending: %s", req.toStyledString().c_str());
+        L_DEBUG("Sending: %s", req.toStyledString().c_str());
 
         std::string body;
         Error err = post_request("https://github.com/login/oauth/access_token",
             body, req.toStyledString());
-        L_INFO("Received %s", body.c_str());
+        L_DEBUG("Received %s", body.c_str());
         Json::Reader parser {};
         if (!parser.parse(body, response)) {
             return ERROR(Error::JSON_PARSE_ERROR);
@@ -72,7 +72,7 @@ namespace api {
         std::string resp;
         Error err
             = get_request(ui::get_config().api_proxy + "/api/client_id", resp);
-        L_INFO("Received %s", resp.c_str());
+        L_DEBUG("Received %s", resp.c_str());
         if (err) {
             return err;
         }
@@ -90,7 +90,7 @@ namespace api {
         std::string resp;
         Error err = get_request(
             ui::get_config().api_proxy + "/api/login", resp, token);
-        L_INFO("Received: %s", resp.c_str());
+        L_DEBUG("Received: %s", resp.c_str());
         if (err) {
             return err;
         }
@@ -111,7 +111,7 @@ Error AuthenticationFlow::start(void)
     }
     _auth        = {};
     _last_status = STARTED;
-    L_INFO("Starting flow");
+    L_INFO("Starting authentication.");
     Json::Value v;
     Error err = api::_get_client_id(v);
     if (err) {
@@ -149,7 +149,7 @@ Flow::State AuthenticationFlow::poll(void)
     }
     time_t now = time(nullptr);
     if (difftime(now, this->start_time) > this->expires_in) {
-        _last_status = (ERROR(Flow::State::TIMEOUT));
+        _last_status = (ERROR(Error::FLOW_TIMEOUT), Flow::State::TIMEOUT);
         return _last_status;
     }
     if (difftime(now, this->_last_poll) < this->interval * 1.5) {
@@ -166,7 +166,7 @@ Flow::State AuthenticationFlow::poll(void)
                 _reason = resp["error"].asString();
             }
             L_WARN("Received %s", _reason);
-            _last_status = (ERROR(Flow::State::BROKEN));
+            _last_status = (ERROR(Error::FLOW_FAILURE), Flow::State::BROKEN);
             return _last_status;
         }
 
@@ -189,11 +189,11 @@ Flow::State AuthenticationFlow::poll(void)
             if (v["message"].isString()) {
                 _reason = v["message"].asString();
             }
-            _last_status = (ERROR(Flow::State::BROKEN));
+            _last_status = (ERROR(Error::FLOW_FAILURE), Flow::State::BROKEN);
             return _last_status;
         }
         if (!v["login"].isString()) {
-            _last_status = (ERROR(Flow::State::BROKEN));
+            _last_status = (ERROR(Error::FLOW_FAILURE), Flow::State::BROKEN);
             return _last_status;
         }
 
@@ -224,6 +224,7 @@ Flow::State AuthenticationFlow::poll(void)
     }
 
     _last_status = Flow::State::DONE;
+    L_INFO("Authetication succesfull.");
     return Flow::State::DONE;
 }
 
@@ -236,7 +237,7 @@ Error AuthenticationFlow::start_existing(void)
     _last_status      = STARTED;
     std::string login = read(ROOT / ".login");
     if (login == "") {
-        return ERROR(Error::KEYCHAIN_NOT_FOUND);
+        return WARN(KEYCHAIN_NOT_FOUND);
     }
     keychain::Error keyerr;
     std::string pwd

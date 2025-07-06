@@ -26,8 +26,6 @@ void MenuBar(void)
         ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_PopupBg));
     ImGui::PushStyleColor(
         ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-        ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered));
 
     ImGui::PushFont(get_font(FontFlags::NORMAL));
     if (ImGui::BeginMainMenuBar()) {
@@ -111,10 +109,7 @@ void MenuBar(void)
     ImGui::PopFont();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
-    ImGui::PopStyleColor();
     _show_preferences_ui();
-
-    ImGui::SameLine();
 }
 
 void TabWindow(void)
@@ -256,9 +251,10 @@ void _show_preferences_ui()
     if (!pref_show) {
         return;
     }
+    bool keep = true;
     const static ImVec2 __table_l_size
         = ImGui::CalcTextSize("LIGHT THEME STYLE");
-    ImGui::Begin("Preferences", &pref_show,
+    ImGui::Begin("Preferences", &keep,
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
             | (!cfg.is_saved ? ImGuiWindowFlags_UnsavedDocument
                              : ImGuiWindowFlags_None));
@@ -273,18 +269,8 @@ void _show_preferences_ui()
         ImGui::NextColumn();
         ImGui::TableSetupColumn("##Value", ImGuiTableColumnFlags_WidthStretch);
 
-        TablePair(Field("Font Size"));
-        if (ImGui::InputFloat("##FontSize", &cfg.font_size, 0.5, 1.0, "%.1f")) {
-            if (cfg.font_size < 4) {
-                cfg.font_size = 4;
-            }
-            cfg.is_applied = false;
-        };
         TablePair(Field("UI Scale"));
-        if (ImGui::InputInt("##UIScale", &cfg.scale, 5, 10)) {
-            if (cfg.scale < 5) {
-                cfg.scale = 5;
-            }
+        if (ImGui::SliderInt("%", &cfg.scale, 75, 150)) {
             cfg.is_applied = false;
         };
         {
@@ -386,9 +372,10 @@ void _show_preferences_ui()
             "Always Dark",
         };
         TablePair(Field("Rounded Corners"));
-        if (ImGui::Checkbox("##Rounded Corners", &cfg.rounded_corners)) {
+        if (ImGui::SliderInt(
+                "##Rounded Corners", &cfg.rounded_corners, 0, 20)) {
             cfg.is_applied = false;
-        };
+        }
         TablePair(Field("Theme Preference"));
         if (ImGui::Combo(
                 "##ThemePreference", (int*)&cfg.preference, pref_table, 3)) {
@@ -401,6 +388,10 @@ void _show_preferences_ui()
             cfg.startup_win_y = p.y;
             cfg.is_applied    = false;
         }
+        TablePair(Field("Start in Fullscreen"));
+        if (ImGui::Checkbox("##Fullscreen", &cfg.start_fullscreen)) {
+            cfg.is_applied = false;
+        };
         ImGui::EndTable();
     }
     EndSection();
@@ -438,6 +429,14 @@ void _show_preferences_ui()
     }
     ImGui::EndDisabled();
     ImGui::End();
+    if (!keep) {
+        if (cfg.is_applied && !cfg.is_saved) {
+            L_INFO("Reset to last save");
+            cfg            = load_config();
+            cfg.is_applied = false;
+        }
+        pref_show = false;
+    }
 }
 
 } // namespace lcs::ui

@@ -91,6 +91,7 @@ namespace ui {
         // Create window with graphics context
         load_config();
         Configuration& cfg = get_config();
+
         GLFWwindow* window = glfwCreateWindow(cfg.startup_win_x,
             cfg.startup_win_y, "Logic Circuit Simulator", nullptr, nullptr);
         if (window == nullptr) {
@@ -98,6 +99,9 @@ namespace ui {
         }
         glfwMakeContextCurrent(window);
         glfwSwapInterval(1); // Enable vsync
+        if (cfg.start_fullscreen) {
+            glfwMaximizeWindow(window);
+        }
 
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
@@ -213,6 +217,11 @@ namespace ui {
 
             // Rendering
             ImGui::Render();
+
+            if (!get_config().is_applied) {
+                set_style(imio);
+            }
+
             int display_w, display_h;
             glfwGetFramebufferSize(window, &display_w, &display_h);
             glViewport(0, 0, display_w, display_h);
@@ -222,10 +231,6 @@ namespace ui {
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-            if (!get_config().is_applied) {
-                L_INFO("Configuration changes were found!");
-                set_style(imio);
-            }
             glfwSwapBuffers(window);
         }
 #ifdef __EMSCRIPTEN__

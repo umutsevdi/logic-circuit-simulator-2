@@ -68,8 +68,9 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
     if (node.type != COMPONENT_OUTPUT && node.type != COMPONENT_INPUT) {
         ImGui::SameLine();
         if (IconButton<NORMAL>(ICON_LC_TRASH_2, "Delete Node")) {
-            ImNodes::ClearNodeSelection(node.numeric());
+            ImNodes::ClearNodeSelection();
             scene->remove_node(node);
+            EndSection();
             return;
         }
     }
@@ -113,9 +114,7 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
         TablePair(Field("Value"), ToggleButton(_node->get()));
         TablePair(Field("Frequency"));
         float freq_value = _node->_freq.value();
-        if (ImGui::InputFloat("Hz", &freq_value, 0.25f, 1.0f, "%.2f")) {
-            freq_value = std::max(
-                0.25f, std::min(std::round(freq_value * 4.0f) / 4.0f, 10.0f));
+        if (ImGui::SliderFloat("Hz", &freq_value, 0.1f, 5.0f, "%.1f")) {
             if (freq_value != _node->_freq.value()) {
                 _node->_freq = freq_value;
                 io::scene::notify_change();
@@ -136,7 +135,8 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
     }
 
     TablePair(Field("Outputs"));
-    if (ImGui::BeginTable("InputList", 3, ImGuiTableFlags_BordersInner)) {
+    if (ImGui::BeginTable("InputList", 3,
+            ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
         ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
@@ -195,7 +195,8 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
     _input_table(&scene, _node->inputs);
 
     TablePair(Field("Outputs"));
-    if (ImGui::BeginTable("InputList", 3, ImGuiTableFlags_BordersInner)) {
+    if (ImGui::BeginTable("InputList", 3,
+            ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
         ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
@@ -232,8 +233,8 @@ static void _inspector_component_context_node(NRef<Scene> scene, Node node)
     ComponentContext& ctx = scene->component_context.value();
     if (node.type == COMPONENT_INPUT) {
         TablePair(Field("Outputs"));
-        if (ImGui::BeginTable(
-                "InputsComponentInputList", 3, ImGuiTableFlags_BordersInner)) {
+        if (ImGui::BeginTable("InputsComponentInputList", 3,
+                ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
             ImGui::NextColumn();
             ImGui::TableSetupColumn(
@@ -288,10 +289,12 @@ static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
             }
             ImGui::TableSetColumnIndex(2);
             ImGui::BeginDisabled(inputs[i] == 0);
+            ImGui::PushID(std::to_string(i).c_str());
             if (IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "")) {
                 scene->disconnect(inputs[i]);
                 io::scene::notify_change();
             }
+            ImGui::PopID();
             ImGui::EndDisabled();
             ImGui::TableSetColumnIndex(3);
             ToggleButton(value);
@@ -316,7 +319,9 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGui ::TableNextRow();
             ImGui ::TableSetColumnIndex(1);
             ImGui::BeginDisabled(true);
+            ImGui::PushID("##disconnect");
             IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "");
+            ImGui::PopID();
             ImGui::EndDisabled();
         }
 
@@ -335,10 +340,13 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGui ::TableSetColumnIndex(1);
 
             ImGui::BeginDisabled(outputs[i] == 0);
+            ImGui::PushID(std::to_string(i).c_str());
             if (IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "")) {
+
                 scene->disconnect(outputs[i]);
                 io::scene::notify_change();
             }
+            ImGui::PopID();
             ImGui::EndDisabled();
         }
         if (ImGui::TableGetHoveredColumn() == 1) {

@@ -14,7 +14,6 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <iostream>
 
 #define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
@@ -36,9 +35,11 @@ namespace lcs {
 
 extern std::filesystem::path ROOT;
 extern std::filesystem::path TMP;
+
 extern std::filesystem::path LIBRARY;
 extern std::filesystem::path LOCAL;
 extern std::filesystem::path CACHE;
+extern std::filesystem::path MISC;
 extern std::string INI;
 extern bool is_testing;
 
@@ -200,9 +201,9 @@ struct Line {
     Line() = default;
 };
 
-void l_push(LogLevel l, Line&& line);
+void l_push(Line&& line);
 
-void l_iterate(std::function<void(const Line& l)> f);
+void l_iterate(std::function<void(size_t, const Line&)> f);
 
 /** Runs an assertion, displays an error message on failure. Intended for
  * macros. */
@@ -210,16 +211,15 @@ int __expect(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept;
 
 #define __LLOG__(STATUS, ...)                                                  \
-    l_push(STATUS,                                                             \
-        Line { STATUS, __FILE_NAME__, __LINE__, __FUNCTION__, __VA_ARGS__ })
+    l_push(Line { STATUS, __FILE_NAME__, __LINE__, __FUNCTION__, __VA_ARGS__ })
 
-#define L_DEBUG(...) __LLOG__(DEBUG, 0, __VA_ARGS__)
 #define L_INFO(...) __LLOG__(INFO, 0, __VA_ARGS__)
 #define L_WARN(...) __LLOG__(WARN, 0, __VA_ARGS__)
 #define L_ERROR(...) __LLOG__(ERROR, 0, __VA_ARGS__)
 #define L_MSG(...) __LLOG__(INFO, this->id(), __VA_ARGS__)
 
 #ifndef NDEBUG
+#define L_DEBUG(...) __LLOG__(DEBUG, 0, __VA_ARGS__)
 /** Runs an assertion. Displays an error message on failure. In debug builds
  * also crashes the application. */
 #define lcs_assert(expr)                                                       \
@@ -238,7 +238,8 @@ int __expect(std::function<bool(void)> expr, const char* function,
 #endif
 
 #define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
-#define ERROR(err) (L_ERROR(#err)), err
+#define ERROR(err) (L_ERROR("%s: %s", #err, errmsg(err))), err
+#define WARN(err) (L_WARN("%s: %s", #err, errmsg(err))), err
 #define VEC_TO_STR(os, vec, ...)                                               \
     for (const auto& iter : vec) {                                             \
         os << __VA_ARGS__(iter) << ",\t";                                      \

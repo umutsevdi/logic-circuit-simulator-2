@@ -84,8 +84,8 @@ template <>
 LCS_ERROR from_json<InputNode>(const Json::Value& doc, InputNode& node)
 {
     if (doc["freq"].isNumeric()) {
-        node._freq = std::max(0.25f,
-            std::min(std::round(doc["freq"].asFloat() * 4.0f) / 4.0f, 10.0f));
+        node._freq = std::max(0.1f,
+            std::min(std::round(doc["freq"].asFloat() * 10) / 10.0f, 5.0f));
         if (node._freq <= 0) {
             node._freq = std::nullopt;
         }
