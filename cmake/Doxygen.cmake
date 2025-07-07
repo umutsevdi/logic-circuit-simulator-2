@@ -1,5 +1,5 @@
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND LCS_ENABLE_DOXYGEN)
-    find_package(Doxygen)
+    find_package(Doxygen QUIET)
     if(DOXYGEN_FOUND)
         set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile)
         set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/docs)

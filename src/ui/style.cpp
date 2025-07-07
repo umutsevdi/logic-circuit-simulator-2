@@ -24,7 +24,6 @@ const LcsStyle& get_active_style()
 
 void set_style(ImGuiIO& io, bool init)
 {
-    L_INFO("Configuration changes were applied.");
     Configuration& config   = get_config();
     config.is_applied       = true;
     ImGuiStyle& style       = ImGui::GetStyle();

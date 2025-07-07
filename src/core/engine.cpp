@@ -56,7 +56,7 @@ void InputNode::on_signal()
 {
     State result = _value ? State::TRUE : State::FALSE;
     for (relid& out : output) {
-        L_MSG("Sending %s signal to rel@%d", State_to_str((State)_value), out);
+        C_DEBUG("Sending %s signal to rel@%d", State_to_str((State)_value), out);
         _parent->signal(out, result);
     }
 }
@@ -86,7 +86,7 @@ bool OutputNode::is_connected() const { return input != 0; }
 void OutputNode::on_signal()
 {
     _value = input ? _parent->get_rel(input)->value : State::DISABLED;
-    L_MSG("Received %s signal", State_to_str(_value));
+    C_DEBUG("Received %s signal", State_to_str(_value));
 }
 
 /******************************************************************************

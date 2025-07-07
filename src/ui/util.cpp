@@ -1,9 +1,7 @@
 #include "ui/util.h"
-#include "core.h"
-#include "io.h"
+#include "base64.h"
 #include <imgui.h>
 #include <imnodes.h>
-#include <optional>
 
 static std::map<std::string, lcs::ui::ImageHandle> _TEXTURE_MAP;
 namespace lcs::ui {
@@ -34,6 +32,9 @@ const ImageHandle* get_texture(const std::string& key)
 {
     auto p = _TEXTURE_MAP.find(key);
     if (p == _TEXTURE_MAP.end()) {
+        if (load_texture(key, CACHE / (base64_encode(key) + ".jpeg"))) {
+            return get_texture(key);
+        };
         return nullptr;
     }
     return &p->second;

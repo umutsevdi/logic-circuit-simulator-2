@@ -68,7 +68,7 @@ void GateNode::on_signal()
         _is_disabled = true;
     }
     for (relid& out : output) {
-        L_MSG("Sending %s signal to rel@%d", State_to_str(get()), out);
+        C_DEBUG("Sending %s signal to rel@%d", State_to_str(get()), out);
         _parent->signal(out, get());
     }
 }

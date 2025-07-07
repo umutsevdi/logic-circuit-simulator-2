@@ -82,9 +82,11 @@ State ComponentContext::get_value(Node id) const
 
 void ComponentContext::set_value(Node id, State value)
 {
+    L_INFO("%s:%d, %s\n", NodeType_to_str(id.type), id.id, State_to_str(value));
     if (id.id > 0 && id.id < 64) {
         if (id.type == NodeType::COMPONENT_INPUT) {
             _execution_input[id.id - 1] = value == State::TRUE;
+            run();
         } else {
             _execution_output[id.id - 1] = value == State::TRUE;
         }
@@ -199,8 +201,8 @@ void ComponentNode::on_signal()
 
     for (auto sock : outputs) {
         for (relid out : sock.second) {
-            L_MSG("Sending %s signal to rel@%d", State_to_str(get(sock.first)),
-                out);
+            C_DEBUG("Sending %s signal to rel@%d",
+                State_to_str(get(sock.first)), out);
             _parent->signal(out, get(sock.first));
         }
     }

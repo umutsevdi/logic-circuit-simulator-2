@@ -1,7 +1,7 @@
 #include "common.h"
-#include "imgui.h"
 #include "ui/components.h"
 #include "ui/util.h"
+#include <imgui.h>
 #include <string_view>
 namespace lcs::ui {
 
@@ -45,7 +45,11 @@ void Console(void)
         if (!std::string_view { l.obj.data() }.empty()) {
             ImGui::TableSetColumnIndex(1);
             ImGui::PushID(idx);
-            NodeTypeTitle(l.node);
+            if (l.node.id != 0 || l.node.type != 0) {
+                NodeTypeTitle(l.node);
+            } else {
+                ImGui::TextColored(style.yellow, "%s", l.obj.begin());
+            }
             ImGui::PopID();
         }
         ImGui::TableSetColumnIndex(2);
@@ -54,8 +58,6 @@ void Console(void)
         ImGui::TextUnformatted(l.expr.begin());
     });
     ImGui::EndTable();
-    ImGuiIO imio = ImGui::GetIO();
-    ImGui::Text("(%.1f FPS)", imio.Framerate);
     ImGui::End();
 }
 

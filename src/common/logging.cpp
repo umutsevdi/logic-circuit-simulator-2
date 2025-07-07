@@ -1,5 +1,7 @@
 #include "common.h"
 #include "tinyfiledialogs.h"
+#include <cstring>
+#include <iostream>
 
 namespace lcs {
 #define F_BOLD "\033[1m"
@@ -32,19 +34,38 @@ void l_iterate(std::function<void(size_t, const Line& l)> fn)
     }
 }
 
+void Line::_fn_parse(std::string fnname)
+{
+    size_t class_begin  = fnname.find_first_of(' ') + 1;
+    size_t fn_end       = fnname.find_first_of('(', class_begin);
+    std::string fnrange = fnname.substr(class_begin, fn_end - class_begin);
+
+    class_begin = fnrange.find_first_of("lcs::") != std::string::npos ? 5 : 0;
+    size_t fn_begin  = fnrange.find_last_of("::") + 1;
+    fn_end           = fnrange.size() - 1;
+    size_t class_end = fnrange.find_first_of("::", class_begin);
+
+    std::strncpy(fn.data(), fnrange.data() + fn_begin,
+        std::min(fn.max_size(), fn_end - fn_begin + 1));
+    if (class_begin != fn_begin) {
+        std::strncpy(obj.data(), fnrange.data() + class_begin,
+            std::min(obj.max_size(), class_end - class_begin));
+    }
+}
+
 inline static void _log_pre(const Line& l)
 {
     std::ostringstream oss2 {};
 
     printf(F_BOLD "%s%-6s" F_RESET F_GREEN " | " F_RESET "%-35s" F_GREEN
-                  " | " F_RESET F_BLUE "%-35s" F_RESET F_GREEN " | " F_RESET
-                  "%s\r\n",
+                  " | %-30s | " F_RESET F_BLUE "%-35s" F_RESET F_GREEN
+                  " | " F_RESET "%s\r\n",
         (l.severity == ERROR ? F_RED : F_GREEN), l.log_level_str.begin(),
-        l.file_line.begin(), l.fn.begin(), l.expr.begin());
+        l.file_line.begin(), l.obj.begin(), l.fn.begin(), l.expr.begin());
     if (is_testing) {
         __TEST_LOG__ << l.log_level_str.begin() << '\t' << l.file_line.begin()
-                     << '\t' << l.fn.begin() << '\t' << l.expr.begin()
-                     << std::endl;
+                     << '\t' << l.obj.begin() << "\t" << l.fn.begin() << '\t'
+                     << l.expr.begin() << std::endl;
     }
 }
 
@@ -52,10 +73,11 @@ void l_push(Line&& line)
 {
     // DEBUG logs are ignored on release
 #ifdef NDEBUG
-    if constexpr (LogLevel::DEBUG == line.severity) {
+    if (LogLevel::DEBUG == line.severity) {
         return;
     }
 #endif
+
     if (_size < LINE_SIZE) {
         _buffer[_next] = std::move(line);
         _log_pre(_buffer[_next]);

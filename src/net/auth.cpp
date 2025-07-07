@@ -224,7 +224,7 @@ Flow::State AuthenticationFlow::poll(void)
     }
 
     _last_status = Flow::State::DONE;
-    L_INFO("Authetication succesfull.");
+    L_INFO("Authetication succesful.");
     return Flow::State::DONE;
 }
 

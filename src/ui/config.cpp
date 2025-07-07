@@ -92,7 +92,7 @@ LCS_ERROR lcs::from_json<ui::Configuration>(
     if (!(v["theme"].isObject()
             && (v["theme"]["light"].isString() && v["theme"]["dark"].isString()
                 && v["theme"]["prefer"].isString()
-                && v["theme"]["corners"].isBool())
+                && v["theme"]["corners"].isUInt())
             && v["scale"].isInt() && v["language"].isString()
             && v["window"].isObject()
             && (v["window"]["x"].isInt() && v["window"]["y"].isInt()
@@ -114,7 +114,11 @@ LCS_ERROR lcs::from_json<ui::Configuration>(
     c.is_saved         = true;
 
     if (!(c.light_theme != ui::Style::STYLE_S
-            && c.dark_theme != ui::Style::STYLE_S && c.scale > 50)) {
+            && c.dark_theme != ui::Style::STYLE_S &&
+            (c.rounded_corners >= 0 && c.rounded_corners <=20)
+            &&
+            (c.scale >= 75 && c.scale <=150)
+            )) {
         return ERROR(INVALID_JSON_FORMAT);
     }
     return Error::OK;

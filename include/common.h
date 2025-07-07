@@ -189,9 +189,8 @@ struct Line {
             log_level_str.max_size() - 1);
         std::snprintf(
             file_line.data(), file_line.max_size() - 1, "%s:%3d", file, line);
-        std::strncpy(fn.data(), _fn, fn.max_size() - 1);
         snprintf(expr.data(), expr.max_size() - 1, fmt, args...);
-
+        _fn_parse(_fn);
         if (object.id != 0 || object.type != 0) {
             std::strncpy(
                 obj.data(), object.to_str().c_str(), obj.max_size() - 1);
@@ -199,6 +198,9 @@ struct Line {
         }
     }
     Line() = default;
+
+private:
+    void _fn_parse(std::string fnname);
 };
 
 void l_push(Line&& line);
@@ -211,12 +213,13 @@ int __expect(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept;
 
 #define __LLOG__(STATUS, ...)                                                  \
-    l_push(Line { STATUS, __FILE_NAME__, __LINE__, __FUNCTION__, __VA_ARGS__ })
+    l_push(Line {                                                              \
+        STATUS, __FILE_NAME__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__ })
 
 #define L_INFO(...) __LLOG__(INFO, 0, __VA_ARGS__)
 #define L_WARN(...) __LLOG__(WARN, 0, __VA_ARGS__)
 #define L_ERROR(...) __LLOG__(ERROR, 0, __VA_ARGS__)
-#define L_MSG(...) __LLOG__(INFO, this->id(), __VA_ARGS__)
+#define C_DEBUG(...) __LLOG__(DEBUG, this->id(), __VA_ARGS__)
 
 #ifndef NDEBUG
 #define L_DEBUG(...) __LLOG__(DEBUG, 0, __VA_ARGS__)
