@@ -8,15 +8,13 @@
 
 namespace lcs::ui {
 
-static Configuration cfg {
-    .is_saved = false,
-};
+static Configuration cfg { .is_saved = true, .is_applied = true };
 void Preferences(bool& pref_show)
 {
     if (!pref_show) {
         return;
     }
-    if (cfg.is_saved) {
+    if (cfg.is_saved && cfg.is_applied) {
         cfg = get_config();
     }
     bool keep = true;
@@ -182,12 +180,16 @@ void Preferences(bool& pref_show)
     }
     EndSection();
     ImGuiIO& imio = ImGui::GetIO();
-    ImGui::Text("FPS: %4.f Uptime: %4.f seconds", imio.Framerate, ImGui::GetTime());
+    ImGui::Text(
+        "FPS: %4.f Uptime: %4.f seconds", imio.Framerate, ImGui::GetTime());
     ImGui::BeginDisabled(cfg.is_applied);
     if (IconButton<NORMAL>(ICON_LC_REDO_DOT, "Apply")) {
+        cfg.is_saved = false;
         set_config(cfg);
         cfg            = get_config();
         cfg.is_applied = true;
+        Toast(ICON_LC_SETTINGS_2, "Preferences",
+            "Configuration changes were applied.");
     }
     ImGui::EndDisabled();
     ImGui::SameLine(ImGui::GetWindowSize().x * 5 / 6);
@@ -199,14 +201,17 @@ void Preferences(bool& pref_show)
         cfg.is_applied = true;
         cfg.is_saved   = true;
         L_INFO("Configuration changes were saved.");
+        Toast(ICON_LC_SAVE, "Preferences", "Configuration changes were saved.");
     }
     ImGui::EndDisabled();
     ImGui::End();
     if (!keep) {
-        if (cfg.is_applied && !cfg.is_saved) {
+        if (!get_config().is_saved) {
             L_INFO("Configuration changes were reverted.");
+            Toast(ICON_LC_UNDO, "Preferences",
+                "Configuration changes were reverted.");
             set_config(load_config());
-            get_config().is_applied = false;
+            cfg = get_config();
         }
         pref_show = false;
     }

@@ -1,12 +1,76 @@
 #include "common.h"
 #include "core.h"
+#include "imgui_internal.h"
 #include "io.h"
 #include "json/reader.h"
 #include "json/value.h"
+#include "net.h"
 #include "ui/configuration.h"
 
 namespace lcs {
 namespace ui {
+
+    UserData user_data {
+        .palette    = true,
+        .inspector  = true,
+        .scene_info = true,
+        .console    = true,
+        .login {},
+    };
+
+    void _apply_all(ImGuiContext*, ImGuiSettingsHandler*)
+    {
+        if (net::get_flow().start_existing()) {
+            net::get_flow().resolve();
+        }
+    }
+
+    static void* _read_open(
+        ImGuiContext*, ImGuiSettingsHandler*, const char* name)
+    {
+        if (std::strncmp(name, "default", sizeof("default")) == 0) {
+            return &user_data;
+        }
+        return nullptr;
+    }
+
+    static void _read_line(
+        ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
+    {
+        UserData* lo    = (UserData*)entry;
+        uint32_t layout = 0;
+        if (sscanf(line, "layout=0x%X", &layout) == 1) {
+            user_data.palette    = layout & 0b0001;
+            user_data.inspector  = layout & 0b0010;
+            user_data.scene_info = layout & 0b100;
+            user_data.console    = layout & 0b1000;
+        }
+        if (sscanf(line, "login=\"%127[^\"]\"", lo->login.data()) == 1) { }
+    }
+
+    static void _write_all(
+        ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf)
+    {
+        buf->appendf("[%s][%s]\n", APPNAME_LONG, "default");
+        uint32_t layout = user_data.palette | user_data.inspector << 1
+            | user_data.scene_info << 2 | user_data.console << 3;
+        buf->appendf("layout=0x%X\n", layout);
+        buf->appendf("login=\"%s\"\n\n", user_data.login.begin());
+    }
+
+    void bind_config(ImGuiContext* ctx)
+    {
+        ImGuiSettingsHandler handler {};
+        handler.TypeName   = APPNAME_LONG;
+        handler.TypeHash   = ImHashStr(APPNAME_LONG);
+        handler.ReadOpenFn = _read_open;
+        handler.ReadLineFn = _read_line;
+        handler.WriteAllFn = _write_all;
+        handler.ApplyAllFn = _apply_all;
+        handler.UserData   = nullptr;
+        ctx->SettingsHandlers.push_back(handler);
+    }
+
     Configuration _config;
 
     const char* Style_to_str(Style style)
@@ -71,7 +135,6 @@ template <>
 Json::Value lcs::to_json<ui::Configuration>(const ui::Configuration& c)
 {
     Json::Value v;
-    v["theme"]                = {};
     v["theme"]["light"]       = Style_to_str(c.light_theme);
     v["theme"]["dark"]        = Style_to_str(c.dark_theme);
     v["theme"]["prefer"]      = ThemePreference_to_str(c.preference);
@@ -114,11 +177,9 @@ LCS_ERROR lcs::from_json<ui::Configuration>(
     c.is_saved         = true;
 
     if (!(c.light_theme != ui::Style::STYLE_S
-            && c.dark_theme != ui::Style::STYLE_S &&
-            (c.rounded_corners >= 0 && c.rounded_corners <=20)
-            &&
-            (c.scale >= 75 && c.scale <=150)
-            )) {
+            && c.dark_theme != ui::Style::STYLE_S
+            && (c.rounded_corners >= 0 && c.rounded_corners <= 20)
+            && (c.scale >= 75 && c.scale <= 150))) {
         return ERROR(INVALID_JSON_FORMAT);
     }
     return Error::OK;
@@ -165,7 +226,10 @@ namespace ui {
     {
         write(ROOT / "config.json",
             to_json<Configuration>(_config).toStyledString());
+        _config.is_applied = true;
+        _config.is_saved   = true;
     }
+
 } // namespace ui
 
 } // namespace lcs

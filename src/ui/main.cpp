@@ -14,11 +14,10 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "io.h"
 #include "ui.h"
 #include "ui/configuration.h"
 #include "ui/util.h"
-#include <stdio.h>
+#include <cstdio>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -105,10 +104,11 @@ namespace ui {
 
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
+        ui::bind_config(ImGui::CreateContext());
         ImGuiIO& imio = ImGui::GetIO();
         (void)imio;
         imio.IniFilename = INI.c_str();
+
         imio.ConfigFlags
             |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
         imio.ConfigFlags
@@ -157,11 +157,7 @@ namespace ui {
         // nullptr, io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font !=
         // nullptr);
 
-        // Our state
-        bool show_demo_window    = true;
-        bool show_another_window = false;
-        ImVec4 clear_color       = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
+        ImVec4 clear_color = get_active_style().bg;
         // Main loop
 #ifdef __EMSCRIPTEN__
         // For an Emscripten build we are disabling file-system access, so let's
@@ -196,30 +192,17 @@ namespace ui {
             ImGui_ImplGlfw_NewFrame();
 
             ImGui::NewFrame();
-            ImGui::ShowDemoWindow(&show_demo_window);
-            if (show_demo_window) {
-                show_demo_window = ui::loop(imio);
-            }
-
-            // 3. Show another simple window.
-            if (show_another_window) {
-                ImGui::Begin("Another Window",
-                    &show_another_window); // Pass a pointer to our bool
-                                           // variable (the window will have a
-                                           // closing button that will clear the
-                                           // bool when clicked)
-                ImGui::Text("Hello from another window!");
-                if (ImGui::Button("Close Me")) {
-                    show_another_window = false;
-                }
-                ImGui::End();
-            }
+            ImGui::DockSpaceOverViewport();
+#ifndef NDEBUG
+            ImGui::ShowDemoWindow(nullptr);
+#endif
+            ui::loop(imio);
 
             // Rendering
             ImGui::Render();
-
             if (!get_config().is_applied) {
                 set_style(imio);
+                clear_color = get_active_style().bg;
             }
 
             int display_w, display_h;

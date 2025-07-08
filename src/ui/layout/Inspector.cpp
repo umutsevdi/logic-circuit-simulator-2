@@ -3,9 +3,10 @@
 #include "imnodes.h"
 #include "io.h"
 #include "ui/components.h"
+#include "ui/configuration.h"
+#include "ui/layout.h"
 #include "ui/util.h"
 #include <imgui.h>
-#include <cmath>
 
 namespace lcs::ui {
 
@@ -24,27 +25,31 @@ void Inspector(NRef<Scene> scene)
     static int nodeids[1 << 20] = { 0 };
     static char buffer[128];
 
-    ImGui::Begin("Inspector", nullptr);
-    if (scene != nullptr && ImNodes::NumSelectedNodes() > 0) {
-        int len = ImNodes::NumSelectedNodes();
-        ImNodes::GetSelectedNodes(nodeids);
-        if (len > 1) {
-            ImGui::BeginTabBar("InspectorTabs");
-            for (int i = 0; i < ImNodes::NumSelectedNodes(); i++) {
-                Node node = decode_pair(nodeids[i]);
-                snprintf(buffer, 128, "%s@%u", NodeType_to_str_full(node.type),
-                    node.id);
-                NodeType_to_str_full(node.type);
-                if (ImGui::BeginTabItem(
-                        buffer, nullptr, ImGuiTabItemFlags_NoReorder)) {
-                    _inspector_tab(&scene, node);
-                    ImGui::EndTabItem();
-                };
+    if (!user_data.inspector) {
+        return;
+    }
+    if (ImGui::Begin("Inspector", &user_data.inspector)) {
+        if (scene != nullptr && ImNodes::NumSelectedNodes() > 0) {
+            int len = ImNodes::NumSelectedNodes();
+            ImNodes::GetSelectedNodes(nodeids);
+            if (len > 1) {
+                ImGui::BeginTabBar("InspectorTabs");
+                for (int i = 0; i < ImNodes::NumSelectedNodes(); i++) {
+                    Node node = decode_pair(nodeids[i]);
+                    snprintf(buffer, 128, "%s@%u",
+                        NodeType_to_str_full(node.type), node.id);
+                    NodeType_to_str_full(node.type);
+                    if (ImGui::BeginTabItem(
+                            buffer, nullptr, ImGuiTabItemFlags_NoReorder)) {
+                        _inspector_tab(&scene, node);
+                        ImGui::EndTabItem();
+                    };
+                }
+                ImGui::EndTabBar();
+            } else {
+                Node node = decode_pair(nodeids[0]);
+                _inspector_tab(&scene, node);
             }
-            ImGui::EndTabBar();
-        } else {
-            Node node = decode_pair(nodeids[0]);
-            _inspector_tab(&scene, node);
         }
     }
     ImGui::End();

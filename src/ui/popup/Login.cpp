@@ -19,49 +19,47 @@ void LoginWindow(bool& df_show)
         err = net::get_flow().start();
     }
     if (err) {
+        Toast(ICON_LC_WIFI_OFF, "Login Error",
+            "Failed to connect to the server.", true);
         df_show = false;
         net::get_flow().resolve();
         return;
     }
     Flow::State poll_result = net::get_flow().poll();
-    if (poll_result == Flow::DONE) {
+    switch (poll_result) {
+    case Flow::DONE:
         df_show = false;
+        Toast(ICON_LC_GITHUB, ("Welcome " + net::get_account().name).c_str(),
+            "Authentication was successful.");
         return;
+    case Flow::TIMEOUT:
+        Toast(ICON_LC_CLOCK_ALERT, "Login Timeout",
+            "You have exceeded the time limit for\n"
+            "entering your passcode. Please try again\n"
+            "to authenticate your session.",
+            true);
+        df_show_cancel = false;
+        break;
+    case Flow::BROKEN:
+        Toast(ICON_LC_TRIANGLE_ALERT, "Login Error", net::get_flow().reason(),
+            true);
+        df_show_cancel = false;
+        break;
+    default: break;
     }
-    ImGui::OpenPopup("Login");
+    if (df_show_cancel) {
+        ImGui::OpenPopup("Login");
+    }
     if (ImGui::BeginPopupModal(
             "Login", &df_show_cancel, ImGuiWindowFlags_NoSavedSettings)) {
         static const float modal_size
             = ImGui::CalcTextSize("Enter the code to your browser").x;
-        if (poll_result == Flow::BROKEN) {
-            ImGui ::PushFont(get_font(FontFlags ::BOLD | FontFlags ::NORMAL));
-            ImGui ::TextColored(get_active_style().red, "An error occurred.");
-            ImGui ::PopFont();
-            ImGui::Text("%s", net::get_flow().reason());
-        } else if (poll_result == Flow::TIMEOUT) {
-            ImGui ::PushFont(get_font(FontFlags ::BOLD | FontFlags ::NORMAL));
-            ImGui ::TextColored(get_active_style().red,
-                "You have exceeded the time limit for entering your\n"
-                "passcode. Please try again to authenticate your\n"
-                "session. ");
-            ImGui ::PopFont();
-        } else {
-            Field("Enter the code to your browser");
-        }
-        const char* icon;
-        switch (poll_result) {
-        case Flow::TIMEOUT: icon = ICON_LC_CLOCK_ALERT; break;
-        case Flow::BROKEN: icon = ICON_LC_TRIANGLE_ALERT; break;
-        default: icon = ICON_LC_GITHUB; break;
-        }
-        IconText<ULTRA>(icon, "");
-
+        Field("Enter the code to your browser");
+        IconText<ULTRA>(ICON_LC_GITHUB, "");
         float icon_h = 0.f;
-        {
-            ImGui::PushFont(get_font(ULTRA | ICON));
-            icon_h = ImGui::CalcTextSize(ICON_LC_GITHUB).y;
-            ImGui::PopFont();
-        }
+        ImGui::PushFont(get_font(ULTRA | ICON));
+        icon_h = ImGui::CalcTextSize(ICON_LC_GITHUB).y;
+        ImGui::PopFont();
         if (poll_result == Flow::POLLING) {
             ImGui::SameLine();
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + icon_h / 2
@@ -83,21 +81,15 @@ void LoginWindow(bool& df_show)
                     .c_str());
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + modal_size / 2);
             if (IconButton<LARGE>(ICON_LC_CLIPBOARD_COPY, "Copy")) {
+                Toast(ICON_LC_CLIPBOARD_COPY, "Clipboard",
+                    "Token was copied to the clipboard.");
                 ImGui::SetClipboardText(net::get_flow().user_code.c_str());
-            }
-        }
-        if (poll_result == Flow::State::BROKEN
-            || poll_result == Flow::State::TIMEOUT) {
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + modal_size / 2);
-            if (IconButton<NORMAL>(ICON_LC_ROTATE_CW, "Retry")) {
-                df_show = true;
-                net::get_flow().resolve();
             }
         }
         ImGui::EndPopup();
     }
     if (!df_show_cancel) {
-        L_INFO("User pressed cancel");
+        L_INFO("Operation was cancelled.");
         df_show = false;
         net::get_flow().resolve();
     }

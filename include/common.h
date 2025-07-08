@@ -175,9 +175,9 @@ struct Line {
     LogLevel severity = DEBUG;
     Node node         = 0;
     std::array<char, 6> log_level_str {};
-    std::array<char, 30> obj {};
-    std::array<char, 36> file_line {};
-    std::array<char, 36> fn {};
+    std::array<char, 18> obj {};
+    std::array<char, 15> file_line {};
+    std::array<char, 25> fn {};
     std::array<char, 512> expr {};
 
     template <typename... Args>
@@ -242,7 +242,9 @@ int __expect(std::function<bool(void)> expr, const char* function,
 
 #define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
 #define ERROR(err) (L_ERROR("%s: %s", #err, errmsg(err))), err
+#ifndef WARN
 #define WARN(err) (L_WARN("%s: %s", #err, errmsg(err))), err
+#endif
 #define VEC_TO_STR(os, vec, ...)                                               \
     for (const auto& iter : vec) {                                             \
         os << __VA_ARGS__(iter) << ",\t";                                      \

@@ -209,7 +209,9 @@ Flow::State AuthenticationFlow::poll(void)
         if (keyerr.type != keychain::ErrorType::NoError) {
             L_WARN("%s", keyerr.message);
         }
-        write(ROOT / ".login", _auth.account.login);
+
+        std::strncpy(ui::user_data.login.data(), _auth.account.login.data(),
+            ui::user_data.login.max_size());
 
         if (!std::filesystem::exists(
                 CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
@@ -234,8 +236,9 @@ const char* AuthenticationFlow::reason(void) const { return _reason.c_str(); }
 
 Error AuthenticationFlow::start_existing(void)
 {
-    _last_status      = STARTED;
-    std::string login = read(ROOT / ".login");
+    _last_status = STARTED;
+    L_INFO("%s", ui::user_data.login.begin());
+    std::string login = ui::user_data.login.begin();
     if (login == "") {
         return WARN(KEYCHAIN_NOT_FOUND);
     }
@@ -285,7 +288,7 @@ void AuthenticationFlow::resolve(void)
         if (err.type != keychain::ErrorType::NoError) {
             L_ERROR("Error while cleaning password. %s", err.message.c_str());
         }
-        write(ROOT / ".login", "");
+        ui::user_data.login = {};
     }
     _reason      = "";
     _auth        = {};

@@ -3,13 +3,16 @@
 #include "io.h"
 #include "net.h"
 #include "ui/components.h"
+#include "ui/configuration.h"
 #include "ui/layout.h"
 
 namespace lcs::ui {
 void SceneInfo(NRef<Scene> scene)
 {
-    ImGui::Begin("Scene Information");
-    {
+    if (!user_data.scene_info) {
+        return;
+    }
+    if (ImGui::Begin("Scene Information", &user_data.scene_info)) {
         ImGui::BeginDisabled(scene == nullptr);
         Section("Scene");
         Field("Scene Name");
@@ -57,7 +60,8 @@ void SceneInfo(NRef<Scene> scene)
             net::upload_scene(&scene, resp);
         }
         ImGui::EndDisabled();
-        ImGui::End();
     }
+    ImGui::End();
 }
+
 } // namespace lcs::ui

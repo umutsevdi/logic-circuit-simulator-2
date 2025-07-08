@@ -55,7 +55,7 @@ void init_paths(bool _is_testing)
     LIBRARY = ROOT / "pkg" / "lib";
     LOCAL   = ROOT / "pkg" / "local";
     CACHE   = ROOT / ".cache";
-    INI     = ROOT / "loc.ini";
+    INI     = ROOT / "profile.ini";
     MISC    = ROOT / "misc";
     try {
         if (!fs::exists(TMP)) {

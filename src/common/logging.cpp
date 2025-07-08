@@ -46,20 +46,19 @@ void Line::_fn_parse(std::string fnname)
     size_t class_end = fnrange.find_first_of("::", class_begin);
 
     std::strncpy(fn.data(), fnrange.data() + fn_begin,
-        std::min(fn.max_size(), fn_end - fn_begin + 1));
+        std::min(fn.max_size() - 1, fn_end - fn_begin + 1));
     if (class_begin != fn_begin) {
         std::strncpy(obj.data(), fnrange.data() + class_begin,
-            std::min(obj.max_size(), class_end - class_begin));
+            std::min(obj.max_size() - 1, class_end - class_begin));
     }
 }
 
 inline static void _log_pre(const Line& l)
 {
     std::ostringstream oss2 {};
-
-    printf(F_BOLD "%s%-6s" F_RESET F_GREEN " | " F_RESET "%-35s" F_GREEN
-                  " | %-30s | " F_RESET F_BLUE "%-35s" F_RESET F_GREEN
-                  " | " F_RESET "%s\r\n",
+    printf(F_BOLD "%s%-6s" F_RESET F_GREEN "|" F_RESET "%-15s" F_GREEN
+                  " |%-18s|" F_RESET F_BLUE "%-25s" F_RESET F_GREEN "|" F_RESET
+                  "%s\r\n",
         (l.severity == ERROR ? F_RED : F_GREEN), l.log_level_str.begin(),
         l.file_line.begin(), l.obj.begin(), l.fn.begin(), l.expr.begin());
     if (is_testing) {

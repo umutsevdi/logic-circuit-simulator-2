@@ -16,6 +16,8 @@
 
 namespace lcs::ui {
 
+void Toast(const char* icon, const char* title, const char* message,
+    bool is_error = false);
 bool PositionSelector(Point& point, const char* prefix);
 State ToggleButton(State, bool clickable = false);
 void NodeTypeTitle(Node n);

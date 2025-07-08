@@ -1,77 +1,59 @@
 #include "common.h"
+#include "imnodes.h"
 #include "io.h"
-#include "net.h"
 #include "ui.h"
-#include "ui/configuration.h"
 #include "ui/flows.h"
 #include "ui/layout.h"
 #include "ui/util.h"
 #include <imgui.h>
-#include <imnodes.h>
 #include <tinyfiledialogs.h>
 
 static bool show_demo_window = true;
 ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 float f;
 
+static ImGuiID key_palette;
+static ImGuiID key_inspector;
+static ImGuiID key_sceneinfo;
+static ImGuiID key_console;
+
 namespace lcs::ui {
+void before(ImGuiIO&) { ImNodes::CreateContext(); }
 
-Style current;
-void before(ImGuiIO&)
-{
-    ImNodes::CreateContext();
-
-    if (net::get_flow().start_existing()) {
-        net::get_flow().resolve();
-    };
-    current = get_config().dark_theme;
-}
-
-bool loop(ImGuiIO& imio)
+bool loop(ImGuiIO&)
 {
     MenuBar();
-    ImGui::Begin("Root", nullptr,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize
-            | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
-            | ImGuiWindowFlags_NoBringToFrontOnFocus
-            | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoDocking);
-    ImGui::SetWindowSize(imio.DisplaySize);
-    ImGui::SetWindowPos(ImVec2(0, ImGui::CalcTextSize("File").y));
-    ImGui::DockSpace(ImGui::GetID("Root"), ImVec2(0.f, 0.f),
-        ImGuiDockNodeFlags_PassthruCentralNode);
-    ImGui::End();
+    NRef<Scene> scene = io::scene::get();
     new_flow();
-    {
-        NRef<Scene> scene = io::scene::get();
-        SceneInfo(&scene);
-        if (scene != nullptr) {
-            io::scene::run_frame();
-        }
-        NodeEditor(&scene);
-        Inspector(&scene);
-        Palette();
-        Console();
-
-        ImGui::Begin("Font Window");
-        {
-            ImGui::PushFont(get_font(SMALL | ITALIC));
-            ImGui::Text("This is some useful text.");
-            ImGui::PopFont();
-            ImGui::PushFont(get_font(LARGE | BOLD));
-            ImGui::Text("This is some useful text.");
-            ImGui::PopFont();
-            ImGui::PushFont(get_font(NORMAL));
-            ImGui::Text("This is some useful text.");
-            ImGui::PopFont();
-            ImGui::PushFont(get_font(BOLD | ITALIC));
-            ImGui::Text("This is some useful text.");
-            ImGui::PopFont();
-
-            ImGui::Checkbox("Demo Window", &show_demo_window);
-
-            ImGui::End();
-        }
+    if (scene != nullptr) {
+        io::scene::run_frame();
     }
+    SceneInfo(&scene);
+    NodeEditor(&scene);
+    Inspector(&scene);
+    Palette(&scene);
+    Console();
+
+    ImGui::Begin("Font Window");
+    {
+        ImGui::PushFont(get_font(SMALL | ITALIC));
+        ImGui::Text("This is some useful text.");
+        ImGui::PopFont();
+        ImGui::PushFont(get_font(LARGE | BOLD));
+        ImGui::Text("This is some useful text.");
+        ImGui::PopFont();
+        ImGui::PushFont(get_font(NORMAL));
+        ImGui::Text("This is some useful text.");
+        ImGui::PopFont();
+        ImGui::PushFont(get_font(BOLD | ITALIC));
+        ImGui::Text("This is some useful text.");
+        ImGui::PopFont();
+
+        ImGui::Checkbox("Demo Window", &show_demo_window);
+
+        ImGui::End();
+    }
+    RenderNotifications();
     return show_demo_window;
 }
 

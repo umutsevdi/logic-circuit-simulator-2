@@ -14,9 +14,9 @@
 #include <imgui.h>
 
 namespace lcs::ui {
+
 void MenuBar(void);
-void TabWindow(void);
-void Palette(void);
+void Palette(NRef<Scene>);
 void Inspector(NRef<Scene>);
 void NodeEditor(NRef<Scene> scene);
 int _input_text_callback(ImGuiInputTextCallbackData*);
@@ -24,4 +24,5 @@ void Profile(const std::string& name);
 void SceneInfo(NRef<Scene>);
 void Console(void);
 
+void RenderNotifications(void);
 } // namespace lcs::ui

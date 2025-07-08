@@ -15,6 +15,18 @@
 
 namespace lcs::ui {
 
+struct UserData {
+    bool palette;
+    bool inspector;
+    bool scene_info;
+    bool console;
+    std::array<char, 128> login;
+};
+extern UserData user_data;
+
+/** Embed and sync the UserData struct to ImGUIs's configuration file. */
+void bind_config(ImGuiContext*);
+
 class Configuration {
 public:
     enum ThemePreference {

@@ -2,6 +2,7 @@
 #include "io.h"
 #include "net.h"
 #include "ui/components.h"
+#include "ui/configuration.h"
 #include "ui/flows.h"
 #include "ui/layout.h"
 #include "ui/popup.h"
@@ -13,6 +14,8 @@
 #include <string_view>
 
 namespace lcs::ui {
+
+static void tab_window(void);
 
 bool pref_show = false;
 bool df_show   = false;
@@ -53,6 +56,10 @@ void MenuBar(void)
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
+            ImGui::Checkbox("Palette", &user_data.palette);
+            ImGui::Checkbox("Inspector", &user_data.inspector);
+            ImGui::Checkbox("Console", &user_data.console);
+            ImGui::Checkbox("Scene Info", &user_data.scene_info);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
@@ -62,7 +69,7 @@ void MenuBar(void)
         ImGui::SetCursorPosY(ImGui::GetStyle().ItemSpacing.y
             - ImGui::GetStyle().ItemInnerSpacing.y);
 
-        TabWindow();
+        tab_window();
         ImVec2 pos        = ImGui::GetWindowContentRegionMax();
         ImVec2 login_text = ImGui::CalcTextSize("Login");
 
@@ -99,7 +106,7 @@ void MenuBar(void)
                 ImGui::PopStyleVar();
             }
         } else {
-            ImGui::SameLine(pos.x - login_text.x);
+            ImGui::SameLine(pos.x - 2 * login_text.x);
             ImGui::BeginDisabled(
                 net::get_flow().get_state() == Flow::State::POLLING);
             ImGui::SetCursorPosY(ImGui::GetStyle().ItemSpacing.y
@@ -123,7 +130,7 @@ void MenuBar(void)
     Preferences(pref_show);
 }
 
-void TabWindow(void)
+void tab_window(void)
 {
     ImGui::BeginTabBar("Scene Tabs", ImGuiTabBarFlags_FittingPolicyScroll);
     io::scene::iterate([](std::string_view name, std::string_view path,
