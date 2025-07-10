@@ -32,7 +32,7 @@ bool PositionSelector(Point& point, const char* prefix)
 
 State ToggleButton(State state, bool clickable)
 {
-    const LcsStyle& style = get_active_style();
+    const LcsTheme& style = get_active_style();
     ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::SMALL));
     switch (state) {
     case State::TRUE:

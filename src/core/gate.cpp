@@ -55,10 +55,6 @@ void GateNode::on_signal()
         for (relid in : inputs) {
             auto rel = _parent->get_rel(in);
             lcs_assert(rel != nullptr);
-            if (rel->value == State::DISABLED) {
-                _is_disabled = true;
-                break;
-            }
             v.push_back(rel->value == TRUE ? TRUE : FALSE);
         }
         if (!_is_disabled) {

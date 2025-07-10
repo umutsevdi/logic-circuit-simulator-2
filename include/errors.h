@@ -10,7 +10,6 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-namespace lcs {
 #define LCS_ERROR [[nodiscard("Error codes must be handled")]] Error
 enum Error {
     /** Operation is successful. */
@@ -137,4 +136,3 @@ constexpr const char* errmsg(Error e)
     default: return "Unknown Error.";
     }
 };
-} // namespace lcs

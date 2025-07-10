@@ -25,7 +25,7 @@ TEST_CASE("parse JSON subnodes")
     s.get_node<InputNode>(v1)->set(true);
     s.get_node<InputNode>(v2)->set(false);
     s.get_node<InputNode>(v3)->set(true);
-    std::string v = to_json<Scene>(s).toStyledString();
+    std::string v = s.to_json().toStyledString();
     REQUIRE(!v.empty());
 }
 
@@ -44,7 +44,7 @@ TEST_CASE("parse non-zero context")
     s.connect(o, 0, g_and);
     s.get_base(v1)->point = { 1, 3 };
 
-    std::string out = to_json<Scene>(s).toStyledString();
+    std::string out = s.to_json().toStyledString();
     REQUIRE(!out.empty());
 }
 
@@ -56,11 +56,11 @@ TEST_CASE("Save, load and compare")
     s.get_node<InputNode>(v)->set(true);
     s.connect(o, 0, v);
 
-    std::string scene_str = to_json<Scene>(s).toStyledString();
+    std::string scene_str = s.to_json().toStyledString();
     Scene s_loaded;
-    REQUIRE_EQ(io::load(scene_str, s_loaded), lcs::Error::OK);
+    REQUIRE_EQ(io::load(scene_str, s_loaded), Error::OK);
 
-    std::string scene_loaded_str = to_json<Scene>(s_loaded).toStyledString();
+    std::string scene_loaded_str = s_loaded.to_json().toStyledString();
 
     REQUIRE_EQ(scene_str, scene_loaded_str);
     REQUIRE_EQ(s_loaded.get_node<OutputNode>(o)->get(), State::TRUE);
@@ -73,11 +73,11 @@ TEST_CASE("Save a complicated JSON, load and run the tests")
     _create_full_adder_io(s);
     _create_full_adder(s);
 
-    std::string s_str = to_json<Scene>(s).toStyledString();
+    std::string s_str = s.to_json().toStyledString();
     Scene s_loaded {};
 
     Json::Value doc;
-    REQUIRE_EQ(io::load(s_str, s_loaded), lcs::Error::OK);
+    REQUIRE_EQ(io::load(s_str, s_loaded), Error::OK);
     s_loaded.get_node<InputNode>(a)->set(true);
     s_loaded.get_node<InputNode>(b)->set(false);
     s_loaded.get_node<InputNode>(c_in)->set(false);
@@ -121,10 +121,10 @@ TEST_CASE("Save a component, reload and run")
     REQUIRE_EQ(s.component_context->run(0b001), 0);
     REQUIRE_EQ(s.component_context->run(0b000), 0);
 
-    std::string s_str = to_json<Scene>(s).toStyledString();
+    std::string s_str = s.to_json().toStyledString();
     Scene s_loaded {};
-    REQUIRE_EQ(io::load(s_str, s_loaded), lcs::Error::OK);
-    REQUIRE_EQ(s_str, to_json<Scene>(s_loaded).toStyledString());
+    REQUIRE_EQ(io::load(s_str, s_loaded), Error::OK);
+    REQUIRE_EQ(s_str, s_loaded.to_json().toStyledString());
     REQUIRE_EQ(s_loaded.component_context->run(0b111), 1);
     REQUIRE_EQ(s_loaded.component_context->run(0b110), 0);
     REQUIRE_EQ(s_loaded.component_context->run(0b101), 1);
@@ -149,9 +149,8 @@ TEST_CASE("Save a simple component, and use it in a scene")
     REQUIRE_EQ(s.component_context->run(0b01), 0);
     REQUIRE_EQ(s.component_context->run(0b00), 0);
     std::string dependency = s.to_dependency();
-    REQUIRE_EQ(
-        io::component::fetch(dependency, to_json<Scene>(s).toStyledString()),
-        lcs::Error::OK);
+    REQUIRE_EQ(io::component::fetch(dependency, s.to_json().toStyledString()),
+        Error::OK);
     REQUIRE(io::component::get(dependency) != nullptr);
     REQUIRE_EQ(io::component::run(dependency, 0b11), 1);
     REQUIRE_EQ(io::component::run(dependency, 0b10), 0);
@@ -186,13 +185,12 @@ TEST_CASE("Save a component, load it to a scene")
     _create_full_adder(s);
 
     std::string dependency = s.to_dependency();
-    REQUIRE_EQ(
-        io::component::fetch(dependency, to_json<Scene>(s).toStyledString()),
-        lcs::Error::OK);
+    REQUIRE_EQ(io::component::fetch(dependency, s.to_json().toStyledString()),
+        Error::OK);
 
     Scene s2 {};
     s2.dependencies.push_back(s.to_dependency());
-    REQUIRE(s2.load_dependencies() == lcs::Error::OK);
+    REQUIRE(s2.load_dependencies() == Error::OK);
     REQUIRE(s2.dependencies.size() > 0);
 
     Node cnode = s2.add_node<ComponentNode>(s.to_dependency());
@@ -252,7 +250,7 @@ TEST_CASE("Load a component to a scene, then update component(out)")
     s.connect(s.component_context->get_output(0), 0, g_and);
     s.connect(s.component_context->get_output(1), 0, g_or);
     std::string component_name = s.to_dependency();
-    io::component::fetch(component_name, to_json<Scene>(s).toStyledString());
+    io::component::fetch(component_name, s.to_json().toStyledString());
 
     Scene s2 {};
     s2.dependencies.push_back(component_name);
@@ -296,7 +294,7 @@ TEST_CASE("Load a component to a scene, then update component(out)")
     REQUIRE(s.connect(g_not, 0, s.component_context->get_input(0)));
     REQUIRE(s.connect(s.component_context->get_output(2), 0, g_not));
     REQUIRE_EQ(io::component::fetch(
-                   component_name, to_json<Scene>(s).toStyledString(), true),
+                   component_name, s.to_json().toStyledString(), true),
         0);
     Node o3 = s2.add_node<OutputNode>();
     REQUIRE(s2.connect(o3, 0, c, 2));

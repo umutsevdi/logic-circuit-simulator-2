@@ -10,7 +10,7 @@ namespace lcs::ui {
 
 void NodeEditor(NRef<Scene> scene)
 {
-    if (ImGui::Begin("Editor",nullptr,
+    if (ImGui::Begin("Editor", nullptr,
             ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing
                 | ImGuiWindowFlags_NoNavFocus)) {
         ImNodes::BeginNodeEditor();
@@ -19,7 +19,7 @@ void NodeEditor(NRef<Scene> scene)
             ImGui::End();
             return;
         }
-        const LcsStyle& style = get_active_style();
+        const LcsTheme& style = get_active_style();
         bool has_changes      = io::scene::has_changes();
         if (scene->component_context.has_value()) {
             NodeView<ComponentContext>(
@@ -93,7 +93,7 @@ void NodeEditor(NRef<Scene> scene)
                     auto comp = scene->get_node<ComponentNode>(nodeid);
                     ImGui::Text("(");
                     ImGui::SameLine();
-                    for (size_t i = 0; i < comp->inputs.size(); i++) {
+                    for (size_t i = 0; i < comp->outputs.size(); i++) {
                         ToggleButton(comp->get(i));
                         ImGui::SameLine();
                     }

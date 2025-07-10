@@ -17,6 +17,19 @@ static std::array<Line, LINE_SIZE> _buffer {};
 static size_t _next = 0;
 static size_t _size = 0;
 
+static const auto app_start_time = std::chrono::steady_clock::now();
+void Line::_set_time(void)
+{
+    using namespace std::chrono;
+    uint64_t total
+        = duration_cast<seconds>(steady_clock::now() - app_start_time).count();
+    uint32_t hour = static_cast<uint32_t>(total / 3600);
+    uint32_t min  = static_cast<uint32_t>((total % 3600) / 60);
+    uint32_t sec  = static_cast<uint32_t>(total % 60);
+    std::snprintf(time_str.data(), time_str.max_size() - 1, "%02d:%02d:%02d",
+        hour, min, sec);
+}
+
 void l_iterate(std::function<void(size_t, const Line& l)> fn)
 {
     if (_size < LINE_SIZE) {
@@ -56,11 +69,12 @@ void Line::_fn_parse(std::string fnname)
 inline static void _log_pre(const Line& l)
 {
     std::ostringstream oss2 {};
-    printf(F_BOLD "%s%-6s" F_RESET F_GREEN "|" F_RESET "%-15s" F_GREEN
-                  " |%-18s|" F_RESET F_BLUE "%-25s" F_RESET F_GREEN "|" F_RESET
-                  "%s\r\n",
-        (l.severity == ERROR ? F_RED : F_GREEN), l.log_level_str.begin(),
-        l.file_line.begin(), l.obj.begin(), l.fn.begin(), l.expr.begin());
+    printf(F_BLUE "[%s] " F_BOLD "%s%-6s" F_RESET F_GREEN "|" F_RESET
+                  "%-15s" F_GREEN " |%-18s|" F_RESET F_BLUE
+                  "%-25s" F_RESET F_GREEN "|" F_RESET "%s\r\n",
+        l.time_str.begin(), (l.severity == ERROR ? F_RED : F_GREEN),
+        l.log_level_str.begin(), l.file_line.begin(), l.obj.begin(),
+        l.fn.begin(), l.expr.begin());
     if (is_testing) {
         __TEST_LOG__ << l.log_level_str.begin() << '\t' << l.file_line.begin()
                      << '\t' << l.obj.begin() << "\t" << l.fn.begin() << '\t'
@@ -87,6 +101,12 @@ void l_push(Line&& line)
         _buffer[_next] = std::move(line);
         _log_pre(_buffer[_next]);
     }
+}
+
+void l_clear(void)
+{
+    _next = 0;
+    _size = 0;
 }
 
 int __expect(std::function<bool(void)> expr, const char* function,

@@ -16,7 +16,6 @@
 #include "imgui_impl_opengl3.h"
 #include "ui.h"
 #include "ui/configuration.h"
-#include "ui/util.h"
 #include <cstdio>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -48,7 +47,6 @@ static void glfw_error_callback(int error, const char* description)
 
 namespace lcs {
 namespace ui {
-    bool is_dark = false;
     int main(int, char**)
     {
         glfwSetErrorCallback(glfw_error_callback);
@@ -87,10 +85,8 @@ namespace ui {
         // // 3.0+ only
 #endif
 
+        Configuration& cfg = load_config();
         // Create window with graphics context
-        load_config();
-        Configuration& cfg = get_config();
-
         GLFWwindow* window = glfwCreateWindow(cfg.startup_win_x,
             cfg.startup_win_y, "Logic Circuit Simulator", nullptr, nullptr);
         if (window == nullptr) {

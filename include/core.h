@@ -18,9 +18,6 @@
 #include <string>
 #include <vector>
 
-namespace Json {
-class Value;
-}
 namespace lcs {
 
 class Scene;
@@ -69,10 +66,14 @@ constexpr const char* GateType_to_str(GateType g)
 }
 
 /** Position of a node or a curve in the surface */
-struct Point final {
+struct Point final : public Serializable {
     Point(int _x = 0, int _y = 0)
         : x { _x }
         , y { _y } { };
+
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
 
     int x;
     int y;
@@ -114,7 +115,7 @@ protected:
  * the connected output is a Component, since components
  * can have multiple output sockets.
  */
-struct Rel final {
+struct Rel final : public Serializable {
     explicit Rel(relid _id, Node _from_node, Node _to_node, sockid _from_sock,
         sockid _to_sock);
     Rel();
@@ -126,12 +127,16 @@ struct Rel final {
     sockid from_sock;
     sockid to_sock;
     State value;
+
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
 };
 
 /**
  * Describes a single logic gate.
  */
-class GateNode final : public BaseNode {
+class GateNode final : public BaseNode, public Serializable {
 public:
     explicit GateNode(Scene*, Node, GateType type, sockid max_in = 2);
     GateNode(const GateNode&)            = default;
@@ -151,6 +156,10 @@ public:
     State get(sockid slot = 0) const override;
     void on_signal(void) override;
 
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
+
     /** max_in number of inputs, denoted with relation id */
     std::vector<relid> inputs;
     /** Connected nodes to a single output. */
@@ -166,7 +175,7 @@ private:
     sockid _max_in;
 };
 
-class ComponentNode final : public BaseNode {
+class ComponentNode final : public BaseNode, public Serializable {
 public:
     explicit ComponentNode(Scene*, Node, const std::string& path = "");
     ComponentNode(const ComponentNode&)            = default;
@@ -183,6 +192,10 @@ public:
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
 
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
+
     std::vector<relid> inputs;
     std::map<sockid, std::vector<relid>> outputs;
     std::string path;
@@ -196,7 +209,7 @@ private:
  * An input node where it's value can be arbitrarily changed. If
  * InputNode::_freq is defined, it will be toggled automatically.
  */
-class InputNode : public BaseNode {
+class InputNode final : public BaseNode, public Serializable {
 public:
     InputNode(
         Scene* _scene, Node _id, std::optional<float> freq = std::nullopt);
@@ -219,6 +232,10 @@ public:
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
 
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
+
     std::vector<relid> output;
 
     std::optional<float> _freq;
@@ -228,7 +245,7 @@ private:
 };
 
 /** An output node that displays the result */
-class OutputNode final : public BaseNode {
+class OutputNode final : public BaseNode, public Serializable {
 public:
     OutputNode(Scene* _scene, Node _id);
     OutputNode(const OutputNode&)            = default;
@@ -241,6 +258,10 @@ public:
     void on_signal(void) override;
     bool is_connected(void) const override;
     State get(sockid slot = 0) const override;
+
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
 
     relid input;
 
@@ -257,7 +278,7 @@ private:
  * ComponentContext::get_output(sockid) methods where it is
  * virtually increased by one.
  */
-struct ComponentContext final {
+struct ComponentContext final : public Serializable {
     ComponentContext(Scene* parent, sockid input_s = 0, sockid output_s = 0);
 
     inline void reload(Scene* parent) { _parent = parent; }
@@ -295,6 +316,10 @@ struct ComponentContext final {
     /** Update the value of an output slot */
     void set_value(Node id, State value);
 
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
+
     std::vector<std::vector<relid>> inputs;
     std::vector<relid> outputs;
 
@@ -324,7 +349,7 @@ template <typename T> constexpr NodeType as_node_type(void)
     return NodeType::NODE_S;
 }
 
-class Scene final {
+class Scene final : public Serializable {
 public:
     Scene(const std::string& name = "", const std::string& author = "",
         const std::string& description = "", int _version = 1);
@@ -476,6 +501,10 @@ public:
     LCS_ERROR _connect_with_id(relid id, Node to_node, sockid to_sock,
         Node from_node, sockid from_sock = 0);
 
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
+
     Node _last_node[NodeType::NODE_S];
     relid _last_rel;
 
@@ -501,28 +530,5 @@ private:
         }
     }
 };
-
-/**
- * Converts given object to a Json::Value
- * @returns Json document
- */
-template <typename T> Json::Value to_json(const T&);
-/**
- * Reads contents of the document and updates its fields.
- * @returns Error on failure:
- *
- *  - Error::INVALID_SCENE
- *  - Error::REL_CONNECT_ERROR
- *  - Error::UNDEFINED_DEPENDENCY
- *  - Error::INVALID_NODE
- *  - Error::INVALID_NODE
- *  - Error::INVALID_NODE
- *  - Error::INVALID_COMPONENT
- *  - Error::INVALID_INPUT
- *  - Error::INVALID_COMPONENT
- *  - Error::INVALID_GATE
- *  - Error::INVALID_JSON_FORMAT
- */
-template <typename T> LCS_ERROR from_json(const Json::Value&, T&);
 
 } // namespace lcs

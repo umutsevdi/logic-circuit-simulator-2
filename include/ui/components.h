@@ -11,6 +11,7 @@
  ******************************************************************************/
 
 #include "core.h"
+#include "ui/configuration.h"
 #include "ui/util.h"
 #include <imgui.h>
 
@@ -110,7 +111,7 @@ template <typename... Args> void Field(Args... args)
 {
     ImGui::BeginGroup();
     ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
-    ImGui::PushStyleColor(ImGuiCol_Text, get_active_style().magenta);
+    ImGui::PushStyleColor(ImGuiCol_Text, get_active_style().cyan);
     ImGui::Text(args...);
     ImGui::PopFont();
     ImGui::PopStyleColor();

@@ -236,8 +236,7 @@ const char* AuthenticationFlow::reason(void) const { return _reason.c_str(); }
 
 Error AuthenticationFlow::start_existing(void)
 {
-    _last_status = STARTED;
-    L_INFO("%s", ui::user_data.login.begin());
+    _last_status      = STARTED;
     std::string login = ui::user_data.login.begin();
     if (login == "") {
         return WARN(KEYCHAIN_NOT_FOUND);
@@ -314,7 +313,7 @@ void open_browser(const std::string& url)
 Error upload_scene(NRef<const Scene> scene, std::string resp)
 {
     return net::post_request(ui::get_config().api_proxy + "/api/scene", resp,
-        to_json<Scene>(*scene).toStyledString(), _auth.access_token);
+        scene->to_json().toStyledString(), _auth.access_token);
 }
 
 } // namespace lcs::net

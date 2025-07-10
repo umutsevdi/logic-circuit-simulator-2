@@ -56,7 +56,8 @@ void InputNode::on_signal()
 {
     State result = _value ? State::TRUE : State::FALSE;
     for (relid& out : output) {
-        C_DEBUG("Sending %s signal to rel@%d", State_to_str((State)_value), out);
+        C_DEBUG(
+            "Sending %s signal to rel@%d", State_to_str((State)_value), out);
         _parent->signal(out, result);
     }
 }

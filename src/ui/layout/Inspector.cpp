@@ -221,14 +221,35 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
 static void _inspector_component_node(NRef<Scene> scene, Node node)
 {
     auto _node = scene->get_node<ComponentNode>(node);
-    TablePair(Field("Value"), ToggleButton(_node->get()));
+    TablePair(Field("Value"));
+    ImGui::Text("(");
+    ImGui::SameLine();
+    for (size_t i = 0; i < _node->outputs.size(); i++) {
+        ToggleButton(_node->get(i));
+        ImGui::SameLine();
+    }
+    ImGui::Text(")");
     TablePair(Field("Inputs"));
     _input_table(&scene, _node->inputs);
     TablePair(Field("Outputs"));
-    for (auto out : _node->outputs) {
-        if (ImGui::BeginTabBar(std::to_string(out.first).c_str())) {
+    if (ImGui::BeginTable("InputList", 3,
+            ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::NextColumn();
+        ImGui::TableSetupColumn(
+            "Connection", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::NextColumn();
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableHeadersRow();
+
+        for (auto& out : _node->outputs) {
+            TablePair(Field("%d", out.first));
             _output_table(&scene, out.second);
+            ImGui::TableSetColumnIndex(2);
+            ToggleButton(_node->get(out.first));
         }
+
+        ImGui::EndTable();
     }
     ImGui::EndTable();
 }
@@ -271,7 +292,8 @@ static void _inspector_component_context_node(NRef<Scene> scene, Node node)
 
 static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
 {
-    if (ImGui::BeginTable("Inputs", 4, ImGuiTableFlags_BordersInner)) {
+    if (ImGui::BeginTable("Inputs", 4,
+            ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
         ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
@@ -314,22 +336,13 @@ static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
 
 static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
 {
-    if (ImGui::BeginTable("Outputs", 2, ImGuiTableFlags_BordersInner)) {
+    if (ImGui::BeginTable("Outputs", 2,
+            ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
         ImGui::TableHeader("Outputs");
         ImGui::TableSetupColumn(
             "Connection", ImGuiTableColumnFlags_WidthStretch);
         ImGui::NextColumn();
         ImGui::TableSetupColumn("Disconnect", ImGuiTableColumnFlags_WidthFixed);
-        if (outputs.empty()) {
-            ImGui ::TableNextRow();
-            ImGui ::TableSetColumnIndex(1);
-            ImGui::BeginDisabled(true);
-            ImGui::PushID("##disconnect");
-            IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "");
-            ImGui::PopID();
-            ImGui::EndDisabled();
-        }
-
         for (size_t i = 0; i < outputs.size(); i++) {
             ImGui ::TableNextRow();
             ImGui ::TableSetColumnIndex(0);
@@ -345,9 +358,8 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGui ::TableSetColumnIndex(1);
 
             ImGui::BeginDisabled(outputs[i] == 0);
-            ImGui::PushID(std::to_string(i).c_str());
+            ImGui::PushID(("output_" + std::to_string(i)).c_str());
             if (IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "")) {
-
                 scene->disconnect(outputs[i]);
                 io::scene::notify_change();
             }

@@ -23,15 +23,15 @@ TEST_CASE("Save a scene and load")
     s->connect(g_and, 1, v1);
     s->connect(o, 0, g_or);
 
-    std::string s_str = to_json<Scene>(*s).toStyledString();
+    std::string s_str = s->to_json().toStyledString();
 
-    REQUIRE_EQ(io::scene::save_as(TMP / "test.json"), lcs::Error::OK);
-    REQUIRE_EQ(io::scene::close(), lcs::Error::OK);
+    REQUIRE_EQ(io::scene::save_as(TMP / "test.json"), Error::OK);
+    REQUIRE_EQ(io::scene::close(), Error::OK);
     size_t idx = -1;
-    REQUIRE_EQ(io::scene::open(TMP / "test.json", idx), lcs::Error::OK);
+    REQUIRE_EQ(io::scene::open(TMP / "test.json", idx), Error::OK);
     io::scene::get(idx);
     REQUIRE(idx != -1);
-    REQUIRE_EQ(s_str, to_json<Scene>(*io::scene::get()).toStyledString());
+    REQUIRE_EQ(s_str, io::scene::get()->to_json().toStyledString());
 }
 
 TEST_CASE("Save a component and load")
@@ -49,15 +49,15 @@ TEST_CASE("Save a component and load")
     s->connect(s->component_context->get_output(0), 0, g_and);
     s->connect(s->component_context->get_output(1), 0, g_or);
 
-    std::string s_str  = to_json<Scene>(*s).toStyledString();
+    std::string s_str  = s->to_json().toStyledString();
     std::string depstr = s->to_dependency();
 
-    REQUIRE_EQ(io::scene::save(s_handle), lcs::Error::OK);
-    REQUIRE_EQ(io::scene::close(s_handle), lcs::Error::OK);
-    REQUIRE_EQ(io::component::fetch(depstr), lcs::Error::OK);
+    REQUIRE_EQ(io::scene::save(s_handle), Error::OK);
+    REQUIRE_EQ(io::scene::close(s_handle), Error::OK);
+    REQUIRE_EQ(io::component::fetch(depstr), Error::OK);
     auto compref = io::component::get(depstr);
     REQUIRE_NE(compref, nullptr);
-    REQUIRE_EQ(s_str, to_json<Scene>(*compref).toStyledString());
+    REQUIRE_EQ(s_str, compref->to_json().toStyledString());
 }
 
 TEST_CASE("Save a component, load it to a scene")
@@ -96,7 +96,7 @@ TEST_CASE("Save a component, load it to a scene")
 
     Scene s2 {};
     s2.dependencies.push_back(dependency);
-    REQUIRE(s2.load_dependencies() == lcs::Error::OK);
+    REQUIRE(s2.load_dependencies() == Error::OK);
     REQUIRE(s2.dependencies.size() > 0);
 
     Node cnode = s2.add_node<ComponentNode>(dependency);
@@ -142,7 +142,7 @@ TEST_CASE("Fetch a non-local component")
 
     Scene s2 {};
     s2.dependencies.push_back(dependency);
-    REQUIRE(s2.load_dependencies() == lcs::Error::OK);
+    REQUIRE(s2.load_dependencies() == Error::OK);
 
     Node cnode = s2.add_node<ComponentNode>(dependency);
     Node i1    = s2.add_node<InputNode>();

@@ -361,14 +361,17 @@ void Scene::signal(relid id, State value)
         return;
     }
     if (auto r = _relations.find(id); r != _relations.end()) {
-        r->second.value = value;
-        if (r->second.to_node.type != NodeType::COMPONENT_OUTPUT) {
-            auto n = get_base(r->second.to_node);
-            if (n != nullptr) {
-                n->on_signal();
+        if (r->second.value != value) {
+            r->second.value = value;
+            if (r->second.to_node.type != NodeType::COMPONENT_OUTPUT) {
+                auto n = get_base(r->second.to_node);
+                if (n != nullptr) {
+                    n->on_signal();
+                }
+            } else {
+                component_context->set_value(
+                    r->second.to_node.id, r->second.value);
             }
-        } else {
-            component_context->set_value(r->second.to_node.id, r->second.value);
         }
     }
 }

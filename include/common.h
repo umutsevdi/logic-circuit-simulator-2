@@ -28,6 +28,9 @@
 #endif
 
 #include "errors.h"
+namespace Json {
+class Value;
+}
 namespace lcs {
 /******************************************************************************
                                     IO/
@@ -134,12 +137,38 @@ constexpr const char* NodeType_to_str(NodeType s)
     }
 }
 
+class Serializable {
+public:
+    /**
+     * Converts given object to a Json::Value
+     * @returns Json document
+     */
+    virtual Json::Value to_json() const = 0;
+    /**
+     * Reads contents of the document and updates its fields.
+     * @returns Error on failure:
+     *
+     *  - Error::INVALID_SCENE
+     *  - Error::REL_CONNECT_ERROR
+     *  - Error::UNDEFINED_DEPENDENCY
+     *  - Error::INVALID_NODE
+     *  - Error::INVALID_NODE
+     *  - Error::INVALID_NODE
+     *  - Error::INVALID_COMPONENT
+     *  - Error::INVALID_INPUT
+     *  - Error::INVALID_COMPONENT
+     *  - Error::INVALID_GATE
+     *  - Error::INVALID_JSON_FORMAT
+     */
+    LCS_ERROR virtual from_json(const Json::Value&) = 0;
+};
+
 /**
  * Node is a handler that represents the index.
  * id is a non-zero identifier. Together with the type, represents a unique
  * node.
  */
-struct Node {
+struct Node final : public Serializable {
     Node(uint16_t _id = 0, NodeType _type = GATE);
     Node(Node&&)                 = default;
     Node(const Node&)            = default;
@@ -150,6 +179,10 @@ struct Node {
 
     inline uint32_t numeric(void) const { return id | (type << 16); }
     std::string to_str(void) const;
+
+    /* Serializable Interface */
+    Json::Value to_json() const override;
+    LCS_ERROR from_json(const Json::Value&) override;
 
     uint16_t id : 16;
     NodeType type : 4;
@@ -172,8 +205,10 @@ static constexpr const char* LogLevel_str(LogLevel l)
 }
 
 struct Line {
+    Line()            = default;
     LogLevel severity = DEBUG;
     Node node         = 0;
+    std::array<char, 12> time_str {};
     std::array<char, 6> log_level_str {};
     std::array<char, 18> obj {};
     std::array<char, 15> file_line {};
@@ -184,27 +219,41 @@ struct Line {
     Line(LogLevel l, const char* file, int line, const char* _fn,
         /*optional*/ Node object, const char* fmt, Args... args)
     {
+        _set_time();
         severity = l;
         std::strncpy(log_level_str.data(), LogLevel_str(l),
             log_level_str.max_size() - 1);
         std::snprintf(
             file_line.data(), file_line.max_size() - 1, "%s:%3d", file, line);
-        snprintf(expr.data(), expr.max_size() - 1, fmt, args...);
         _fn_parse(_fn);
         if (object.id != 0 || object.type != 0) {
             std::strncpy(
                 obj.data(), object.to_str().c_str(), obj.max_size() - 1);
             node = object;
         }
+        std::snprintf(expr.data(), expr.max_size() - 1, fmt, args...);
     }
-    Line() = default;
 
 private:
     void _fn_parse(std::string fnname);
+    void _set_time(void);
 };
 
+/**
+ * Push a log message to the stack. Intended to be used by the macros such as
+ * L_INFO, L_WARN, L_ERROR, L_DEBUG.
+ * @param line to push
+ *
+ */
 void l_push(Line&& line);
 
+/** Clears all log messages. */
+void l_clear(void);
+
+/**
+ * Loop over existing logs starting from the oldest.
+ * @param f iteration function
+ */
 void l_iterate(std::function<void(size_t, const Line&)> f);
 
 /** Runs an assertion, displays an error message on failure. Intended for
@@ -213,31 +262,27 @@ int __expect(std::function<bool(void)> expr, const char* function,
     const char* file, int line, const char* str_expr) noexcept;
 
 #define __LLOG__(STATUS, ...)                                                  \
-    l_push(Line {                                                              \
+    lcs::l_push(lcs::Line {                                                    \
         STATUS, __FILE_NAME__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__ })
 
-#define L_INFO(...) __LLOG__(INFO, 0, __VA_ARGS__)
-#define L_WARN(...) __LLOG__(WARN, 0, __VA_ARGS__)
-#define L_ERROR(...) __LLOG__(ERROR, 0, __VA_ARGS__)
-#define C_DEBUG(...) __LLOG__(DEBUG, this->id(), __VA_ARGS__)
+#define L_INFO(...) __LLOG__(lcs::LogLevel::INFO, 0, __VA_ARGS__)
+#define L_WARN(...) __LLOG__(lcs::LogLevel::WARN, 0, __VA_ARGS__)
+#define L_ERROR(...) __LLOG__(lcs::LogLevel::ERROR, 0, __VA_ARGS__)
+#define C_DEBUG(...) __LLOG__(lcs::LogLevel::DEBUG, this->id(), __VA_ARGS__)
 
+#define lcs_assert(expr)                                                       \
+    {                                                                          \
+        if (lcs::__expect([&]() mutable -> bool { return expr; },              \
+                __FUNCTION__, __FILE_NAME__, __LINE__, #expr)) {               \
+            exit(1);                                                           \
+        }                                                                      \
+    }
 #ifndef NDEBUG
 #define L_DEBUG(...) __LLOG__(DEBUG, 0, __VA_ARGS__)
 /** Runs an assertion. Displays an error message on failure. In debug builds
  * also crashes the application. */
-#define lcs_assert(expr)                                                       \
-    {                                                                          \
-        if (__expect([&]() mutable -> bool { return expr; },                   \
-                __PRETTY_FUNCTION__, __FILE_NAME__, __LINE__, #expr)) {        \
-            exit(1);                                                           \
-        }                                                                      \
-    }
 #else
 #define L_DEBUG(...)
-#define lcs_assert(expr)                                                       \
-    if ((expr) == 0) {                                                         \
-        L_ERROR("Assertion " #expr " failed!");                                \
-    }
 #endif
 
 #define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__

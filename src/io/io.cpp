@@ -38,7 +38,7 @@ Error load(const std::string& data, Scene& s)
     if (!reader.parse(data, root)) {
         return ERROR(Error::INVALID_JSON_FORMAT);
     }
-    return from_json<Scene>(root, s);
+    return s.from_json(root);
 }
 
 namespace scene {
@@ -118,7 +118,7 @@ namespace scene {
             inode.path = inode.scene.to_filepath();
         }
 
-        if (!write(inode.path, to_json<Scene>(inode.scene).toStyledString())) {
+        if (!write(inode.path, inode.scene.to_json().toStyledString())) {
             return ERROR(Error::NO_SAVE_PATH_DEFINED);
         }
         inode.is_saved = true;
@@ -129,8 +129,8 @@ namespace scene {
                 compiter != COMPONENT_STORAGE.end()) {
                 COMPONENT_STORAGE.insert_or_assign(dependency_string, Scene {});
                 Scene s;
-                Error err = from_json<Scene>(to_json<Scene>(inode.scene),
-                    COMPONENT_STORAGE[dependency_string]);
+                Error err = COMPONENT_STORAGE[dependency_string].from_json(
+                    inode.scene.to_json());
                 if (err) { // FIXME later
                     return err;
                 }
@@ -287,6 +287,7 @@ namespace component {
     Error fetch(
         const std::string& name, const std::string& data, bool invalidate)
     {
+        L_DEBUG("Fetching %s", name.c_str());
         if (!invalidate) {
             if (auto cmp = COMPONENT_STORAGE.find(name);
                 cmp != COMPONENT_STORAGE.end()) {

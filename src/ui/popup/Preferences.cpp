@@ -1,25 +1,44 @@
 #include "IconsLucide.h"
 #include "ui/components.h"
 #include "ui/configuration.h"
-#include "ui/util.h"
 #include <imgui.h>
-#include <imnodes.h>
 #include <tinyfiledialogs.h>
 
 namespace lcs::ui {
 
-static Configuration cfg { .is_saved = true, .is_applied = true };
+static Configuration cfg = {};
+
+static void color_buttons(const LcsTheme&);
 void Preferences(bool& pref_show)
 {
+    static int light_idx = 0;
+    static int dark_idx  = 0;
+    static const ImVec2 __table_l_size
+        = ImGui::CalcTextSize("LIGHT THEME STYLE");
+    static const char* pref_table[] = {
+        "Follow OS",
+        "Always Light",
+        "Always Dark",
+    };
     if (!pref_show) {
         return;
     }
+    auto light_themes = get_available_styles(false);
+    auto dark_themes  = get_available_styles(true);
     if (cfg.is_saved && cfg.is_applied) {
         cfg = get_config();
+        for (size_t i = 0; i < light_themes.size(); i++) {
+            if (cfg.light_theme == light_themes[i]) {
+                light_idx = i;
+            }
+        }
+        for (size_t i = 0; i < dark_themes.size(); i++) {
+            if (cfg.dark_theme == dark_themes[i]) {
+                dark_idx = i;
+            }
+        }
     }
     bool keep = true;
-    const static ImVec2 __table_l_size
-        = ImGui::CalcTextSize("LIGHT THEME STYLE");
     ImGui::Begin("Preferences", &keep,
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
             | (!get_config().is_saved ? ImGuiWindowFlags_UnsavedDocument
@@ -41,102 +60,25 @@ void Preferences(bool& pref_show)
         };
         {
             TablePair(Field("Light Theme Style"));
-            int selected = cfg.light_theme;
-            static const char* table[]
-                = { "Seoul256 Light", "Acme", "Gruvbox Light", "One Light" };
-            if (ImGui::Combo("##Select Theme", &selected, table, 4)) {
+            auto light_themes = get_available_styles(false);
+            if (ImGui::Combo("##Select Theme", &light_idx, light_themes.data(),
+                    light_themes.size())) {
                 cfg.is_applied  = false;
-                cfg.light_theme = (Style)selected;
+                cfg.light_theme = light_themes[light_idx];
             }
-            const LcsStyle& style = ui::get_style(cfg.light_theme);
-            ImGui::ColorButton("Background (Light)", style.bg);
-            ImGui::SameLine();
-            ImGui::ColorButton("Black (Light)", style.black);
-            ImGui::SameLine();
-            ImGui::ColorButton("Red (Light)", style.red);
-            ImGui::SameLine();
-            ImGui::ColorButton("Green (Light)", style.green);
-            ImGui::SameLine();
-            ImGui::ColorButton("Yellow (Light)", style.yellow);
-            ImGui::SameLine();
-            ImGui::ColorButton("Blue (Light)", style.blue);
-            ImGui::SameLine();
-            ImGui::ColorButton("Magenta (Light)", style.magenta);
-            ImGui::SameLine();
-            ImGui::ColorButton("Cyan (Light)", style.cyan);
-            ImGui::SameLine();
-            ImGui::ColorButton("White (Light)", style.white);
-
-            ImGui::ColorButton("Foreground (Light)", style.fg);
-            ImGui::SameLine();
-            ImGui::ColorButton("Black Bright (Light)", style.black_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Red Bright (Light)", style.red_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Green Bright (Light)", style.green_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Yellow Bright (Light)", style.yellow_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Blue Bright (Light)", style.blue_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Magenta Bright (Light)", style.magenta_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Cyan Bright (Light)", style.cyan_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("White Bright (Light)", style.white_bright);
+            const LcsTheme& style = ui::get_theme(cfg.light_theme);
+            color_buttons(style);
         }
         {
             TablePair(Field("Dark Theme Style"));
-
-            int selected = cfg.dark_theme - 4;
-            static const char* table[]
-                = { "Seashells", "XTerm", "Gruvbox Dark", "One Dark" };
-            if (ImGui::Combo("##Select Theme Dark", &selected, table, 4)) {
-                cfg.dark_theme = (Style)(selected + 4);
+            if (ImGui::Combo("##Select Theme Dark", &dark_idx,
+                    dark_themes.data(), dark_themes.size())) {
                 cfg.is_applied = false;
+                cfg.dark_theme = dark_themes[dark_idx];
             }
-            const LcsStyle& style = ui::get_style(cfg.dark_theme);
-            ImGui::ColorButton("Background (Dark)", style.bg);
-            ImGui::SameLine();
-            ImGui::ColorButton("Black (Dark)", style.black);
-            ImGui::SameLine();
-            ImGui::ColorButton("Red (Dark)", style.red);
-            ImGui::SameLine();
-            ImGui::ColorButton("Green (Dark)", style.green);
-            ImGui::SameLine();
-            ImGui::ColorButton("Yellow (Dark)", style.yellow);
-            ImGui::SameLine();
-            ImGui::ColorButton("Blue (Dark)", style.blue);
-            ImGui::SameLine();
-            ImGui::ColorButton("Magenta (Dark)", style.magenta);
-            ImGui::SameLine();
-            ImGui::ColorButton("Cyan (Dark)", style.cyan);
-            ImGui::SameLine();
-            ImGui::ColorButton("White (Dark)", style.white);
-
-            ImGui::ColorButton("Foreground (Dark)", style.fg);
-            ImGui::SameLine();
-            ImGui::ColorButton("Black Bright (Dark)", style.black_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Red Bright (Dark)", style.red_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Green Bright (Dark)", style.green_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Yellow Bright (Dark)", style.yellow_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Blue Bright (Dark)", style.blue_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Magenta Bright (Dark)", style.magenta_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("Cyan Bright (Dark)", style.cyan_bright);
-            ImGui::SameLine();
-            ImGui::ColorButton("White Bright (Dark)", style.white_bright);
+            const LcsTheme& style = ui::get_theme(cfg.dark_theme);
+            color_buttons(style);
         }
-        static const char* pref_table[] = {
-            "Follow OS",
-            "Always Light",
-            "Always Dark",
-        };
         TablePair(Field("Rounded Corners"));
         if (ImGui::SliderInt(
                 "##Rounded Corners", &cfg.rounded_corners, 0, 20)) {
@@ -160,22 +102,6 @@ void Preferences(bool& pref_show)
             cfg.is_applied    = false;
         }
         ImGui::EndDisabled();
-        ImGui::EndTable();
-    }
-    EndSection();
-    Section("Network");
-    if (ImGui::BeginTable("##NetworkTable", 2, ImGuiTableFlags_BordersInnerV)) {
-        static std::array<char, 1024> api_input {};
-        ImGui::TableSetupColumn(
-            "##Key", ImGuiTableColumnFlags_WidthFixed, __table_l_size.x);
-        ImGui::NextColumn();
-        ImGui::TableSetupColumn("##Value", ImGuiTableColumnFlags_WidthStretch);
-        TablePair(Field("API Proxy"));
-        if (ImGui::InputText(
-                "##api_proxy", api_input.data(), api_input.max_size())) {
-            cfg.is_applied = false;
-            cfg.api_proxy  = api_input.begin();
-        }
         ImGui::EndTable();
     }
     EndSection();
@@ -216,4 +142,46 @@ void Preferences(bool& pref_show)
         pref_show = false;
     }
 }
+
+static void color_buttons(const LcsTheme& style)
+{
+    ImGui::PushID(style.name.c_str());
+    ImGui::ColorButton("Background", style.bg);
+    ImGui::SameLine();
+    ImGui::ColorButton("Black", style.black);
+    ImGui::SameLine();
+    ImGui::ColorButton("Red", style.red);
+    ImGui::SameLine();
+    ImGui::ColorButton("Green", style.green);
+    ImGui::SameLine();
+    ImGui::ColorButton("Yellow", style.yellow);
+    ImGui::SameLine();
+    ImGui::ColorButton("Blue", style.blue);
+    ImGui::SameLine();
+    ImGui::ColorButton("Magenta", style.magenta);
+    ImGui::SameLine();
+    ImGui::ColorButton("Cyan", style.cyan);
+    ImGui::SameLine();
+    ImGui::ColorButton("White", style.white);
+
+    ImGui::ColorButton("Foreground", style.fg);
+    ImGui::SameLine();
+    ImGui::ColorButton("Black Bright", style.black_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Red Bright", style.red_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Green Bright", style.green_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Yellow Bright", style.yellow_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Blue Bright", style.blue_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Magenta Bright", style.magenta_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Cyan Bright", style.cyan_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("White Bright", style.white_bright);
+    ImGui::PopID();
+}
 } // namespace lcs::ui
+  //

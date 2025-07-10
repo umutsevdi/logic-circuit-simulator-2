@@ -141,6 +141,34 @@ template <> void NodeView<GateNode>(NRef<GateNode> node, bool has_changes)
     ImNodes::EndNode();
 }
 
-template <> void NodeView<ComponentNode>(NRef<ComponentNode>, bool) { }
+template <>
+void NodeView<ComponentNode>(NRef<ComponentNode> node, bool has_changes)
+{
+    uint32_t nodeid = node->id().numeric();
+    ImNodes::BeginNode(nodeid);
+    _sync_position(node->base(), has_changes);
+    ImNodes::BeginNodeTitleBar();
+    ImGui::Text("Component Node %u", node->id().id);
+    ImNodes::EndNodeTitleBar();
+
+    for (size_t i = 0; i < node->inputs.size(); i++) {
+        if (i == node->inputs.size() / 2) {
+            for (size_t j = 0; j < node->outputs.size(); j++) {
+                ImNodes::BeginOutputAttribute(encode_pair(node->id(), j, true),
+                    to_shape(!node->outputs[j].empty(), false));
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX()
+                    + ImGui::CalcTextSize("         ").x);
+                ImGui::Text("%zu", j + 1);
+                ImNodes::EndOutputAttribute();
+            }
+        }
+        ImNodes::BeginInputAttribute(encode_pair(node->id(), i, false),
+            to_shape(node->is_connected(), true));
+        ImGui::Text("%zu", i + 1);
+        ImNodes::EndInputAttribute();
+    }
+
+    ImNodes::EndNode();
+}
 
 } // namespace lcs::ui

@@ -8,7 +8,7 @@
 #include <string_view>
 namespace lcs::ui {
 
-static ImVec4 log_color(const LcsStyle& style, LogLevel level)
+static ImVec4 _log_color(const LcsTheme& style, LogLevel level)
 {
     switch (level) {
     case DEBUG: return style.blue_bright;
@@ -23,12 +23,17 @@ void Console(void)
     if (!user_data.console) {
         return;
     }
-    const LcsStyle& style = get_active_style();
+    const LcsTheme& style = get_active_style();
     if (ImGui::Begin("Console", &user_data.console)) {
-        if (ImGui::BeginTable("##ConsoleTable", 4,
+        if (IconButton<NORMAL>(ICON_LC_TRASH, "Clear")) {
+            lcs::l_clear();
+        }
+        if (ImGui::BeginTable("##ConsoleTable", 5,
                 ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersInner
-                    | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)) {
+                    | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY
+                    | ImGuiTableColumnFlags_NoResize)) {
             ImGui::TableHeader("##Console");
+            ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed);
             ImGui::TableSetupColumn(
                 "Severity", ImGuiTableColumnFlags_WidthFixed);
             ImGui::NextColumn();
@@ -48,10 +53,13 @@ void Console(void)
                 ImGui::Selectable(("##" + std::to_string(idx)).c_str(),
                     &selected, ImGuiSelectableFlags_SpanAllColumns);
                 ImGui::SameLine();
-                ImGui::TextColored(log_color(style, l.severity), "%s",
+                ImGui::TextUnformatted(l.time_str.begin());
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextColored(_log_color(style, l.severity), "%s",
                     l.log_level_str.begin());
                 if (!std::string_view { l.obj.data() }.empty()) {
-                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TableSetColumnIndex(2);
                     ImGui::PushID(idx);
                     if (l.node.id != 0 || l.node.type != 0) {
                         NodeTypeTitle(l.node);
@@ -60,9 +68,9 @@ void Console(void)
                     }
                     ImGui::PopID();
                 }
-                ImGui::TableSetColumnIndex(2);
-                ImGui::TextColored(style.cyan, "%s", l.fn.begin());
                 ImGui::TableSetColumnIndex(3);
+                ImGui::TextColored(style.cyan, "%s", l.fn.begin());
+                ImGui::TableSetColumnIndex(4);
                 ImGui::TextUnformatted(l.expr.begin());
 
                 if (selected) {

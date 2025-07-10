@@ -182,10 +182,6 @@ void ComponentNode::on_signal()
             if (in != 0) {
                 auto rel = _parent->get_rel(in);
                 lcs_assert(rel != nullptr);
-                if (rel->value == State::DISABLED) {
-                    _is_disabled = true;
-                    break;
-                }
                 input <<= 1;
                 if (rel->value == TRUE) {
                     input++;
