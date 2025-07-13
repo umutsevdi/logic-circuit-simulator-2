@@ -27,6 +27,9 @@ ImFont* get_font(int attributes) { return _FONT[attributes]; }
 
 void set_style(ImGuiIO& io, bool init)
 {
+    if (init) {
+        L_DEBUG("Initializing theme for the first time");
+    }
     Configuration& cfg      = get_config();
     cfg.is_applied          = true;
     ImGuiStyle& style       = ImGui::GetStyle();
@@ -65,6 +68,9 @@ void set_style(ImGuiIO& io, bool init)
 
     io.FontGlobalScale = cfg.scale / 100.f * 2 / 3 /* font downscale factor*/;
     style.ScaleAllSizes(cfg.scale / 100.f);
+    if (init) {
+        L_DEBUG("Styling is completed.");
+    }
 }
 
 const char* get_style(size_t idx, bool is_dark)
@@ -99,6 +105,7 @@ const LcsTheme& get_active_style(void)
 
 static void _init_fonts(ImGuiIO& io)
 {
+    L_DEBUG("Load fonts.");
     // Load the fonts twice the size and scale them back to have clear
     // visuals.
     float fsize = 16.f * 3 / 2;
@@ -155,6 +162,7 @@ static void _init_fonts(ImGuiIO& io)
     _FONT[ULTRA | ICON] = atlas->AddFontFromFileTTF(
         font.c_str(), 2.5 * fsize, nullptr, icon_ranges);
     atlas->Build();
+    L_DEBUG("Font atlas was built.");
 }
 
 #define CLRU32(...) ImGui::GetColorU32(__VA_ARGS__)
@@ -282,6 +290,8 @@ static void _set_colors(
 
 static void _init_themes(Configuration& cfg)
 {
+    L_DEBUG("Load themes.");
+    // Load the fonts twice the size and scale them back to have clear
     _init_default_themes();
     Json::Value v {};
     Json::Reader r;
@@ -316,6 +326,7 @@ static void _init_themes(Configuration& cfg)
             cfg.dark_theme.c_str(), names_dark[0]);
         cfg.dark_theme = names_dark[0];
     }
+    L_DEBUG("Themes are ready.");
 }
 
 inline ImVec4 to_imvec4(uint64_t clr)

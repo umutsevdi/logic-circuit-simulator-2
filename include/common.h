@@ -15,13 +15,15 @@
 #include <fstream>
 #include <functional>
 
+#define VERSION "0.1"
+
 #define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
 #define APPNAME_LONG "LogicCircuitSimulator"
 
 #ifndef API_ENDPOINT
 #ifndef NDEBUG
-#define API_ENDPOINT "http://localhost:8080"
+#define API_ENDPOINT "http://localhost:8000"
 #else
 #define API_ENDPOINT "https://lcs2.com"
 #endif

@@ -1,5 +1,6 @@
 #include "common.h"
 #include "tinyfiledialogs.h"
+#include <chrono>
 #include <cstring>
 #include <iostream>
 
@@ -22,12 +23,19 @@ void Line::_set_time(void)
 {
     using namespace std::chrono;
     uint64_t total
-        = duration_cast<seconds>(steady_clock::now() - app_start_time).count();
-    uint32_t hour = static_cast<uint32_t>(total / 3600);
-    uint32_t min  = static_cast<uint32_t>((total % 3600) / 60);
-    uint32_t sec  = static_cast<uint32_t>(total % 60);
-    std::snprintf(time_str.data(), time_str.max_size() - 1, "%02d:%02d:%02d",
-        hour, min, sec);
+        = duration_cast<milliseconds>(steady_clock::now() - app_start_time)
+              .count();
+    uint32_t hour = static_cast<uint32_t>(total / 3'600'000ULL); // 60*60*1000
+    uint32_t min  = static_cast<uint32_t>((total % 3'600'000ULL) / 60'000ULL);
+    uint32_t sec  = static_cast<uint32_t>((total % 60'000ULL) / 1'000ULL);
+    uint32_t ms   = static_cast<uint32_t>(total % 1'000ULL / 10);
+    if (hour == 0) {
+        std::snprintf(time_str.data(), time_str.max_size() - 1,
+            "%02d:%02d:%02d", min, sec, ms);
+    } else {
+        std::snprintf(time_str.data(), time_str.max_size() - 1,
+            "%02d:%02d:%02d", hour, min, sec);
+    }
 }
 
 void l_iterate(std::function<void(size_t, const Line& l)> fn)

@@ -26,7 +26,8 @@ static size_t _write_cb(
 Error get_request(
     const std::string& url, std::string& resp, const std::string& authorization)
 {
-    L_DEBUG("Sending GET to %s\tAuth: %s", url.c_str(), authorization.c_str());
+    L_DEBUG("GET %s\t[Auth: %s]", url.c_str(), authorization.c_str());
+
     CURL* curl = curl_easy_init();
     if (!curl) {
         resp = "";
@@ -73,7 +74,7 @@ Error get_request(
 Error post_request(const std::string& url, std::string& resp,
     const std::string& req, const std::string& authorization)
 {
-    L_DEBUG("Sending POST to %s\tAuth:%s\tReq: %s", url.c_str(),
+    L_DEBUG("POST %s\t[Auth: %s]\tReq: {%s}", url.c_str(),
         authorization.c_str(), req.c_str());
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -131,6 +132,7 @@ static size_t write_bin_cb(
 Error get_request(const std::string& url, std::vector<unsigned char>& resp,
     const std::string&)
 {
+    L_DEBUG("GET %s\t[Auth: %s]", url.c_str());
     CURL* curl = curl_easy_init();
     if (!curl) {
         resp.clear();

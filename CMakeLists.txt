@@ -33,7 +33,7 @@ message("Build Type: ${CMAKE_BUILD_TYPE}")
 
 add_compile_options(-Wall -Wextra)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options(-g -O0 -Wpedantic)
+    add_compile_options(-g -Og -Wpedantic)
 else()
     add_compile_options(-O3)
 endif()

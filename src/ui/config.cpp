@@ -1,9 +1,11 @@
+#include "IconsLucide.h"
 #include "common.h"
 #include "imgui_internal.h"
 #include "io.h"
 #include "json/reader.h"
 #include "json/value.h"
 #include "net.h"
+#include "ui/components.h"
 #include "ui/configuration.h"
 
 namespace lcs ::ui {
@@ -135,6 +137,9 @@ void _apply_all(ImGuiContext*, ImGuiSettingsHandler*)
     if (net::get_flow().start_existing()) {
         net::get_flow().resolve();
     }
+    Toast(ICON_LC_GITHUB, ("Welcome back " + net::get_account().name).c_str(),
+        "Authentication was successful.");
+    L_INFO("Welcome back %s", net::get_account().name.c_str());
 }
 
 static void* _read_open(ImGuiContext*, ImGuiSettingsHandler*, const char* name)

@@ -8,7 +8,7 @@ namespace lcs::ui {
 
 static Configuration cfg = {};
 
-static void color_buttons(const LcsTheme&);
+static void _color_buttons(const LcsTheme&);
 void Preferences(bool& pref_show)
 {
     static int light_idx = 0;
@@ -67,7 +67,7 @@ void Preferences(bool& pref_show)
                 cfg.light_theme = light_themes[light_idx];
             }
             const LcsTheme& style = ui::get_theme(cfg.light_theme);
-            color_buttons(style);
+            _color_buttons(style);
         }
         {
             TablePair(Field("Dark Theme Style"));
@@ -77,7 +77,7 @@ void Preferences(bool& pref_show)
                 cfg.dark_theme = dark_themes[dark_idx];
             }
             const LcsTheme& style = ui::get_theme(cfg.dark_theme);
-            color_buttons(style);
+            _color_buttons(style);
         }
         TablePair(Field("Rounded Corners"));
         if (ImGui::SliderInt(
@@ -143,11 +143,13 @@ void Preferences(bool& pref_show)
     }
 }
 
-static void color_buttons(const LcsTheme& style)
+static void _color_buttons(const LcsTheme& style)
 {
     ImGui::PushID(style.name.c_str());
     ImGui::ColorButton("Background", style.bg);
     ImGui::SameLine();
+    ImGui::ColorButton("Foreground", style.fg);
+
     ImGui::ColorButton("Black", style.black);
     ImGui::SameLine();
     ImGui::ColorButton("Red", style.red);
@@ -155,7 +157,16 @@ static void color_buttons(const LcsTheme& style)
     ImGui::ColorButton("Green", style.green);
     ImGui::SameLine();
     ImGui::ColorButton("Yellow", style.yellow);
+
+
+    ImGui::ColorButton("Black Bright", style.black_bright);
     ImGui::SameLine();
+    ImGui::ColorButton("Red Bright", style.red_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Green Bright", style.green_bright);
+    ImGui::SameLine();
+    ImGui::ColorButton("Yellow Bright", style.yellow_bright);
+
     ImGui::ColorButton("Blue", style.blue);
     ImGui::SameLine();
     ImGui::ColorButton("Magenta", style.magenta);
@@ -164,16 +175,6 @@ static void color_buttons(const LcsTheme& style)
     ImGui::SameLine();
     ImGui::ColorButton("White", style.white);
 
-    ImGui::ColorButton("Foreground", style.fg);
-    ImGui::SameLine();
-    ImGui::ColorButton("Black Bright", style.black_bright);
-    ImGui::SameLine();
-    ImGui::ColorButton("Red Bright", style.red_bright);
-    ImGui::SameLine();
-    ImGui::ColorButton("Green Bright", style.green_bright);
-    ImGui::SameLine();
-    ImGui::ColorButton("Yellow Bright", style.yellow_bright);
-    ImGui::SameLine();
     ImGui::ColorButton("Blue Bright", style.blue_bright);
     ImGui::SameLine();
     ImGui::ColorButton("Magenta Bright", style.magenta_bright);

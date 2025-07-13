@@ -10,6 +10,18 @@
 
 namespace lcs::net {
 
+#ifdef _WIN32
+#define OS "win32";
+#elif __APPLE__
+#define OS "apple";
+#elif defined(__linux__)
+#define OS "linux";
+#elif defined(__unix__)
+#define OS "unix";
+#else
+#define OS "unknown";
+#endif
+
 struct AuthInfo {
     Account account;
     std::string access_token = "";
@@ -70,9 +82,8 @@ namespace api {
     static _get_client_id(Json::Value& response)
     {
         std::string resp;
-        Error err
-            = get_request(ui::get_config().api_proxy + "/api/client_id", resp);
-        L_DEBUG("Received %s", resp.c_str());
+        Error err = get_request(
+            ui::get_config().api_proxy + "/api/auth/client_id", resp);
         if (err) {
             return err;
         }
@@ -84,13 +95,36 @@ namespace api {
     }
 
     LCS_ERROR
-    static _login(Json::Value& response, const std::string& token = "")
+    static _login_oauth(Json::Value& response, const std::string& token = "")
     {
         L_INFO("Send token to session server");
         std::string resp;
-        Error err = get_request(
-            ui::get_config().api_proxy + "/api/login", resp, token);
-        L_DEBUG("Received: %s", resp.c_str());
+        Json::Value req;
+        req["os"]      = OS;
+        req["version"] = APP_PKG ":" VERSION;
+        Error err      = post_request(ui::get_config().api_proxy
+                     + "/api/auth/login/oauth2?token=" + token,
+                 resp, req.toStyledString());
+        if (err) {
+            return err;
+        }
+        Json::Reader parser {};
+        if (!parser.parse(resp, response)) {
+            return ERROR(Error::JSON_PARSE_ERROR);
+        }
+        return OK;
+    }
+
+    LCS_ERROR
+    static _login_session(Json::Value& response, const std::string& token = "")
+    {
+        L_INFO("Send token to session server");
+        std::string resp;
+        Json::Value req;
+        req["os"]      = OS;
+        req["version"] = APP_PKG ":" VERSION;
+        Error err = post_request(ui::get_config().api_proxy + "/api/auth/login",
+            resp, req.toStyledString(), token);
         if (err) {
             return err;
         }
@@ -184,25 +218,21 @@ Flow::State AuthenticationFlow::poll(void)
 
     {
         Json::Value v;
-        Error err = api::_login(v, _auth.access_token);
+        Error err = api::_login_oauth(v, _auth.access_token);
         if (err) {
-            if (v["message"].isString()) {
-                _reason = v["message"].asString();
+            if (v["error"].isString()) {
+                _reason = v["error"].asString();
             }
             _last_status = (ERROR(Error::FLOW_FAILURE), Flow::State::BROKEN);
             return _last_status;
         }
-        if (!v["login"].isString()) {
-            _last_status = (ERROR(Error::FLOW_FAILURE), Flow::State::BROKEN);
-            return _last_status;
-        }
-
         _auth.account.login      = v["login"].asString();
         _auth.account.name       = v["name"].asString();
         _auth.account.email      = v["email"].asString();
         _auth.account.bio        = v["bio"].asString();
         _auth.account.url        = v["url"].asString();
-        _auth.account.avatar_url = v["avatarUrl"].asString();
+        _auth.account.avatar_url = v["avatar_url"].asString();
+        _auth.access_token       = v["jwt"].asString();
         keychain::Error keyerr;
         keychain::setPassword(APP_PKG, APPNAME_LONG, _auth.account.login,
             _auth.access_token, keyerr);
@@ -250,21 +280,26 @@ Error AuthenticationFlow::start_existing(void)
     }
 
     Json::Value v;
-    Error err = api::_login(v, pwd);
+    Error err = api::_login_session(v, pwd);
     if (err) {
-        if (v["message"].isString()) {
-            _reason = v["message"].asString();
+        if (v["error"].isString()) {
+            _reason = v["error"].asString();
         }
         return err;
     }
-    _auth.access_token       = pwd;
     _auth.account.login      = v["login"].asString();
     _auth.account.name       = v["name"].asString();
     _auth.account.email      = v["email"].asString();
     _auth.account.bio        = v["bio"].asString();
     _auth.account.url        = v["url"].asString();
-    _auth.account.avatar_url = v["avatarUrl"].asString();
-
+    _auth.account.avatar_url = v["avatar_url"].asString();
+    _auth.access_token       = v["jwt"].asString();
+    keychain::Error set_err;
+    keychain::setPassword(APP_PKG, APPNAME_LONG, _auth.account.login,
+        _auth.access_token, set_err);
+    if (set_err.type != keychain::ErrorType::NoError) {
+        L_WARN("%s", set_err.message);
+    }
     if (!std::filesystem::exists(
             CACHE / (base64_encode(_auth.account.avatar_url) + ".jpeg"))) {
         std::vector<unsigned char> data;

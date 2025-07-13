@@ -55,6 +55,58 @@ void SceneInfo(NRef<Scene> scene)
             }
             EndSection();
         }
+        if (scene != nullptr && !scene->dependencies.empty()) {
+            Section("Dependencies");
+            if (ImGui::BeginTable("Dependencies", 4,
+                    ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
+                ImGui::TableHeader("Dependencies");
+                ImGui::TableSetupColumn(
+                    "Author", ImGuiTableColumnFlags_WidthFixed);
+                ImGui::NextColumn();
+                ImGui::TableSetupColumn(
+                    "Name", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::NextColumn();
+                ImGui::TableSetupColumn(
+                    "Version", ImGuiTableColumnFlags_WidthFixed);
+                ImGui::NextColumn();
+                ImGui::TableSetupColumn(
+                    "Number of Nodes", ImGuiTableColumnFlags_WidthFixed);
+                ImGui::TableHeadersRow();
+                for (const std::string& d : scene->dependencies) {
+                    bool selected     = false;
+                    size_t author_end = d.find_first_of('/') + 1;
+                    size_t name_end   = d.find_last_of('/') + 1;
+                    ImGui ::TableNextRow();
+                    ImGui ::TableSetColumnIndex(0);
+                    ImGui::Selectable(("##" + d).c_str(), &selected,
+                        ImGuiSelectableFlags_SpanAllColumns);
+                    ImGui::SameLine();
+                    ImGui::TextUnformatted(d.substr(0, author_end - 1).c_str());
+                    ImGui ::TableSetColumnIndex(1);
+                    ImGui::TextUnformatted(
+                        d.substr(author_end, name_end - author_end - 1)
+                            .c_str());
+                    ImGui ::TableSetColumnIndex(2);
+                    ImGui::TextUnformatted(d.substr(name_end).c_str());
+                    ImGui ::TableSetColumnIndex(3);
+                    int count = 0;
+                    for (auto& x : scene->_components) {
+                        if (x.second.path == d) {
+                            count++;
+                        }
+                    }
+                    ImGui::Text("%d", count);
+                    if (selected) {
+                        Toast(ICON_LC_CLIPBOARD_COPY, "Clipboard",
+                            "Dependency name was copied to the clipboard.");
+                        ImGui::SetClipboardText(d.c_str());
+                    }
+                }
+                ImGui::EndTable();
+                IconButton<NORMAL>(ICON_LC_PACKAGE, "Add Component");
+            }
+            EndSection();
+        }
         if (IconButton<NORMAL>(ICON_LC_UPLOAD, "Upload")) {
             std::string resp;
             net::upload_scene(&scene, resp);
