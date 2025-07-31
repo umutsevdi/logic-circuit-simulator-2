@@ -2,6 +2,7 @@
 #include "core.h"
 #include "port.h"
 #include <json/value.h>
+#include <stack>
 #include <type_traits>
 
 namespace lcs::io {
@@ -124,15 +125,46 @@ static void _encode_rel(const Scene& s, std::vector<uint8_t>& buffer)
     buffer.push_back(Token::END);
 }
 
-LCS_ERROR read_scene(const Scene& s, std::vector<uint8_t>& buffer)
+LCS_ERROR serialize(const Scene& s, std::vector<uint8_t>& buffer)
 {
     buffer.clear();
     buffer.reserve(sizeof(s));
-    buffer.insert(buffer.begin(), std::string_view { VERSION }.begin(),
-        std::string_view { VERSION }.end());
+//  buffer.insert(buffer.begin(), std::string_view { VERSION }.begin(),
+//      std::string_view { VERSION }.end());
     _encode_meta(s, buffer);
     _encode_nodes(s, buffer);
     _encode_rel(s, buffer);
+    return Error::OK;
+}
+
+LCS_ERROR deserialize(const std::vector<uint8_t>& buffer, Scene& s)
+{
+    std::stack<Token> stk {};
+
+    size_t i = 0;
+
+    Token t;
+    while (i < buffer.size()) {
+        if(!stk.empty())
+        {
+
+        }
+
+
+
+        switch (buffer[i]) {
+        case Token::SECT_META:
+        case Token::SECT_INC:
+        case Token::SECT_NODE:
+        case Token::SECT_CON:
+        case Token::SECT_NGATE:
+        case Token::SECT_NIN:
+        case Token::SECT_NOUT:
+        case Token::SECT_NCOMP: stk.emplace(buffer[i]); break;
+        case Token::END: stk.pop(); break;
+        }
+    }
+
     return Error::OK;
 }
 

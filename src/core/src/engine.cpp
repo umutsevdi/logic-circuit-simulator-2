@@ -1,4 +1,3 @@
-#include "common.h"
 #include "core.h"
 
 namespace lcs {
@@ -119,7 +118,7 @@ void OutputNode::on_signal(void)
         auto r = _parent->get_rel(input);
         lcs_assert(r != nullptr);
         _value = r->value;
-        L_DEBUG("Received %s signal", State_to_str(r->value));
+        L_DEBUG("Received %s signal", to_str<State>(r->value));
     }
 }
 

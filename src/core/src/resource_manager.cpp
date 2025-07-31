@@ -1,7 +1,4 @@
-#include "common.h"
 #include "core.h"
-#include "io.h"
-#include "port.h"
 #include <json/json.h>
 #include <filesystem>
 #include <optional>
@@ -38,6 +35,7 @@ Error load(const std::string& data, Scene& s)
     if (!reader.parse(data, root)) {
         return ERROR(Error::INVALID_JSON_FORMAT);
     }
+
     return s.from_json(root);
 }
 
@@ -56,8 +54,11 @@ namespace scene {
             }
         }
         Inode inode { true, path, Scene {} };
-        std::string data = read(path);
-        Error err        = io::load(data, inode.scene);
+        std::string data;
+        if (!read(path, data)) {
+            return ERROR(Error::NOT_FOUND);
+        }
+        Error err = io::load(data, inode.scene);
         if (err) {
             return err;
         }
@@ -249,7 +250,10 @@ namespace component {
             path = LIBRARY / tokens[0]
                 / (base64_encode(tokens[1] + "/" + tokens[2]) + ".json");
         }
-        std::string data = read(path);
+        std::string data;
+        if (!read(path, data)) {
+            return ERROR(Error::NOT_FOUND);
+        }
         if (data == "") {
             return ERROR(Error::COMPONENT_NOT_FOUND);
         }

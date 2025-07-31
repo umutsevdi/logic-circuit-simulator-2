@@ -1,6 +1,4 @@
-#include "common.h"
 #include "core.h"
-#include "port.h"
 #include <algorithm>
 #include <cstring>
 #include <sstream>
@@ -381,17 +379,6 @@ std::string Scene::to_dependency() const
     dep_str << std::string_view { name.begin() } << '/'
             << std::to_string(version);
     return dep_str.str();
-}
-
-Error Scene::load_dependencies(void)
-{
-    for (const std::string& dep : dependencies) {
-        Error err = io::component::fetch(dep);
-        if (err) {
-            return err;
-        }
-    }
-    return OK;
 }
 
 std::string Scene::to_filepath(void) const

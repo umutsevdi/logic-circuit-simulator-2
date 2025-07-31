@@ -11,6 +11,7 @@
  ******************************************************************************/
 
 #include "common.h"
+#include "port.h"
 #include <array>
 #include <bitset>
 #include <cstdint>
@@ -267,8 +268,7 @@ private:
 /** An output node that displays the result */
 class OutputNode final : public BaseNode {
 public:
-    enum Type : uint8_t { SINGLE, SEG7 };
-    OutputNode(Scene* _scene, Type variant = Type::SINGLE);
+    OutputNode(Scene* _scene);
     OutputNode(const OutputNode&)            = default;
     OutputNode(OutputNode&&)                 = default;
     OutputNode& operator=(OutputNode&&)      = default;
@@ -284,7 +284,7 @@ public:
     relid input;
 
 private:
-    State value;
+    State _value;
 };
 
 /**
@@ -422,7 +422,7 @@ public:
         }
         if constexpr (std::is_same<T, InputNode>()) {
             // FIXME add timer if timer
-            get_first<float>(args...);
+            // get_first<float>(args...);
             //          if (_freq.has_value()) {
             //              _timerlist.emplace(id, 0);
             //          }
@@ -489,7 +489,7 @@ public:
      * - Error::REL_NOT_FOUND
      * - Error::NOT_CONNECTED
      */
-    LCS_ERROR disconnect(relid id);
+    Error disconnect(relid id);
 
     /**
      * Trigger a signal for the given relation while updating it's value.
@@ -502,19 +502,11 @@ public:
     std::string to_dependency(void) const;
     /** Returns file path to save. */
     std::string to_filepath(void) const;
-    /**
-     * Loads dependencies according to the internal list.
-     * @returns Error on failure:
-     *
-     * - io::component::fetch
-     *
-     */
-    LCS_ERROR load_dependencies(void);
 
-    std::array<char, 128> name;
-    std::array<char, 512> description;
+    std::array<char, 128> name {};
+    std::array<char, 512> description {};
     /** GitHub user names are limited to 40 characters. */
-    std::array<char, 60> author; //
+    std::array<char, 60> author {}; //
     int version;
     std::vector<std::string> dependencies;
     std::optional<ComponentContext> component_context;
@@ -581,9 +573,8 @@ private:
  * @param scene to serialize
  * @param buffer to write into
  * @returns Error on failure
- *
  */
-Error serialize(const Scene& scene, std::vector<uint8_t>& buffer);
+LCS_ERROR serialize(const Scene& scene, std::vector<uint8_t>& buffer);
 
 /**
  * Deserializes given scene.
@@ -591,7 +582,7 @@ Error serialize(const Scene& scene, std::vector<uint8_t>& buffer);
  * @param scene to write into
  * @returns Error on failure
  */
-Error deserialize(const std::vector<uint8_t>& buffer, Scene& scene);
+LCS_ERROR deserialize(const std::vector<uint8_t>& buffer, Scene& scene);
 
 template <> const char* to_str<State>(State s)
 {
@@ -613,9 +604,6 @@ template <> const char* to_str<GateNode::Type>(GateNode::Type s)
     case GateNode::Type::XNOR: return "XNOR";
     default: return "null";
     }
-}
-namespace io {
-
 }
 
 } // namespace lcs

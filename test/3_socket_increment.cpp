@@ -1,4 +1,3 @@
-#include "common.h"
 #include "core.h"
 #include <doctest.h>
 
@@ -9,7 +8,7 @@ TEST_CASE("Increment socket size, expect update")
 
     auto v     = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
     auto o     = s.add_node<OutputNode>();
 
     s.get_node<InputNode>(v)->set(true);

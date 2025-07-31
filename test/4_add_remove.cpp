@@ -26,7 +26,7 @@ TEST_CASE("Readd Gate Test")
     auto v     = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto o     = s.add_node<OutputNode>();
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
     REQUIRE(s.connect(o, 0, g_and));
 
     auto r = s.connect(g_and, 0, v);
@@ -39,7 +39,7 @@ TEST_CASE("Readd Gate Test")
     s.remove_node(g_and);
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
 
-    auto g_or = s.add_node<GateNode>(GateType::OR);
+    auto g_or = s.add_node<GateNode>(GateNode::Type::OR);
     REQUIRE(s.connect(o, 0, g_or));
     REQUIRE(s.connect(g_or, 0, v));
     REQUIRE(s.connect(g_or, 1, v2));
@@ -50,8 +50,8 @@ TEST_CASE("Readd Gate Test")
 TEST_CASE("Gate State Change After Removal")
 {
     Scene s;
-    auto g_or  = s.add_node<GateNode>(GateType::OR);
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_or  = s.add_node<GateNode>(GateNode::Type::OR);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
     auto v1    = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto v3    = s.add_node<InputNode>();
@@ -71,7 +71,7 @@ TEST_CASE("Gate State Change After Removal")
     s.remove_node(g_or);
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
 
-    g_or = s.add_node<GateNode>(GateType::OR);
+    g_or = s.add_node<GateNode>(GateNode::Type::OR);
     REQUIRE(s.connect(g_or, 0, v1));
     REQUIRE(s.connect(g_or, 1, v2));
     REQUIRE(s.connect(o, 0, g_or));

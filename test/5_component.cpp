@@ -6,7 +6,7 @@ using namespace lcs;
 TEST_CASE("Create a component context")
 {
     Scene s { ComponentContext { &s, 3, 1 }, "Create a component context" };
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
     s.get_node<GateNode>(g_and)->increment();
 
     REQUIRE(s.component_context.has_value());
@@ -32,10 +32,10 @@ TEST_CASE("Create a 2x1 MUX component")
 {
     // IN1 = 1, IN2 = 2, IN3 = SEL
     Scene s { ComponentContext { &s, 3, 1 }, "Create a 2x1 MUX component" };
-    auto g_and   = s.add_node<GateNode>(GateType::AND);
-    auto g_and_2 = s.add_node<GateNode>(GateType::AND);
-    auto g_not   = s.add_node<GateNode>(GateType::NOT);
-    auto g_out   = s.add_node<GateNode>(GateType::OR);
+    auto g_and   = s.add_node<GateNode>(GateNode::Type::AND);
+    auto g_and_2 = s.add_node<GateNode>(GateNode::Type::AND);
+    auto g_not   = s.add_node<GateNode>(GateNode::Type::NOT);
+    auto g_out   = s.add_node<GateNode>(GateNode::Type::OR);
 
     s.connect(g_and, 0, s.component_context->get_input(0));
     s.connect(g_and_2, 0, s.component_context->get_input(1));
@@ -62,8 +62,8 @@ TEST_CASE("Create a 2x1 MUX component")
 TEST_CASE("Create a component, grow it")
 {
     Scene s { ComponentContext { &s, 2, 1 }, "Basic gate" };
-    auto g_and = s.add_node<GateNode>(GateType::AND);
-    auto g_not = s.add_node<GateNode>(GateType::NOT);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
+    auto g_not = s.add_node<GateNode>(GateNode::Type::NOT);
     s.connect(g_and, 1, g_not);
     s.connect(g_and, 0, s.component_context->get_input(0));
     s.connect(g_not, 0, s.component_context->get_input(1));

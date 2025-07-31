@@ -1,5 +1,4 @@
 #include "core.h"
-#include "io.h"
 #include "test_util.h"
 #include <doctest.h>
 #include <json/json.h>

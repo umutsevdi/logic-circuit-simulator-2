@@ -13,9 +13,9 @@ TEST_CASE("Connect IN to OUT, Update")
     lcs_assert(s.get_node<OutputNode>(o) != nullptr);
     lcs_assert(s.get_node<InputNode>(v) != nullptr);
 
-    L_INFO("%s <-[%s]-- %s", State_to_str(s.get_node<OutputNode>(o)->get()),
-        State_to_str(s.get_rel(s.get_node<InputNode>(v)->output[0])->value),
-        State_to_str(s.get_node<InputNode>(v)->get()));
+    L_INFO("%s <-[%s]-- %s", to_str<State>(s.get_node<OutputNode>(o)->get()),
+        to_str<State>(s.get_rel(s.get_node<InputNode>(v)->output[0])->value),
+        to_str<State>(s.get_node<InputNode>(v)->get()));
 
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::FALSE);
     s.get_node<InputNode>(v)->set(true);
@@ -40,7 +40,7 @@ TEST_CASE("Connect same input to Gate")
     Scene s;
     auto v     = s.add_node<InputNode>();
     auto o     = s.add_node<OutputNode>();
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
 
     REQUIRE(s.connect(g_and, 0, v));
     REQUIRE(s.connect(g_and, 1, v));
@@ -55,8 +55,8 @@ TEST_CASE("Connect same input to Gate")
 TEST_CASE("[[v1,v2]->and, v2]->or->o")
 {
     Scene s;
-    auto g_and = s.add_node<GateNode>(GateType::AND);
-    auto g_or  = s.add_node<GateNode>(GateType::OR);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
+    auto g_or  = s.add_node<GateNode>(GateNode::Type::OR);
     auto v     = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto o     = s.add_node<OutputNode>();
@@ -79,10 +79,10 @@ TEST_CASE("[[v1,v2]->and, v2]->or->o")
 TEST_CASE("Multiple Inputs with AND/OR Gates")
 {
     Scene s;
-    auto g_and  = s.add_node<GateNode>(GateType::AND);
-    auto g_or   = s.add_node<GateNode>(GateType::OR);
-    auto g_nand = s.add_node<GateNode>(GateType::NAND);
-    auto g_nor  = s.add_node<GateNode>(GateType::NOR);
+    auto g_and  = s.add_node<GateNode>(GateNode::Type::AND);
+    auto g_or   = s.add_node<GateNode>(GateNode::Type::OR);
+    auto g_nand = s.add_node<GateNode>(GateNode::Type::NAND);
+    auto g_nor  = s.add_node<GateNode>(GateNode::Type::NOR);
     auto v1     = s.add_node<InputNode>();
     auto v2     = s.add_node<InputNode>();
     auto v3     = s.add_node<InputNode>();
@@ -114,7 +114,7 @@ TEST_CASE("1-Bit Adder Circuit")
     Scene s;
     auto v1   = s.add_node<InputNode>();
     auto v2   = s.add_node<InputNode>();
-    auto gate = s.add_node<GateNode>(GateType::OR);
+    auto gate = s.add_node<GateNode>(GateNode::Type::OR);
     auto sum  = s.add_node<OutputNode>();
 
     REQUIRE(s.connect(gate, 0, v1));
@@ -146,11 +146,11 @@ TEST_CASE("Full Adder")
     Scene s;
     _create_full_adder_io(s);
 
-    auto g_xor       = s.add_node<GateNode>(GateType::XOR);
-    auto g_xor_sum   = s.add_node<GateNode>(GateType::XOR);
-    auto g_and_carry = s.add_node<GateNode>(GateType::AND);
-    auto g_and       = s.add_node<GateNode>(GateType::AND);
-    auto g_or        = s.add_node<GateNode>(GateType::OR);
+    auto g_xor       = s.add_node<GateNode>(GateNode::Type::XOR);
+    auto g_xor_sum   = s.add_node<GateNode>(GateNode::Type::XOR);
+    auto g_and_carry = s.add_node<GateNode>(GateNode::Type::AND);
+    auto g_and       = s.add_node<GateNode>(GateNode::Type::AND);
+    auto g_or        = s.add_node<GateNode>(GateNode::Type::OR);
 
     REQUIRE(s.connect(g_xor, 0, a));
     REQUIRE(s.connect(g_xor, 1, b));

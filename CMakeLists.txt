@@ -45,6 +45,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(keychain)
 
+set(JSONCPP_WITH_TESTS OFF)
+set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
+set(BUILD_STATIC_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
 FetchContent_Declare(
     jsoncpp
     GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git

@@ -83,6 +83,10 @@ std::vector<std::string> split(std::string& s, const char delimiter);
 
 template <typename T> const char* to_str(T);
 
+
+std::string base64_encode(const std::string& input);
+std::string base64_decode(const std::string& input);
+
 enum Error {
     /** Operation is successful. */
     OK,
