@@ -1,4 +1,12 @@
 if(LCS_GUI)
+
+
+
+
+
+
+
+
     project(${PRJ} C CXX)
     set(LCS_DEPENDS 
         core common io jsoncpp_static base64 ui net imnodes )

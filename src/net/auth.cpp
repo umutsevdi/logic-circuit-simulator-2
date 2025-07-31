@@ -173,7 +173,7 @@ Error AuthenticationFlow::start(void)
     return OK;
 }
 
-Flow::State AuthenticationFlow::poll(void)
+AuthenticationFlow::State AuthenticationFlow::poll(void)
 {
     if (_last_status == STARTED) {
         _last_status = POLLING;
@@ -183,12 +183,12 @@ Flow::State AuthenticationFlow::poll(void)
     }
     time_t now = time(nullptr);
     if (difftime(now, this->start_time) > this->expires_in) {
-        _last_status = (ERROR(Error::FLOW_TIMEOUT), Flow::State::TIMEOUT);
+        _last_status = (ERROR(Error::FLOW_TIMEOUT), State::TIMEOUT);
         return _last_status;
     }
     if (difftime(now, this->_last_poll) < this->interval * 1.5) {
-        _last_status = Flow::State::POLLING;
-        return Flow::State::POLLING;
+        _last_status = State::POLLING;
+        return State::POLLING;
     }
     this->_last_poll = now;
 
@@ -200,15 +200,15 @@ Flow::State AuthenticationFlow::poll(void)
                 _reason = resp["error"].asString();
             }
             L_WARN("Received %s", _reason);
-            _last_status = (ERROR(Error::FLOW_FAILURE), Flow::State::BROKEN);
+            _last_status = (ERROR(Error::FLOW_FAILURE), State::BROKEN);
             return _last_status;
         }
 
         if (resp["error"].isString()
             && resp["error"].asString() == "authorization_pending") {
             // TODO For other types of error codes change the to
-            // Flow::State::BROKEN
-            _last_status = Flow::State::POLLING;
+            // State::BROKEN
+            _last_status = State::POLLING;
             return _last_status;
         } else if (resp["error"].isString()) {
             _reason = resp["error_description"].asString();
@@ -223,7 +223,7 @@ Flow::State AuthenticationFlow::poll(void)
             if (v["error"].isString()) {
                 _reason = v["error"].asString();
             }
-            _last_status = (ERROR(Error::FLOW_FAILURE), Flow::State::BROKEN);
+            _last_status = (ERROR(Error::FLOW_FAILURE), State::BROKEN);
             return _last_status;
         }
         _auth.account.login      = v["login"].asString();
@@ -255,12 +255,15 @@ Flow::State AuthenticationFlow::poll(void)
         }
     }
 
-    _last_status = Flow::State::DONE;
+    _last_status = State::DONE;
     L_INFO("Authetication succesful.");
-    return Flow::State::DONE;
+    return State::DONE;
 }
 
-Flow::State AuthenticationFlow::get_state(void) const { return _last_status; }
+AuthenticationFlow::State AuthenticationFlow::get_state(void) const
+{
+    return _last_status;
+}
 
 const char* AuthenticationFlow::reason(void) const { return _reason.c_str(); }
 

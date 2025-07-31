@@ -10,6 +10,12 @@ TEST_CASE("Connect IN to OUT, Update")
     auto v = s.add_node<InputNode>();
     auto o = s.add_node<OutputNode>();
     REQUIRE(s.connect(o, 0, v));
+    lcs_assert(s.get_node<OutputNode>(o) != nullptr);
+    lcs_assert(s.get_node<InputNode>(v) != nullptr);
+
+    L_INFO("%s <-[%s]-- %s", State_to_str(s.get_node<OutputNode>(o)->get()),
+        State_to_str(s.get_rel(s.get_node<InputNode>(v)->output[0])->value),
+        State_to_str(s.get_node<InputNode>(v)->get()));
 
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::FALSE);
     s.get_node<InputNode>(v)->set(true);

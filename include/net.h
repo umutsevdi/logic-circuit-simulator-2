@@ -16,42 +16,11 @@
 
 namespace lcs::net {
 
-/** Initializes required libraries. */
-void init(void);
-
-/** Send a GET request to targeted URL.
- * @param url target URL.
- * @param resp response to update.
- * @param authorization header, optional.
- * @returns Error on failure:
- *
- *  - Error::REQUEST_FAILED
- *  - Error::RESPONSE_ERROR
- */
-LCS_ERROR get_request(const std::string& url, std::string& resp,
-    const std::string& authorization = "");
-
-/** Send a GET request to desired URL. Intended for binary data.
- * See net::get_request for more details. */
-LCS_ERROR get_request(const std::string& url, std::vector<unsigned char>& resp,
-    const std::string& authorization = "");
-
-/** Send a POST request to targeted URL.
- * @param url target URL.
- * @param resp response to update.
- * @param req request body, optional.
- * @param authorization header, optional.
- * @returns Error on failure:
- *
- *  - Error::REQUEST_FAILED
- *  - Error::RESPONSE_ERROR
- */
-LCS_ERROR post_request(const std::string& url, std::string& resp,
-    const std::string& req = "", const std::string& authorization = "");
-
 /** Device flow authenticates the device with non-blocking mechanism. */
-class AuthenticationFlow final : public Flow {
+class AuthenticationFlow {
+
 public:
+    enum State { INACTIVE, STARTED, POLLING, DONE, TIMEOUT, BROKEN };
     AuthenticationFlow()  = default;
     ~AuthenticationFlow() = default;
     std::string client_id;
@@ -62,18 +31,18 @@ public:
     int interval      = 0;
     time_t start_time = 0L;
 
-    LCS_ERROR start(void) override;
-    State poll(void) override;
-    State get_state(void) const override;
-    void resolve(void) override;
-    const char* reason(void) const override;
+    Error start(void);
+    State poll(void);
+    State get_state(void) const;
+    void resolve(void);
+    const char* reason(void) const;
 
     /** Run authentication flow during initialization. */
-    LCS_ERROR start_existing(void);
+    Error start_existing(void);
 
 private:
-    time_t _last_poll = 0L;
-    State _last_status;
+    time_t _last_poll  = 0L;
+    State _last_status = INACTIVE;
     std::string _reason;
 };
 
@@ -99,7 +68,10 @@ AuthenticationFlow& get_flow(void);
 const Account& get_account(void);
 
 /** Returns whether the user is logged in.*/
-inline bool is_logged_in(void) { return get_flow().get_state() == Flow::DONE; }
+inline bool is_logged_in(void)
+{
+    return get_flow().get_state() == AuthenticationFlow::DONE;
+}
 
 /**
  * Opens up the given URL on the user's default web browser.
@@ -108,4 +80,5 @@ inline bool is_logged_in(void) { return get_flow().get_state() == Flow::DONE; }
 void open_browser(const std::string& url);
 
 LCS_ERROR upload_scene(NRef<const Scene> scene, std::string resp);
+
 } // namespace lcs::net

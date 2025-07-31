@@ -23,7 +23,7 @@ TEST_CASE("Early Disconnect Test")
     auto v     = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto o     = s.add_node<OutputNode>();
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
 
     auto r = s.connect(g_and, 0, v);
     REQUIRE(r);
@@ -41,8 +41,8 @@ TEST_CASE("Early Disconnect Test")
 TEST_CASE("Gate State Change After Disconnect")
 {
     Scene s;
-    auto g_or  = s.add_node<GateNode>(GateType::OR);
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_or  = s.add_node<GateNode>(GateNode::Type::OR);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
     auto v1    = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto v3    = s.add_node<InputNode>();
@@ -82,7 +82,7 @@ TEST_CASE("Invalid Connection Attempt")
 TEST_CASE("Reconnect After Multiple Disconnections")
 {
     Scene s;
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto g_and = s.add_node<GateNode>(GateNode::Type::AND);
     auto v1    = s.add_node<InputNode>();
     auto v2    = s.add_node<InputNode>();
     auto o     = s.add_node<OutputNode>();
