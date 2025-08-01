@@ -10,11 +10,12 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <vector>
 
-#define VERSION "0.1"
+#define VERSION 1
 
 #define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
@@ -83,9 +84,24 @@ std::vector<std::string> split(std::string& s, const char delimiter);
 
 template <typename T> const char* to_str(T);
 
-
 std::string base64_encode(const std::string& input);
 std::string base64_decode(const std::string& input);
+
+inline uint32_t htonl(uint32_t host)
+{
+    uint16_t test = 1;
+    if (*(reinterpret_cast<uint8_t*>(&test)) == 1) {
+        uint32_t network = 0;
+        network |= ((host >> 24) & 0xFF);
+        network |= ((host >> 8) & 0xFF00);
+        network |= ((host << 8) & 0xFF0000);
+        network |= ((host << 24) & 0xFF000000);
+        return network;
+    }
+    return host;
+}
+
+inline uint32_t ntohl(uint32_t network) { return htonl(network); }
 
 enum Error {
     /** Operation is successful. */

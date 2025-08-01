@@ -10,7 +10,6 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 #include "common.h"
-#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -52,22 +51,6 @@ namespace net {
      */
     LCS_ERROR post_request(const std::string& URL, std::string& resp,
         const std::string& req = "", const std::string& authorization = "");
-
-    inline uint32_t htonl(uint32_t host)
-    {
-        uint16_t test = 1;
-        if (*(reinterpret_cast<uint8_t*>(&test)) == 1) {
-            uint32_t network = 0;
-            network |= ((host >> 24) & 0xFF);
-            network |= ((host >> 8) & 0xFF00);
-            network |= ((host << 8) & 0xFF0000);
-            network |= ((host << 24) & 0xFF000000);
-            return network;
-        }
-        return host;
-    }
-
-    inline uint32_t ntohl(uint32_t network) { return htonl(network); }
 } // namespace net
 
 /******************************************************************************
