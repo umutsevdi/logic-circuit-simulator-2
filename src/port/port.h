@@ -149,7 +149,7 @@ int __expect(std::function<bool(void)> expr, const char* function,
 #endif
 
 #define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
-#define ERROR(err) (L_ERROR("%s: %s", #err, errmsg(err))), err
+#define ERROR(err) (L_ERROR("%s(%d): %s", #err, err, errmsg(err))), err
 #ifndef WARN
 #define WARN(err) (L_WARN("%s: %s", #err, errmsg(err))), err
 #endif

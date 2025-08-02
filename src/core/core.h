@@ -387,8 +387,11 @@ public:
     Scene& operator=(const Scene&) = delete;
     ~Scene()                       = default;
 
+    /** Explicit copy function. */
+    Scene clone(const Scene&);
+
     /** Run a frame for the scene. */
-    void run_timers(void);
+    void run_timers(uint64_t time);
 
     /** Creates a node in a scene with given type. Passes arguments to
      * the constructor similar to emplace methods.
@@ -508,7 +511,7 @@ public:
     /** GitHub user names are limited to 40 characters. */
     std::array<char, 60> author {}; //
     int version;
-    std::vector<std::string> dependencies;
+    std::vector<std::shared_ptr<Scene>> dependencies;
     std::optional<ComponentContext> component_context;
 
     std::vector<GateNode> _gates;

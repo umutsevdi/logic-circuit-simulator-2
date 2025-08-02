@@ -26,7 +26,7 @@ bool loop(ImGuiIO&)
     NRef<Scene> scene = io::scene::get();
     new_flow();
     if (scene != nullptr) {
-        io::scene::run_frame();
+        scene->run();
     }
     SceneInfo(&scene);
     NodeEditor(&scene);

@@ -16,28 +16,21 @@ struct Inode {
     {
     }
     bool is_saved;
+    bool has_changes;
     std::string path;
     Scene scene;
+
+    void notify_change(void)
+    {
+        is_saved    = false;
+        has_changes = true;
+    }
 };
 static std::string current_path;
 static std::map<std::string, Scene> COMPONENT_STORAGE;
 static std::vector<Inode> SCENE_STORAGE;
 static size_t active_scene = SIZE_MAX;
 static bool _has_changes   = false;
-
-Error load(const std::string& data, Scene& s)
-{
-    if (data == "") {
-        return ERROR(Error::NOT_FOUND);
-    }
-    Json::Reader reader {};
-    Json::Value root;
-    if (!reader.parse(data, root)) {
-        return ERROR(Error::INVALID_JSON_FORMAT);
-    }
-
-    return s.from_json(root);
-}
 
 namespace scene {
 
@@ -54,11 +47,11 @@ namespace scene {
             }
         }
         Inode inode { true, path, Scene {} };
-        std::string data;
+        std::vector<uint8_t> data;
         if (!read(path, data)) {
             return ERROR(Error::NOT_FOUND);
         }
-        Error err = io::load(data, inode.scene);
+        Error err = deserialize(data, inode.scene);
         if (err) {
             return err;
         }
@@ -119,7 +112,12 @@ namespace scene {
             inode.path = inode.scene.to_filepath();
         }
 
-        if (!write(inode.path, inode.scene.to_json().toStyledString())) {
+        std::vector<uint8_t> scene_bin;
+        Error err = serialize(inode.scene, scene_bin);
+        if (err) {
+            return err;
+        }
+        if (!write(inode.path, scene_bin)) {
             return ERROR(Error::NO_SAVE_PATH_DEFINED);
         }
         inode.is_saved = true;
@@ -129,12 +127,7 @@ namespace scene {
             if (auto compiter = COMPONENT_STORAGE.find(dependency_string);
                 compiter != COMPONENT_STORAGE.end()) {
                 COMPONENT_STORAGE.insert_or_assign(dependency_string, Scene {});
-                Scene s;
-                Error err = COMPONENT_STORAGE[dependency_string].from_json(
-                    inode.scene.to_json());
-                if (err) { // FIXME later
-                    return err;
-                }
+                COMPONENT_STORAGE[dependency_string].clone(inode.scene);
             }
         }
         return OK;
@@ -179,7 +172,7 @@ namespace scene {
         const std::string& description, int version)
     {
         SCENE_STORAGE.emplace_back(
-            false, "", Scene { name, author, description, version });
+            false, false, "", Scene { name, author, description, version });
         _has_changes = true;
         return SCENE_STORAGE.size() - 1;
     }

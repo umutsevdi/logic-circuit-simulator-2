@@ -53,6 +53,41 @@ Scene& Scene::operator=(Scene&& other)
     return *this;
 }
 
+Scene Scene::clone(const Scene& other)
+{
+    memcpy(name.data(), other.name.data(), name.size());
+    memcpy(description.data(), other.description.data(), description.size());
+    memcpy(author.data(), other.author.data(), author.size());
+    version           = other.version;
+    dependencies      = other.dependencies;
+    _timerlist        = other._timerlist;
+    _gates            = other._gates;
+    _components       = other._components;
+    _inputs           = other._inputs;
+    _outputs          = other._outputs;
+    _relations        = other._relations;
+    component_context = other.component_context;
+    for (size_t i = 0; i < Node::Type::NODE_S; i++) {
+        _last_node[i] = other._last_node[i];
+    }
+    _last_rel = other._last_rel;
+    for (auto& gate : _gates) {
+        gate.reload(this);
+    }
+    for (auto& comp : _components) {
+        comp.reload(this);
+    }
+    for (auto& input : _inputs) {
+        input.reload(this);
+    }
+    for (auto& output : _outputs) {
+        output.reload(this);
+    }
+    if (component_context.has_value()) {
+        component_context->reload(this);
+    }
+}
+
 void Scene::_move_from(Scene&& other)
 {
     name              = std::move(other.name);
