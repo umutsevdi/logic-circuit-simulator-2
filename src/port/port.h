@@ -216,4 +216,11 @@ bool write(const std::string& path, const std::string& data);
 bool write(const std::string& path, std::vector<unsigned char>& data);
 
 template <typename T> const char* to_str(T);
+
+void request_open_file(void);
+void request_save_file(const char* path);
+void request_alert(const char* msg);
+void request_close(void);
+void handle_requests(void);
+
 } // namespace lcs

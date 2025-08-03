@@ -14,6 +14,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "port.h"
 #include "ui.h"
 #include "ui/configuration.h"
 #include <cstdio>
@@ -211,6 +212,7 @@ namespace ui {
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
             glfwSwapBuffers(window);
+            handle_requests();
         }
 #ifdef __EMSCRIPTEN__
         EMSCRIPTEN_MAINLOOP_END;

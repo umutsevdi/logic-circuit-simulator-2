@@ -2,6 +2,62 @@
 
 namespace lcs {
 
+BaseNode::BaseNode(Scene* scene, Point _p)
+    : point { _p }
+    , _parent { scene }
+{
+}
+
+Node::Node(uint16_t _id, Node::Type _type)
+    : index { _id }
+    , type { _type }
+{
+}
+
+template <> const char* to_str<Node::Type>(Node::Type s)
+{
+    switch (s) {
+    case Node::Type::GATE: return "Gate";
+    case Node::Type::COMPONENT: return "Component";
+    case Node::Type::INPUT: return "Input";
+    case Node::Type::OUTPUT: return "Output";
+    case Node::Type::COMPONENT_INPUT: return "Component Input";
+    case Node::Type::COMPONENT_OUTPUT: return "Component Output";
+    default: return "Unknown";
+    }
+}
+
+template <> const char* to_str<Node>(Node node)
+{
+    static std::string s;
+    s = std::string { to_str<Node::Type>(node.type) } + "@"
+        + std::to_string(node.index);
+    return s.c_str();
+}
+
+template <> const char* to_str<State>(State s)
+{
+    switch (s) {
+    case State::TRUE: return "TRUE";
+    case State::FALSE: return "FALSE";
+    default: return "DISABLED";
+    }
+}
+
+template <> const char* to_str<GateNode::Type>(GateNode::Type s)
+{
+    switch (s) {
+    case GateNode::Type::NOT: return "NOT";
+    case GateNode::Type::AND: return "AND";
+    case GateNode::Type::OR: return "OR";
+    case GateNode::Type::XOR: return "XOR";
+    case GateNode::Type::NAND: return "NAND";
+    case GateNode::Type::NOR: return "NOR";
+    case GateNode::Type::XNOR: return "XNOR";
+    default: return "null";
+    }
+}
+
 int encode_pair(Node node, sockid sock, bool is_out)
 {
     lcs_assert(node.index < 0xFFFF);
@@ -50,7 +106,7 @@ Rel::Rel()
                                 InputNode
 *****************************************************************************/
 
-InputNode::InputNode(Scene* _scene, std::optional<float> freq)
+InputNode::InputNode(Scene* _scene, uint8_t freq)
     : BaseNode { _scene }
     , _freq { freq }
     , _value { false }
@@ -87,9 +143,6 @@ State InputNode::get(sockid) const
 
 void InputNode::clean(void)
 {
-    if (is_timer()) {
-        _parent->_timerlist.erase(_id);
-    }
     for (auto r : output) {
         if (r != 0) {
             _parent->disconnect(r);
@@ -132,29 +185,5 @@ void OutputNode::clean()
 /******************************************************************************
                                     Context
 *****************************************************************************/
-
-BaseNode::BaseNode(Scene* scene, Point _p)
-    : point { _p }
-    , _parent { scene }
-{
-}
-
-/******************************************************************************
-                                Implementation
-*****************************************************************************/
-
-Node::Node(uint16_t _id, Node::Type _type)
-    : index { _id }
-    , type { _type }
-{
-}
-
-template <> const char* to_str<Node>(Node node)
-{
-    static std::string s;
-    s = std::string { to_str<Node::Type>(node.type) } + "@"
-        + std::to_string(node.index);
-    return s.c_str();
-}
 
 } // namespace lcs

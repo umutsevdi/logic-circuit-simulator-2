@@ -19,7 +19,7 @@
 
 #define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
-#define APPNAME_LONG "LogicCircuitSimulator"
+#define APPNAME_LONG "Logic Circuit Simulator"
 
 #ifndef API_ENDPOINT
 #ifndef NDEBUG
@@ -69,7 +69,7 @@ inline std::string strlimit(const std::string& input, size_t limit)
     return input;
 }
 
-template <typename T, typename... Args> const char* get_first(T first, Args...)
+template <typename T, typename... Args> T get_first(T first, Args...)
 {
     return first;
 }

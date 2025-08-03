@@ -24,7 +24,8 @@ Scene::Scene(const std::string& _name, const std::string& _author,
 
 Scene::Scene(ComponentContext ctx, const std::string& _name,
         const std::string& _author, const std::string& _description, int _version) :
-        version { _version }, component_context { ctx }, _last_node {
+        version { _version }, component_context { ctx }, frame_s{0},
+        _last_node {
             Node { 0, Node::Type::GATE },
             Node { 0, Node::Type::COMPONENT },
             Node { 0, Node::Type::INPUT },
@@ -53,14 +54,15 @@ Scene& Scene::operator=(Scene&& other)
     return *this;
 }
 
-Scene Scene::clone(const Scene& other)
+void Scene::clone(const Scene& other)
 {
     memcpy(name.data(), other.name.data(), name.size());
     memcpy(description.data(), other.description.data(), description.size());
     memcpy(author.data(), other.author.data(), author.size());
-    version           = other.version;
-    dependencies      = other.dependencies;
-    _timerlist        = other._timerlist;
+    version      = other.version;
+    dependencies = other.dependencies;
+
+    frame_s           = other.frame_s;
     _gates            = other._gates;
     _components       = other._components;
     _inputs           = other._inputs;
@@ -95,7 +97,7 @@ void Scene::_move_from(Scene&& other)
     author            = std::move(other.author);
     version           = other.version;
     dependencies      = std::move(other.dependencies);
-    _timerlist        = std::move(other._timerlist);
+    frame_s           = other.frame_s;
     _gates            = std::move(other._gates);
     _components       = std::move(other._components);
     _inputs           = std::move(other._inputs);
@@ -152,12 +154,6 @@ void Scene::remove_node(Node id)
     }
     lcs_assert(node != nullptr);
     node->clean();
-    if (id.type == Node::Type::INPUT && ((InputNode*)node)->is_timer()) {
-        _timerlist.erase(std::remove_if(
-            _timerlist.begin(), _timerlist.end(), [id](const TimeData& data) {
-                return data.node.index == id.index;
-            }));
-    }
     node->set_null();
     if (_last_node[id.type].index >= id.index) {
         _last_node[id.type].index = id.index;
@@ -177,7 +173,7 @@ NRef<Rel> Scene::get_rel(relid idx)
                                  : (S_ERROR("Rel not found", nullptr));
 }
 
-Error Scene::_connect_with_id(
+Error Scene::connect_with_id(
     relid id, Node to_node, sockid to_sock, Node from_node, sockid from_sock)
 {
     if (from_node.type == Node::Type::OUTPUT
@@ -278,8 +274,7 @@ relid Scene::connect(
 {
     _last_rel++;
     relid id = _last_rel;
-    return _connect_with_id(id, to_node, to_sock, from_node, from_sock) ? 0
-                                                                        : id;
+    return connect_with_id(id, to_node, to_sock, from_node, from_sock) ? 0 : id;
 }
 
 Error Scene::disconnect(relid id)
@@ -431,15 +426,19 @@ std::string Scene::to_filepath(void) const
     return p;
 }
 
-void Scene::run_timers(void)
+void Scene::run(float delta)
 {
-    for (auto& timer : _timerlist) {
-        NRef<InputNode> node = get_node<InputNode>(timer.first);
-        timer.second += node->_freq.value_or(0) / 60;
-        if (timer.second > 1) {
-            timer.second--;
-            node->toggle();
+    frame_s += delta;
+    uint32_t f_uint = frame_s * 10;
+    for (auto& in : _inputs) {
+        if (!in.is_null() && in.is_timer()) { }
+        if (f_uint % in._freq == 0) {
+            in.toggle();
         }
+    }
+    // TODO Also run dependency scenes with the timer.
+    if (frame_s > 10) {
+        frame_s -= 10;
     }
 }
 

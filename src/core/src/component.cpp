@@ -3,6 +3,7 @@
 #include "port.h"
 #include <algorithm>
 #include <bitset>
+#include <cstdint>
 
 namespace lcs {
 
@@ -121,21 +122,19 @@ uint64_t ComponentContext::run(uint64_t v)
     return run();
 }
 
-ComponentNode::ComponentNode(Scene* _s, const std::string& _path)
+ComponentNode::ComponentNode(Scene* _s)
     : BaseNode { _s }
+    , dep_idx { UINT8_MAX }
     , _output_value { 0 }
 {
-    if (_path != "") {
-        set_component(_path);
-    }
 }
 
-Error ComponentNode::set_component(const std::string& _path)
+Error ComponentNode::set_component(uint8_t _dep_idx)
 {
-    if (_path == "") {
+    if (_dep_idx >= _parent->dependencies.size()) {
         return ERROR(Error::INVALID_DEPENDENCY_FORMAT);
     }
-    auto ref = io::component::get(_path);
+    auto ref = _parent->dependencies[_dep_idx];
     if (ref == nullptr) {
         return ERROR(Error::COMPONENT_NOT_FOUND);
     }
@@ -156,7 +155,7 @@ Error ComponentNode::set_component(const std::string& _path)
     for (size_t i = 0; i < ref->component_context->outputs.size(); i++) {
         outputs[i] = {};
     }
-    path = _path;
+    dep_idx = _dep_idx;
     return OK;
 }
 
@@ -199,7 +198,8 @@ void ComponentNode::on_signal(void)
                 input++;
             }
         }
-        _output_value = io::component::run(path, input);
+        _output_value
+            = _parent->dependencies[dep_idx]->component_context->run(input);
         for (auto sock : outputs) {
             for (relid out : sock.second) {
                 L_DEBUG("Sending %s signal to rel@%d",

@@ -8,8 +8,6 @@
 
 namespace lcs::ui {
 
-static const char* _PATH_FILTER[1] = { "*.json" };
-
 void open_flow()
 {
     const char* path = tinyfd_openFileDialog("Select a scene", LIBRARY.c_str(),

@@ -17,17 +17,18 @@
 #include <cstdint>
 #include <map>
 #include <optional>
-#include <set>
 #include <string>
 #include <type_traits>
 #include <vector>
 
 namespace lcs {
+
+class Scene;
 /** id type for socket, sock_t = 0 means disconnected */
-typedef uint8_t sockid;
+using sockid = uint8_t;
 
 /** Relationship identifier. Id is a non-zero identifier. */
-typedef uint32_t relid;
+using relid = uint32_t;
 
 /**
  * Node is a handler that represents the index.
@@ -67,23 +68,9 @@ struct Node {
     uint16_t index : 16;
     Type type : 4;
 };
-template <> const char* to_str<Node::Type>(Node::Type s)
-{
-    switch (s) {
-    case Node::Type::GATE: return "Gate";
-    case Node::Type::COMPONENT: return "Component";
-    case Node::Type::INPUT: return "Input";
-    case Node::Type::OUTPUT: return "Output";
-    case Node::Type::COMPONENT_INPUT: return "Component Input";
-    case Node::Type::COMPONENT_OUTPUT: return "Component Output";
-    default: return "Unknown";
-    }
-}
 
 int encode_pair(Node node, sockid sock, bool is_out);
 Node decode_pair(int pair_code, sockid* sock = nullptr, bool* is_out = nullptr);
-
-class Scene;
 
 enum State {
     /** Socket evaluated to false. */
@@ -168,11 +155,12 @@ public:
     GateNode& operator=(const GateNode&) = default;
     ~GateNode()                          = default;
 
-    /** Adds a new input socket */
+    /** Get gate type. */
+    Type type(void) const { return _type; };
+    /** Adds a new input socket. */
     bool increment(void);
-    /** Removes an input socket */
+    /** Removes an input socket. */
     bool decrement(void);
-    inline Type type(void) const { return _type; };
 
     /* BaseNode */
     bool is_connected(void) const override;
@@ -187,15 +175,13 @@ public:
 
 private:
     /** Gate specific calculation function */
-    bool (*_apply)(const std::vector<bool>&);
-
     Type _type;
     State _value;
 };
 
 class ComponentNode final : public BaseNode {
 public:
-    explicit ComponentNode(Scene*, const std::string& path = "");
+    explicit ComponentNode(Scene*);
     ComponentNode(const ComponentNode&)            = default;
     ComponentNode(ComponentNode&&)                 = default;
     ComponentNode& operator=(ComponentNode&&)      = default;
@@ -203,7 +189,7 @@ public:
     ~ComponentNode()                               = default;
 
     /** Assigns configurations of given component to this node. */
-    LCS_ERROR set_component(const std::string& path);
+    LCS_ERROR set_component(uint8_t dep_idx);
 
     /* BaseNode */
     void on_signal(void) override;
@@ -213,7 +199,7 @@ public:
 
     std::vector<relid> inputs;
     std::map<sockid, std::vector<relid>> outputs;
-    std::string path;
+    uint8_t dep_idx;
 
 private:
     uint64_t _output_value;
@@ -226,14 +212,14 @@ private:
 class InputNode final : public BaseNode {
 public:
     enum Type : uint8_t { DEFAULT, TIMER };
-    InputNode(Scene* _scene, std::optional<float> freq = std::nullopt);
+    InputNode(Scene* _scene, uint8_t _freq = 0);
     InputNode(const InputNode&)            = default;
     InputNode(InputNode&&)                 = default;
     InputNode& operator=(InputNode&&)      = default;
     InputNode& operator=(const InputNode&) = default;
     ~InputNode()                           = default;
 
-    bool is_timer(void) const { return _freq.has_value(); }
+    bool is_timer(void) const { return _freq != 0; }
     /** Set the value, and notify connected nodes.
      * @param value to set
      **/
@@ -249,17 +235,15 @@ public:
 
     std::vector<relid> output;
 
-    struct TimeData {
-        Node node;
-        float freq;
-        float current;
-
-        bool operator<(const TimeData& other) const
-        {
-            return node.index < other.node.index;
-        }
-    };
-    std::optional<float> _freq;
+    /** _freq is a non-zero value for timers.
+     * On an active scene Scene::run_timers is 10 times per
+     * second.
+     *
+     * * _freq = 1   once every 10 seconds.
+     * * _freq = 10  once per second.
+     * * _freq = 20  twice per second.
+     */
+    uint8_t _freq;
 
 private:
     bool _value;
@@ -363,17 +347,6 @@ template <typename T> constexpr Node::Type as_node_type(void)
     return Node::Type::NODE_S;
 }
 
-struct TimeData {
-    Node node;
-    float freq;
-    float current;
-
-    bool operator<(const TimeData& other) const
-    {
-        return node.index < other.node.index;
-    }
-};
-
 class Scene {
 public:
     Scene(const std::string& name = "", const std::string& author = "",
@@ -388,10 +361,13 @@ public:
     ~Scene()                       = default;
 
     /** Explicit copy function. */
-    Scene clone(const Scene&);
+    void clone(const Scene&);
 
-    /** Run a frame for the scene. */
-    void run_timers(uint64_t time);
+    /**
+     * Run a frame for the scene.
+     * @param delta time elapsed since last frame, in seconds.
+     */
+    void run(float delta);
 
     /** Creates a node in a scene with given type. Passes arguments to
      * the constructor similar to emplace methods.
@@ -402,7 +378,7 @@ public:
     {
         Node id;
         constexpr Node::Type node_type = as_node_type<T>();
-        std::vector<T>& vec            = _get_vec<T>();
+        std::vector<T>& vec            = vector<T>();
         id = { _last_node[node_type].index, node_type };
         if (id.index == vec.size()) {
             vec.emplace_back(this, args...);
@@ -423,30 +399,29 @@ public:
             L_DEBUG("Last node found at %zu/%zu for %s", i, vec.size(),
                 to_str<Node::Type>(node_type));
         }
-        if constexpr (std::is_same<T, InputNode>()) {
-            // FIXME add timer if timer
-            // get_first<float>(args...);
-            //          if (_freq.has_value()) {
-            //              _timerlist.emplace(id, 0);
-            //          }
+        if constexpr (std::is_same<T, ComponentNode>()) {
+            uint8_t idx = get_first<uint8_t>(args...);
+            lcs_assert(vec[vec.size() - 1].set_component(idx) == Error::OK);
         }
-
         return id;
     }
 
-    /** Safely removes given node from the scene.
+    /**
+     * Safely removes given node from the scene.
+     *
      * @param id node to remove
      */
     void remove_node(Node id);
 
-    /** Obtain a temporary node reference from the scene.
+    /**
+     * Obtain a temporary node reference from the scene.
      *
      * @param id non-zero node id
      * @returns T* | nullptr
      */
     template <typename T> NRef<T> get_node(Node id)
     {
-        std::vector<T>& vec = _get_vec<T>();
+        std::vector<T>& vec = vector<T>();
         lcs_assert(id.type == as_node_type<T>());
         return id.index < vec.size() ? &vec[id.index] : nullptr;
     }
@@ -462,6 +437,7 @@ public:
 
     /**
      * Obtain a relationship between nodes by its id.
+     *
      * @param id non-zero rel id
      * @returns Relation | nullptr
      */
@@ -484,45 +460,6 @@ public:
         Node to_node, sockid to_sock, Node from_node, sockid from_sock = 0);
 
     /**
-     * Safely disconnects a node relationship.
-     * @param id relid to disconnect
-     * @returns Error on failure:
-     *
-     * - Error::INVALID_RELID
-     * - Error::REL_NOT_FOUND
-     * - Error::NOT_CONNECTED
-     */
-    Error disconnect(relid id);
-
-    /**
-     * Trigger a signal for the given relation while updating it's value.
-     * @param id relationship id
-     * @param value to set
-     */
-    void signal(relid id, State value);
-
-    /** Returns a dependency string. */
-    std::string to_dependency(void) const;
-    /** Returns file path to save. */
-    std::string to_filepath(void) const;
-
-    std::array<char, 128> name {};
-    std::array<char, 512> description {};
-    /** GitHub user names are limited to 40 characters. */
-    std::array<char, 60> author {}; //
-    int version;
-    std::vector<std::shared_ptr<Scene>> dependencies;
-    std::optional<ComponentContext> component_context;
-
-    std::vector<GateNode> _gates;
-    std::vector<ComponentNode> _components;
-    std::vector<InputNode> _inputs;
-    std::vector<OutputNode> _outputs;
-    std::map<relid, Rel> _relations;
-    /** key = Node::id, value: internal clock counter */
-    std::set<TimeData> _timerlist;
-
-    /**
      * Attempts to connect two nodes from their given sockets. On success
      * relationship with given id is inserted.
      *
@@ -542,8 +479,61 @@ public:
      * - Error::INVALID_TO_TYPE
      */
     LCS_ERROR
-    _connect_with_id(relid id, Node to_node, sockid to_sock, Node from_node,
+    connect_with_id(relid id, Node to_node, sockid to_sock, Node from_node,
         sockid from_sock = 0);
+
+    /**
+     * Safely disconnects a node relationship.
+     * @param id relid to disconnect
+     * @returns Error on failure:
+     *
+     * - Error::INVALID_RELID
+     * - Error::REL_NOT_FOUND
+     * - Error::NOT_CONNECTED
+     */
+    Error disconnect(relid id);
+
+    /**
+     * Trigger a signal for the given relation while updating it's value.
+     * @param id relationship id
+     * @param value to set
+     */
+    void signal(relid id, State value);
+
+    /** Get a reference to the desired NodeType's vector. */
+    template <class T> constexpr std::vector<T>& vector()
+    {
+        if constexpr (std::is_same<T, GateNode>()) {
+            return _gates;
+        } else if constexpr (std::is_same<T, ComponentNode>()) {
+            return _components;
+        } else if constexpr (std::is_same<T, InputNode>()) {
+            return _inputs;
+        } else if constexpr (std::is_same<T, OutputNode>()) {
+            return _outputs;
+        }
+    }
+
+    /** Returns a dependency string. */
+    std::string to_dependency(void) const;
+    /** Returns file path to save. */
+    std::string to_filepath(void) const;
+
+    std::array<char, 128> name {};
+    std::array<char, 512> description {};
+    /** GitHub user names are limited to 40 characters. */
+    std::array<char, 60> author {}; //
+    int version;
+    std::vector<std::shared_ptr<Scene>> dependencies;
+    std::optional<ComponentContext> component_context;
+
+    std::vector<GateNode> _gates;
+    std::vector<ComponentNode> _components;
+    std::vector<InputNode> _inputs;
+    std::vector<OutputNode> _outputs;
+    std::map<relid, Rel> _relations;
+    /** Delta counter in seconds. */
+    float frame_s;
 
     Node _last_node[Node::Type::NODE_S];
     relid _last_rel;
@@ -551,24 +541,6 @@ public:
 private:
     /** The helper method for move constructor and move assignment */
     void _move_from(Scene&&);
-
-    template <class T> inline std::vector<T>& _get_vec()
-    {
-        constexpr bool is_gate      = std::is_same<T, GateNode>::value;
-        constexpr bool is_component = std::is_same<T, ComponentNode>::value;
-        constexpr bool is_input     = std::is_same<T, InputNode>::value;
-        constexpr bool is_output    = std::is_same<T, OutputNode>::value;
-
-        if constexpr (is_gate) {
-            return _gates;
-        } else if constexpr (is_component) {
-            return _components;
-        } else if constexpr (is_input) {
-            return _inputs;
-        } else if constexpr (is_output) {
-            return _outputs;
-        }
-    }
 };
 
 /**
@@ -586,27 +558,5 @@ LCS_ERROR serialize(const Scene& scene, std::vector<uint8_t>& buffer);
  * @returns Error on failure
  */
 LCS_ERROR deserialize(const std::vector<uint8_t>& buffer, Scene& scene);
-
-template <> const char* to_str<State>(State s)
-{
-    switch (s) {
-    case State::TRUE: return "TRUE";
-    case State::FALSE: return "FALSE";
-    default: return "DISABLED";
-    }
-}
-template <> const char* to_str<GateNode::Type>(GateNode::Type s)
-{
-    switch (s) {
-    case GateNode::Type::NOT: return "NOT";
-    case GateNode::Type::AND: return "AND";
-    case GateNode::Type::OR: return "OR";
-    case GateNode::Type::XOR: return "XOR";
-    case GateNode::Type::NAND: return "NAND";
-    case GateNode::Type::NOR: return "NOR";
-    case GateNode::Type::XNOR: return "XNOR";
-    default: return "null";
-    }
-}
 
 } // namespace lcs

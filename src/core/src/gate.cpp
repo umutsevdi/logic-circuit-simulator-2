@@ -11,6 +11,8 @@ static bool _nand(const std::vector<bool>&);
 static bool _nor(const std::vector<bool>&);
 static bool _xnor(const std::vector<bool>&);
 static bool _not(const std::vector<bool>&);
+static bool (*_operations[])(const std::vector<bool>&)
+    = { _not, _and, _or, _xor, _nand, _nor, _xnor, _not };
 
 GateNode::GateNode(Scene* _scene, Type type, sockid _max_in)
     : BaseNode { _scene }
@@ -18,7 +20,7 @@ GateNode::GateNode(Scene* _scene, Type type, sockid _max_in)
     , _value { State::DISABLED }
 
 {
-    if (_type == Type::NOT) {
+    if (type == Type::NOT) {
         _max_in = 1;
     } else if (_max_in < 2) {
         _max_in = 2;
@@ -27,9 +29,6 @@ GateNode::GateNode(Scene* _scene, Type type, sockid _max_in)
     for (size_t i = 0; i < _max_in; i++) {
         inputs.push_back(0);
     }
-    static bool (*__functions[])(const std::vector<bool>&)
-        = { _not, _and, _or, _xor, _nand, _nor, _xnor, _not };
-    _apply = __functions[_type];
 }
 
 bool GateNode::is_connected() const
@@ -64,7 +63,7 @@ void GateNode::on_signal(void)
             lcs_assert(rel != nullptr);
             v.push_back(rel->value == TRUE ? TRUE : FALSE);
         }
-        _value = _apply(v) ? State::TRUE : State::FALSE;
+        _value = _operations[_type](v) ? State::TRUE : State::FALSE;
     } else {
         _value = State::DISABLED;
     }

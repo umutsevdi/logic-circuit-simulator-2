@@ -20,7 +20,8 @@ static ImGuiID key_console;
 namespace lcs::ui {
 void before(ImGuiIO&) { ImNodes::CreateContext(); }
 
-bool loop(ImGuiIO&)
+bool loop(ImGuiIO& imio)
+
 {
     MenuBar();
     NRef<Scene> scene = io::scene::get();
