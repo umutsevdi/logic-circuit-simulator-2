@@ -1,4 +1,5 @@
 #include "core.h"
+#include "port.h"
 
 namespace lcs {
 
@@ -90,7 +91,7 @@ Rel::Rel(relid _id, Node _from_node, Node _to_node, sockid _from_sock,
     , to_node { _to_node }
     , from_sock { _from_sock }
     , to_sock { _to_sock }
-    , value { FALSE }
+    , value { DISABLED }
 {
 }
 
@@ -98,7 +99,7 @@ Rel::Rel()
     : id { 0 }
     , from_sock { 0 }
     , to_sock { 0 }
-    , value { FALSE }
+    , value { DISABLED }
 {
 }
 
@@ -171,8 +172,10 @@ void OutputNode::on_signal(void)
         auto r = _parent->get_rel(input);
         lcs_assert(r != nullptr);
         _value = r->value;
-        L_DEBUG("Received %s signal", to_str<State>(r->value));
+    } else {
+        _value = DISABLED;
     }
+    L_DEBUG("Received %s signal", to_str<State>(_value));
 }
 
 void OutputNode::clean()

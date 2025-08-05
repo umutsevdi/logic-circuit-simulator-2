@@ -10,8 +10,12 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include "errors.h"
+#include <array>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -28,8 +32,10 @@
 #define API_ENDPOINT "https://lcs2.com"
 #endif
 #endif
+#define LCS_ERROR [[nodiscard("Error codes must be handled")]] Error
 
 namespace lcs {
+template <typename T> const char* to_str(T);
 /**
  * A custom container class that stores a pointer to an object defined
  * within a scene. Can not be stored, copied or assigned.
@@ -60,30 +66,145 @@ private:
     T* _v;
 };
 
-inline std::string strlimit(const std::string& input, size_t limit)
-{
-    size_t len = input.length();
-    if (len > limit) {
-        return "..." + input.substr(len - limit + 3, limit);
+/******************************************************************************
+                                  LOGGING/
+******************************************************************************/
+
+/**
+ * Single Log message. Log messages are printed to the terminal,
+ * written to the test output file and displayed on the Console window.
+ */
+struct Message {
+    enum Severity { DEBUG, INFO, WARN, ERROR };
+    Message()         = default;
+    Severity severity = DEBUG;
+    std::array<char, 12> time_str {};
+    std::array<char, 6> log_level_str {};
+    std::array<char, 18> obj {};
+    std::array<char, 20> file_line {};
+    std::array<char, 25> fn {};
+    std::array<char, 512> expr {};
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    template <typename... Args>
+    Message(Severity l, const char* file, int line, const char* _fn,
+        const char* fmt, Args... args)
+    {
+        _set_time();
+        severity = l;
+        std::strncpy(
+            log_level_str.data(), _severity_to_str(l), log_level_str.size());
+        std::snprintf(
+            file_line.data(), file_line.max_size(), "%s:%-4d", file, line);
+        _fn_parse(_fn);
+        std::snprintf(expr.data(), expr.max_size(), fmt, args...);
     }
-    return input;
-}
+#pragma GCC diagnostic pop
+
+private:
+    void _fn_parse(const char* name);
+    void _set_time(void);
+    static constexpr const char* _severity_to_str(Severity l)
+    {
+        switch (l) {
+        case DEBUG: return "DEBUG";
+        case INFO: return "INFO ";
+        case WARN: return "WARN ";
+        default: return "ERROR";
+        }
+    }
+};
+
+namespace fs {
+
+#define __LLOG__(STATUS, ...)                                                  \
+    lcs::fs::_log(Message {                                                    \
+        STATUS, __FILE_NAME__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__ })
+
+#define L_INFO(...) __LLOG__(Message::INFO, __VA_ARGS__)
+#define L_WARN(...) __LLOG__(Message::WARN, __VA_ARGS__)
+#define L_ERROR(...) __LLOG__(Message::ERROR, __VA_ARGS__)
+
+#ifndef NDEBUG
+#define L_DEBUG(...) __LLOG__(Message::DEBUG, __VA_ARGS__)
+/** Runs an assertion. Displays an error message on failure. In debug builds
+ * also crashes the application. */
+#define lcs_assert(expr)                                                       \
+    {                                                                          \
+        if (lcs::fs::__expect([&]() mutable -> bool { return expr; },          \
+                __FUNCTION__, __FILE_NAME__, __LINE__, #expr)) {               \
+            exit(1);                                                           \
+        }                                                                      \
+    }
+#else
+#define L_DEBUG(...)
+#define lcs_assert(expr)                                                       \
+    {                                                                          \
+        lcs::fs::__expect([&]() mutable -> bool { return expr; },              \
+            __FUNCTION__, __FILE_NAME__, __LINE__, #expr);                     \
+    }
+#endif
+
+#define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
+#define ERROR(err) ((L_ERROR("%s(%d): %s", #err, err, errmsg(err))), err)
+#define VEC_TO_STR(os, vec, ...)                                               \
+    for (const auto& iter : vec) {                                             \
+        os << __VA_ARGS__(iter) << ",\t";                                      \
+    }
+
+    /**
+     * Initializes required folder structure for the application.
+     * If testing flag is enabled files are saved to a temporary location.
+     * @param is_testing whether testing mode is enabled or not
+     */
+    void init(bool is_testing = false);
+    void close(void);
+
+    /**
+     * Loop over existing logs starting from the oldest.
+     * @param fn iteration function
+     */
+    void iterate_logs(std::function<void(size_t, const Message& l)> fn);
+
+    /** Clears all log messages. */
+    void clear_log(void);
+
+    extern bool is_testing;
+    extern std::filesystem::path ROOT;
+    extern std::filesystem::path TMP;
+    extern std::filesystem::path LIBRARY;
+    extern std::filesystem::path CACHE;
+    extern std::filesystem::path MISC;
+    extern std::string INI;
+    extern FILE* __TEST_LOG__;
+
+    /** Runs an assertion, displays an error message on failure. Intended for
+     * macros. */
+    int __expect(std::function<bool(void)> expr, const char* function,
+        const char* file, int line, const char* str_expr) noexcept;
+    /**
+     * Push a log message to the stack. Intended to be used by the macros
+     * such as L_INFO, L_WARN, L_ERROR, L_DEBUG.
+     */
+    void _log(const Message& l);
+
+} // namespace fs
+
+/******************************************************************************
+                                  /LOGGING
+******************************************************************************/
+
+} // namespace lcs
 
 template <typename T, typename... Args> T get_first(T first, Args...)
 {
     return first;
 }
 
-template <typename... Args> const char* get_first(const char* first, Args...)
-{
-    return first;
-}
-
+std::string strlimit(const std::string& input, size_t limit);
 std::vector<std::string> split(std::string& s, const std::string& delimiter);
 std::vector<std::string> split(std::string& s, const char delimiter);
-
-template <typename T> const char* to_str(T);
-
 std::string base64_encode(const std::string& input);
 std::string base64_decode(const std::string& input);
 
@@ -94,8 +215,8 @@ std::string base64_decode(const std::string& input);
  */
 inline uint32_t htonl(uint32_t host)
 {
-    uint16_t test = 1;
-    if (*(reinterpret_cast<uint8_t*>(&test)) == 1) {
+    uint32_t test = 1;
+    if (*(uint8_t*)&test == 1) {
         uint32_t network = 0;
         network |= ((host >> 24) & 0xFF);
         network |= ((host >> 8) & 0xFF00);
@@ -112,102 +233,3 @@ inline uint32_t htonl(uint32_t host)
  * * Conforming to POSIX.1-2001.
  */
 inline uint32_t ntohl(uint32_t network) { return htonl(network); }
-
-enum Error {
-    /** Operation is successful. */
-    OK,
-    /** Parser encountered termination before end of a statement. */
-    UNTERMINATED_STATEMENT,
-    /** Parser encountered a invalid string. */
-    INVALID_STRING,
-    /** Object has 0 as node id. */
-    INVALID_NODEID,
-    /** Object has 0 as rel id. */
-    INVALID_RELID,
-    /** Given relationship does not exist within that scene. */
-    REL_NOT_FOUND,
-    /** Outputs can not be used as a from type. */
-    INVALID_FROM_TYPE,
-    /** Only components can have NodeType::COMPONENT_INPUT and
-       NodeType::COMPONENT_OUTPUT. */
-    NOT_A_COMPONENT,
-    /** Inputs can not be used as a to type. */
-    INVALID_TO_TYPE,
-    /** Attempted to bind a already connected input socket. */
-    ALREADY_CONNECTED,
-    /** Component socket is not connected. */
-    NOT_CONNECTED,
-    /** Attempted to execute or load a component that does not exist. */
-    COMPONENT_NOT_FOUND,
-    /** Deserialized node does not fulfill its requirements. */
-    INVALID_NODE,
-    /** Invalid dependency string. */
-    INVALID_DEPENDENCY_FORMAT,
-    /** Not a valid JSON document. */
-    INVALID_JSON_FORMAT,
-    /** No such file or directory in given path */
-    NOT_FOUND,
-    /** Failed to save file*/
-    NO_SAVE_PATH_DEFINED,
-    /** Failed to send the request to the server. Request didn't arrive to the
-       server. */
-    REQUEST_FAILED,
-    /** Request was sent successfully to the server but the server responded
-     * with non 200 code message.*/
-    RESPONSE_ERROR,
-    /** Response is not a valid JSON string. */
-    JSON_PARSE_ERROR,
-
-    /** See error message.*/
-    KEYCHAIN_GENERIC_ERROR,
-    /** Key not found.*/
-    KEYCHAIN_NOT_FOUND,
-    /** Occurs on Windows when the number of characters in password is too
-       long.*/
-    KEYCHAIN_TOO_LONG,
-    /** Occurs on MacOS when the application fails to pass certain conditions.*/
-    KEYCHAIN_ACCESS_DENIED,
-    /** Attempted to start a flow that was already active. */
-    UNTERMINATED_FLOW,
-    /** Represents the how many types of error codes exists. Not a valid error
-       code.*/
-    ERROR_S
-};
-
-constexpr const char* errmsg(Error e)
-{
-    switch (e) {
-    case OK: return "Operation is successful.";
-    case UNTERMINATED_STATEMENT:
-        return "ParseError: Parser encountered termination before end of a "
-               "statement.";
-    case INVALID_STRING:
-        return "ParseError: Parser encountered a invalid string. ";
-    case INVALID_NODEID: return "Object has invalid ID.";
-    case INVALID_RELID: return "Object has invalid relaitonship ID.";
-    case REL_NOT_FOUND: return "The relationship was not found.";
-    case INVALID_FROM_TYPE: return "Outputs can not be used as a from type.";
-    case NOT_A_COMPONENT: return "Only components can have CIN or COUT.";
-    case INVALID_TO_TYPE: return "Inputs can not be used as a to type.";
-    case ALREADY_CONNECTED: return "Input socket is already connected.";
-    case NOT_CONNECTED: return "Component socket is not connected. ";
-    case COMPONENT_NOT_FOUND: return "Component was not found.";
-    case INVALID_NODE: return "Invalid node format.";
-    case INVALID_DEPENDENCY_FORMAT: return "Invalid dependency string. ";
-    case INVALID_JSON_FORMAT: return "Invalid JSON document.";
-    case NOT_FOUND: return "No such file or directory.";
-    case NO_SAVE_PATH_DEFINED: return "Failed to save file.";
-    case REQUEST_FAILED: return "Failed to send the request.";
-    case RESPONSE_ERROR: return "Bad request.";
-    case JSON_PARSE_ERROR: return "Response is not a valid JSON string.";
-    case KEYCHAIN_GENERIC_ERROR: return "Keychain couldn't load the password.";
-    case KEYCHAIN_NOT_FOUND: return "Key was not found.";
-    case KEYCHAIN_TOO_LONG: return "[WindowsOnly] key is too long.";
-    case KEYCHAIN_ACCESS_DENIED: return "[AppleOnly] Authorization failure.";
-    case UNTERMINATED_FLOW: return "Already active flowl.";
-
-    case ERROR_S: return "Unknown Error.";
-    }
-};
-#define LCS_ERROR [[nodiscard("Error codes must be handled")]] Error
-} // namespace lcs

@@ -40,7 +40,6 @@ file(GLOB_RECURSE UI_RES *.cpp)
 add_library(ui ${UI_RES})
 target_link_libraries(ui PRIVATE
     core
-    port
     imgui
     imnodes
 )

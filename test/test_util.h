@@ -9,11 +9,11 @@
     Node sum   = s.add_node<OutputNode>();
 
 #define _create_full_adder(s)                                                  \
-    Node g_xor       = s.add_node<GateNode>(GateType::XOR);                    \
-    Node g_xor_sum   = s.add_node<GateNode>(GateType::XOR);                    \
-    Node g_and_carry = s.add_node<GateNode>(GateType::AND);                    \
-    Node g_and       = s.add_node<GateNode>(GateType::AND);                    \
-    Node g_or        = s.add_node<GateNode>(GateType::OR);                     \
+    Node g_xor       = s.add_node<GateNode>(GateNode::Type::XOR);              \
+    Node g_xor_sum   = s.add_node<GateNode>(GateNode::Type::XOR);              \
+    Node g_and_carry = s.add_node<GateNode>(GateNode::Type::AND);              \
+    Node g_and       = s.add_node<GateNode>(GateNode::Type::AND);              \
+    Node g_or        = s.add_node<GateNode>(GateNode::Type::OR);               \
                                                                                \
     s.connect(g_xor, 0, a);                                                    \
     s.connect(g_xor, 1, b);                                                    \

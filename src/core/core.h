@@ -11,15 +11,11 @@
  ******************************************************************************/
 
 #include "common.h"
-#include "port.h"
 #include <array>
 #include <bitset>
 #include <cstdint>
 #include <map>
 #include <optional>
-#include <string>
-#include <type_traits>
-#include <vector>
 
 namespace lcs {
 
@@ -399,10 +395,6 @@ public:
             L_DEBUG("Last node found at %zu/%zu for %s", i, vec.size(),
                 to_str<Node::Type>(node_type));
         }
-        if constexpr (std::is_same<T, ComponentNode>()) {
-            uint8_t idx = get_first<uint8_t>(args...);
-            lcs_assert(vec[vec.size() - 1].set_component(idx) == Error::OK);
-        }
         return id;
     }
 
@@ -516,15 +508,13 @@ public:
 
     /** Returns a dependency string. */
     std::string to_dependency(void) const;
-    /** Returns file path to save. */
-    std::string to_filepath(void) const;
 
     std::array<char, 128> name {};
     std::array<char, 512> description {};
     /** GitHub user names are limited to 40 characters. */
     std::array<char, 60> author {}; //
     int version;
-    std::vector<std::shared_ptr<Scene>> dependencies;
+    std::vector<Scene> dependencies;
     std::optional<ComponentContext> component_context;
 
     std::vector<GateNode> _gates;
@@ -559,4 +549,102 @@ LCS_ERROR serialize(const Scene& scene, std::vector<uint8_t>& buffer);
  */
 LCS_ERROR deserialize(const std::vector<uint8_t>& buffer, Scene& scene);
 
+namespace io {
+
+    /**
+     * Creates an empty scene with given name
+     * @param name Scene name
+     * @param author Scene author
+     * @param description Scene description
+     * @param version Scene version
+     * @returns scene index
+     */
+    size_t scene_new(const std::string& name, const std::string& author,
+        const std::string& description, int version);
+
+    /**
+     * Reads scene data from given file.
+     * @param path to file
+     * @param idx on successful scene_open calls idx will be updated to a
+     * valid idx to access scene.
+     * @returns Error on failure:
+     *
+     * - Error::NOT_FOUND
+     * - deserialize
+     */
+    LCS_ERROR scene_open(const std::string& path, size_t& idx);
+
+    /**
+     * Closes the scene with selected path, erasing from memory.
+     * @param idx index of the scene, active scene if not provided
+     * @returns Error::OK
+     */
+    LCS_ERROR scene_close(size_t idx = SIZE_MAX);
+
+    /**
+     * Updates the contents of given scene.
+     * @param idx index of the scene, active scene if not provided
+     * @returns Error on failure:
+     *
+     * - Error::NO_SAVE_PATH_DEFINED
+     */
+    LCS_ERROR scene_save(size_t idx = SIZE_MAX);
+
+    /**
+     * Updates the contents of given scene.
+     * @param new_path to save
+     * @param idx index of the scene, active scene if not provided
+     * @returns Error on failure:
+     *
+     * - Error::NO_SAVE_PATH_DEFINED
+     */
+    LCS_ERROR scene_save_as(const std::string& new_path, size_t idx = SIZE_MAX);
+
+    /**
+     * Alerts the changes in a scene.
+     * @param idx to update
+     */
+    void scene_notify(size_t idx = SIZE_MAX);
+    /**
+     * Selects a scene as current.
+     * @param idx to select
+     * @returns reference to scene
+     */
+    NRef<Scene> scene_get(size_t idx = SIZE_MAX);
+
+    bool is_saved(size_t idx = SIZE_MAX);
+
+    void iterate(std::function<bool(std::string_view name,
+            std::string_view path, bool is_saved, bool is_active)>
+            run);
+
+    /**
+     * Get if there are any changes that have been done to the scene
+     * outside the Node editor. Node editor uses this method to update
+     * itself.
+     *
+     * NOTE: Has changes assumes, after calling this method required changes
+     * are made. So calling this method again would return always false.
+     *
+     * @returns whether there are changes within the scene
+     */
+    bool has_changes(void);
+
+    /**
+     * Loads the given component. If the component does not
+     * exist in file system attempts to pull it from an available mirror.
+     * @param name component name
+     * @param scene to update
+     * @returns Error on failure:
+     *
+     * - Error::NOT_A_COMPONENT
+     * - Error::INVALID_DEPENDENCY_FORMAT
+     * - Error::COMPONENT_NOT_FOUND
+     * - Error::NOT_A_COMPONENT
+     * - deserialize
+     * - net::get_request
+     */
+    Error load_dependency(const std::string& name, Scene& scene);
+
+} // namespace io
 } // namespace lcs

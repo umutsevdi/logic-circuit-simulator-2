@@ -13,10 +13,6 @@ TEST_CASE("Connect IN to OUT, Update")
     lcs_assert(s.get_node<OutputNode>(o) != nullptr);
     lcs_assert(s.get_node<InputNode>(v) != nullptr);
 
-    L_INFO("%s <-[%s]-- %s", to_str<State>(s.get_node<OutputNode>(o)->get()),
-        to_str<State>(s.get_rel(s.get_node<InputNode>(v)->output[0])->value),
-        to_str<State>(s.get_node<InputNode>(v)->get()));
-
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::FALSE);
     s.get_node<InputNode>(v)->set(true);
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
@@ -32,6 +28,7 @@ TEST_CASE("Connect IN to OUT, update and disconnect")
     s.get_node<InputNode>(v)->set(true);
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
     s.disconnect(r);
+    L_INFO("%s", to_str<State>(s.get_node<OutputNode>(o)->get()));
     REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
 }
 

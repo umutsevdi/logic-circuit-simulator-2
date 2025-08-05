@@ -1,3 +1,4 @@
+#include "common.h"
 #include "core.h"
 #include <algorithm>
 #include <cstring>
@@ -8,7 +9,8 @@ namespace lcs {
 
 Scene::Scene(const std::string& _name, const std::string& _author,
         const std::string& _description, int _version) :
-        version { _version }, component_context { std::nullopt }, _last_node {
+        version { _version }, component_context { std::nullopt }, frame_s{0},
+    _last_node {
             Node { 0, Node::Type::GATE },
             Node { 0, Node::Type::COMPONENT },
             Node { 0, Node::Type::INPUT },
@@ -59,8 +61,11 @@ void Scene::clone(const Scene& other)
     memcpy(name.data(), other.name.data(), name.size());
     memcpy(description.data(), other.description.data(), description.size());
     memcpy(author.data(), other.author.data(), author.size());
-    version      = other.version;
-    dependencies = other.dependencies;
+    version = other.version;
+    for (const auto& dep : other.dependencies) {
+        dependencies.push_back(Scene {});
+        dependencies.back().clone(dep);
+    }
 
     frame_s           = other.frame_s;
     _gates            = other._gates;
@@ -181,8 +186,8 @@ Error Scene::connect_with_id(
         return ERROR(Error::INVALID_FROM_TYPE);
     } else if (from_node.type == Node::Type::COMPONENT
         && from_sock
-            >= io::component::get(get_node<ComponentNode>(from_node)->path)
-                ->component_context->outputs.size()) {
+            >= dependencies[get_node<ComponentNode>(from_node)->dep_idx]
+                .component_context->outputs.size()) {
         return ERROR(Error::INVALID_NODEID);
     }
     if (!component_context.has_value()
@@ -361,7 +366,7 @@ void Scene::signal(relid id, State value)
     lcs_assert(id != 0);
     auto r = get_rel(id);
     lcs_assert(r != nullptr);
-    if (r->value != value) {
+    if (r->value != value || r->value == DISABLED) {
         r->value = value;
         if (r->to_node.type != Node::Type::COMPONENT_OUTPUT) {
             auto n = get_base(r->to_node);
@@ -409,21 +414,6 @@ std::string Scene::to_dependency() const
     dep_str << std::string_view { name.begin() } << '/'
             << std::to_string(version);
     return dep_str.str();
-}
-
-std::string Scene::to_filepath(void) const
-{
-    std::filesystem::path p;
-    std::string_view str_author { author.begin() };
-    std::string file_name { name.begin() };
-    file_name
-        = base64_encode(file_name + "/" + std::to_string(version)) + ".json";
-    if (str_author.empty() || str_author == "local") {
-        p = LOCAL / file_name;
-    } else {
-        p = LIBRARY / str_author / file_name;
-    }
-    return p;
 }
 
 void Scene::run(float delta)

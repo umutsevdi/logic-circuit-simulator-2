@@ -1,6 +1,5 @@
 #include "common.h"
 #include "core.h"
-#include "port.h"
 #include <algorithm>
 #include <bitset>
 #include <cstdint>
@@ -132,12 +131,9 @@ ComponentNode::ComponentNode(Scene* _s)
 Error ComponentNode::set_component(uint8_t _dep_idx)
 {
     if (_dep_idx >= _parent->dependencies.size()) {
-        return ERROR(Error::INVALID_DEPENDENCY_FORMAT);
-    }
-    auto ref = _parent->dependencies[_dep_idx];
-    if (ref == nullptr) {
         return ERROR(Error::COMPONENT_NOT_FOUND);
     }
+    auto& ref = _parent->dependencies[_dep_idx];
     for (relid id : inputs) {
         _parent->disconnect(id);
     }
@@ -149,10 +145,10 @@ Error ComponentNode::set_component(uint8_t _dep_idx)
     inputs.clear();
     outputs.clear();
 
-    for (size_t i = 0; i < ref->component_context->inputs.size(); i++) {
+    for (size_t i = 0; i < ref.component_context->inputs.size(); i++) {
         inputs.push_back(0);
     }
-    for (size_t i = 0; i < ref->component_context->outputs.size(); i++) {
+    for (size_t i = 0; i < ref.component_context->outputs.size(); i++) {
         outputs[i] = {};
     }
     dep_idx = _dep_idx;
@@ -199,7 +195,7 @@ void ComponentNode::on_signal(void)
             }
         }
         _output_value
-            = _parent->dependencies[dep_idx]->component_context->run(input);
+            = _parent->dependencies[dep_idx].component_context->run(input);
         for (auto sock : outputs) {
             for (relid out : sock.second) {
                 L_DEBUG("Sending %s signal to rel@%d",

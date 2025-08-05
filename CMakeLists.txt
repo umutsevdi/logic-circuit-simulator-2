@@ -61,12 +61,12 @@ include_directories(${jsoncpp_SOURCE_DIR}/include)
 
 include_directories(src/common)
 include_directories(src/core)
-include_directories(src/port)
 add_subdirectory(src/common)
 add_subdirectory(src/core)
-add_subdirectory(src/port)
 
 if(LCS_GUI)
+    include_directories(src/net)
+    add_subdirectory(src/net)
     include_directories(src/ui)
     add_subdirectory(src/ui)
     file(GLOB SOURCES src/main.cpp)
@@ -94,8 +94,6 @@ if(LCS_BUILD_TESTS)
     target_link_libraries(LogicCircuitSimulator.tst PRIVATE
         common
         core
-        io
-        net
         jsoncpp_static
         ${LCS_TEST_DEP}
     doctest::doctest)
@@ -117,5 +115,36 @@ if(LCS_BUILD_TESTS)
     )
     if(CMAKE_BUILD_TYPE STREQUAL "Release" AND LCS_GUI)
         add_dependencies(${PRJ} run_tests)
+    endif()
+endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND LCS_ENABLE_DOXYGEN)
+    find_package(Doxygen QUIET)
+    if(DOXYGEN_FOUND)
+
+        FetchContent_Declare(
+            doxygen-awesome-css
+            GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
+            GIT_TAG v2.3.4
+        )
+        FetchContent_MakeAvailable(doxygen-awesome-css)
+        
+        set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile)
+        set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/docs)
+        message("${DOX} ${DOXYFILE_IN} ${DOXYFILE_OUT} Doxfile at: ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile")
+        file(MAKE_DIRECTORY ${DOXYGEN_OUT})
+        # Configure Doxygen output directory
+        set(DOXYGEN_GENERATE_HTML YES)
+        set(DOXYGEN_OUTPUT_DIRECTORY ${DOXYGEN_OUT})
+        # Add a custom target to generate documentation
+        add_custom_target(doc
+            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_IN}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM)
+        if(LCS_GUI)
+            add_dependencies(${PROJECT_NAME} doc)
+        else()
+            add_dependencies(${PROJECT_NAME}.tst doc)
+        endif()
     endif()
 endif()
