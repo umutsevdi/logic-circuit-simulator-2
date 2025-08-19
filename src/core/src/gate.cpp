@@ -14,7 +14,7 @@ static bool _not(const std::vector<bool>&);
 static bool (*_operations[])(const std::vector<bool>&)
     = { _not, _and, _or, _xor, _nand, _nor, _xnor, _not };
 
-GateNode::GateNode(Scene* _scene, Type type, sockid _max_in)
+Gate::Gate(Scene* _scene, Type type, sockid _max_in)
     : BaseNode { _scene }
     , _type { type }
     , _value { State::DISABLED }
@@ -31,15 +31,15 @@ GateNode::GateNode(Scene* _scene, Type type, sockid _max_in)
     }
 }
 
-bool GateNode::is_connected() const
+bool Gate::is_connected() const
 {
     return std::all_of(
         inputs.begin(), inputs.end(), [&](relid i) { return i != 0; });
 }
 
-State GateNode::get(sockid) const { return _value; }
+State Gate::get(sockid) const { return _value; }
 
-void GateNode::clean(void)
+void Gate::clean(void)
 {
     for (auto r : output) {
         if (r != 0) {
@@ -53,7 +53,7 @@ void GateNode::clean(void)
     }
 }
 
-void GateNode::on_signal(void)
+void Gate::on_signal(void)
 {
     if (is_connected()) {
         std::vector<bool> v {};
@@ -68,12 +68,11 @@ void GateNode::on_signal(void)
         _value = State::DISABLED;
     }
     for (relid& out : output) {
-        L_DEBUG("Sending %s signal to rel@%d", to_str<State>(get()), out);
         _parent->signal(out, get());
     }
 }
 
-bool GateNode::increment()
+bool Gate::increment()
 {
     if (_type == Type::NOT) {
         return false;
@@ -83,7 +82,7 @@ bool GateNode::increment()
     return true;
 }
 
-bool GateNode::decrement()
+bool Gate::decrement()
 {
     if (_type == Type::NOT || inputs.size() == 2) {
         return false;

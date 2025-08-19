@@ -1,7 +1,8 @@
-#include "IconsLucide.h"
 #include "common.h"
-#include "ui/configuration.h"
-#include "ui/util.h"
+#include "components.h"
+#include "configuration.h"
+#include "ui.h"
+#include <IconsLucide.h>
 #include <imgui.h>
 #include <imnodes.h>
 #include <json/reader.h>
@@ -115,8 +116,8 @@ static void _init_fonts(ImGuiIO& io)
     io.Fonts->AddFontDefault();
     static const ImWchar icon_ranges[] = { ICON_MIN_LC, ICON_MAX_LC, 0 };
 
-    auto dir         = MISC / "font" / "Archivo" / "ttf";
-    auto font_lucide = MISC / "font" / "Lucide" / "Lucide.ttf";
+    auto dir         = fs::MISC / "font" / "Archivo" / "ttf";
+    auto font_lucide = fs::MISC / "font" / "Lucide" / "Lucide.ttf";
 
     auto font = dir / "Archivo-Regular.ttf";
 #define add_to_atlas(size, ...)                                                \
@@ -152,7 +153,7 @@ static void _init_fonts(ImGuiIO& io)
     _FONT[LARGE | BOLD | ITALIC] = atlas->AddFontFromFileTTF(
         font.c_str(), 1.25 * fsize, nullptr, atlas->GetGlyphRangesDefault());
 
-    font                = MISC / "font" / "Lucide" / "Lucide.ttf";
+    font                = fs::MISC / "font" / "Lucide" / "Lucide.ttf";
     _FONT[SMALL | ICON] = atlas->AddFontFromFileTTF(
         font.c_str(), 0.75 * fsize, nullptr, icon_ranges);
     _FONT[NORMAL | ICON]
@@ -161,8 +162,6 @@ static void _init_fonts(ImGuiIO& io)
         font.c_str(), 1.25 * fsize, nullptr, icon_ranges);
     _FONT[ULTRA | ICON] = atlas->AddFontFromFileTTF(
         font.c_str(), 2.5 * fsize, nullptr, icon_ranges);
-    atlas->Build();
-    L_DEBUG("Font atlas was built.");
 }
 
 #define CLRU32(...) ImGui::GetColorU32(__VA_ARGS__)
@@ -246,10 +245,10 @@ static void _set_colors(
     clr_gui[ImGuiCol_PlotHistogram] = V4MUL(DL(t.green, t.yellow_bright), 0.9f);
     clr_gui[ImGuiCol_PlotHistogramHovered]
         = V4MUL(DL(t.green, t.yellow_bright), 1.0f);
-    clr_node[ImNodesCol_GridBackground]  = CLRU32(V4MUL(t.bg, DL(1.2f, 0.8f)));
-    clr_node[ImNodesCol_GridLine]        = CLRU32(V4MUL(t.fg, 0.5f));
-    clr_node[ImNodesCol_GridLinePrimary] = CLRU32(ImGuiCol_FrameBgActive);
-    clr_node[ImNodesCol_NodeBackground]  = CLRU32(ImGuiCol_WindowBg);
+    clr_node[ImNodesCol_GridBackground] = CLRU32(V4MUL(t.bg, DL(1.2f, 0.8f)));
+    clr_node[ImNodesCol_GridLine]       = CLRU32(V4MUL(t.fg, 0.5f));
+    //    clr_node[ImNodesCol_GridLinePrimary] = CLRU32(ImGuiCol_FrameBgActive);
+    clr_node[ImNodesCol_NodeBackground]         = CLRU32(ImGuiCol_WindowBg);
     clr_node[ImNodesCol_NodeBackgroundHovered]  = CLRU32(V4MUL(t.bg, 1.3f));
     clr_node[ImNodesCol_NodeBackgroundSelected] = CLRU32(V4MUL(t.bg, 1.5f));
 
@@ -296,7 +295,7 @@ static void _init_themes(Configuration& cfg)
     Json::Value v {};
     Json::Reader r;
     std::string data;
-    if (read(MISC / "themes.json", data)) {
+    if (fs::read(fs::MISC / "themes.json", data)) {
         lcs_assert(r.parse(data, v));
         lcs_assert(v.isArray());
         for (const auto& element : v) {
@@ -326,7 +325,6 @@ static void _init_themes(Configuration& cfg)
             cfg.dark_theme.c_str(), names_dark[0]);
         cfg.dark_theme = names_dark[0];
     }
-    L_DEBUG("Themes are ready.");
 }
 
 inline ImVec4 to_imvec4(uint64_t clr)
@@ -379,7 +377,7 @@ LCS_ERROR LcsTheme::from_json(const Json::Value& v)
             && v["yellow_bright"].isString() && v["blue_bright"].isString()
             && v["magenta_bright"].isString() && v["cyan_bright"].isString()
             && v["white_bright"].isString())) {
-        return ERROR(Error::INVALID_JSON_FORMAT);
+        return ERROR(Error::INVALID_JSON);
     }
     name           = v["name"].asString();
     is_dark        = v["is_dark"].asBool();

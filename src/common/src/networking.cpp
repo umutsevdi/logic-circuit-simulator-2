@@ -39,7 +39,8 @@ public:
     bool is_done() const;
 
     HttpResponse resp;
-    uint8_t flags = 0U;
+    void (*cb)(HttpResponse& resp) = nullptr;
+    uint8_t flags                  = 0U;
 
 private:
     // Request Data
@@ -121,6 +122,9 @@ void HttpHandle::handle(void)
     }
     flags |= IS_RESOLVED;
     resp.err = Error::OK;
+    if (cb != nullptr) {
+        cb(resp);
+    }
 }
 
 bool HttpHandle::is_done() const
@@ -144,6 +148,7 @@ void init(bool)
     _thread = std::thread { [&]() {
         bool term = false;
         while (true) {
+            std::vector<size_t> erase_list;
             std::unique_lock<std::mutex> lock(data_mutex);
             cv.wait(lock, [] { return !data.empty(); });
             for (auto& [k, v] : data) {
@@ -152,18 +157,23 @@ void init(bool)
                     continue;
                 }
                 v.handle();
+                if (v.cb != nullptr) {
+                    erase_list.push_back(k);
+                }
+            }
+            for (auto& it : erase_list) {
+                data.erase(it);
             }
             if (term) {
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     } };
 }
 
 void close(void)
 {
-    L_INFO("Waiting for module lcs::net to close.");
     {
         std::unique_lock<std::mutex> lock(data_mutex);
         data.emplace(UINT64_MAX, HttpHandle {});
@@ -173,7 +183,7 @@ void close(void)
     if (_thread.joinable()) {
         _thread.join();
     }
-    L_INFO("lcs::net is closed.");
+    L_INFO("Module lcs::net is closed.");
 }
 
 uint64_t get_request(const std::string& URL, const std::string& authorization)
@@ -185,6 +195,16 @@ uint64_t get_request(const std::string& URL, const std::string& authorization)
     return last;
 }
 
+void get_request_then(void (*cb)(HttpResponse& resp), const std::string& URL,
+    const std::string& authorization)
+{
+    std::lock_guard<std::mutex> lock(data_mutex);
+    last++;
+    data.emplace(last, HttpHandle {});
+    data[last].get(URL, authorization);
+    data[last].cb = cb;
+}
+
 uint64_t post_request(const std::string& URL, const std::vector<uint8_t>& req,
     const std::string& authorization)
 {
@@ -193,6 +213,16 @@ uint64_t post_request(const std::string& URL, const std::vector<uint8_t>& req,
     data.emplace(last, HttpHandle {});
     data[last].post(URL, req, authorization);
     return last;
+}
+
+void post_request_then(void (*cb)(HttpResponse& resp), const std::string& URL,
+    const std::vector<uint8_t>& req, const std::string& authorization)
+{
+    std::lock_guard<std::mutex> lock(data_mutex);
+    last++;
+    data.emplace(last, HttpHandle {});
+    data[last].post(URL, req, authorization);
+    data[last].cb = cb;
 }
 
 bool pull_response(uint64_t id, HttpResponse& resp)

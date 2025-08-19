@@ -62,9 +62,10 @@ void Scene::clone(const Scene& other)
     memcpy(description.data(), other.description.data(), description.size());
     memcpy(author.data(), other.author.data(), author.size());
     version = other.version;
-    for (const auto& dep : other.dependencies) {
-        dependencies.push_back(Scene {});
-        dependencies.back().clone(dep);
+    for (const Scene& dep : other.dependencies()) {
+        Scene s {};
+        s.clone(dep);
+        add_dependency(std::move(s));
     }
 
     frame_s           = other.frame_s;
@@ -101,7 +102,7 @@ void Scene::_move_from(Scene&& other)
     description       = std::move(other.description);
     author            = std::move(other.author);
     version           = other.version;
-    dependencies      = std::move(other.dependencies);
+    _dependencies     = std::move(other._dependencies);
     frame_s           = other.frame_s;
     _gates            = std::move(other._gates);
     _components       = std::move(other._components);
@@ -125,6 +126,9 @@ void Scene::_move_from(Scene&& other)
     }
     for (auto& output : _outputs) {
         output.reload(this);
+    }
+    for (auto& dep : _dependencies) {
+        dep._parent = this;
     }
     if (component_context.has_value()) {
         component_context->reload(this);
@@ -185,8 +189,7 @@ Error Scene::connect_with_id(
         || from_node.type == Node::Type::COMPONENT_OUTPUT) {
         return ERROR(Error::INVALID_FROM_TYPE);
     } else if (from_node.type == Node::Type::COMPONENT
-        && from_sock
-            >= dependencies[get_node<ComponentNode>(from_node)->dep_idx]
+        && from_sock >= dependencies()[get_node<Component>(from_node)->dep_idx]
                 .component_context->outputs.size()) {
         return ERROR(Error::INVALID_NODEID);
     }
@@ -199,7 +202,7 @@ Error Scene::connect_with_id(
     bool is_connected = false;
     switch (to_node.type) {
     case Node::Type::GATE: {
-        if (auto gate = get_node<GateNode>(to_node);
+        if (auto gate = get_node<Gate>(to_node);
             gate != nullptr && gate->inputs[to_sock] == 0) {
             gate->inputs[to_sock] = id;
             is_connected          = true;
@@ -207,7 +210,7 @@ Error Scene::connect_with_id(
         break;
     }
     case Node::Type::COMPONENT: {
-        if (auto comp = get_node<ComponentNode>(to_node);
+        if (auto comp = get_node<Component>(to_node);
             comp != nullptr && comp->inputs[to_sock] == 0) {
             comp->inputs[to_sock] = id;
             is_connected          = true;
@@ -215,7 +218,7 @@ Error Scene::connect_with_id(
         break;
     }
     case Node::Type::OUTPUT: {
-        if (auto out = get_node<OutputNode>(to_node);
+        if (auto out = get_node<Output>(to_node);
             out != nullptr && out->input == 0) {
             out->input   = id;
             is_connected = true;
@@ -242,16 +245,16 @@ Error Scene::connect_with_id(
 
     switch (from_node.type) {
     case Node::Type::GATE:
-        get_node<GateNode>(from_node)->output.push_back(id);
-        get_node<GateNode>(from_node)->on_signal();
+        get_node<Gate>(from_node)->output.push_back(id);
+        get_node<Gate>(from_node)->on_signal();
         break;
     case Node::Type::COMPONENT:
-        get_node<ComponentNode>(from_node)->outputs[from_sock].push_back(id);
-        get_node<ComponentNode>(from_node)->on_signal();
+        get_node<Component>(from_node)->outputs[from_sock].push_back(id);
+        get_node<Component>(from_node)->on_signal();
         break;
     case Node::Type::INPUT:
-        get_node<InputNode>(from_node)->output.push_back(id);
-        get_node<InputNode>(from_node)->on_signal();
+        get_node<Input>(from_node)->output.push_back(id);
+        get_node<Input>(from_node)->on_signal();
         break;
     case Node::Type::COMPONENT_INPUT: /* Component input is not handled
                                      here. */
@@ -266,7 +269,7 @@ Error Scene::connect_with_id(
             }
             from_list.push_back(id);
         }
-        component_context->run(0);
+        component_context->run(0, 0);
         break;
     default: return ERROR(Error::INVALID_TO_TYPE);
     }
@@ -295,18 +298,18 @@ Error Scene::disconnect(relid id)
 
     switch (r->second.from_node.type) {
     case Node::Type::GATE: {
-        auto& v = get_node<GateNode>(r->second.from_node)->output;
+        auto& v = get_node<Gate>(r->second.from_node)->output;
         v.erase(std::remove_if(v.begin(), v.end(), remove_fn));
         break;
     }
     case Node::Type::COMPONENT: {
-        auto& v = get_node<ComponentNode>(r->second.from_node)
+        auto& v = get_node<Component>(r->second.from_node)
                       ->outputs[r->second.from_sock];
         v.erase(std::remove_if(v.begin(), v.end(), remove_fn));
         break;
     }
     case Node::Type::INPUT: {
-        auto& v = get_node<InputNode>(r->second.from_node)->output;
+        auto& v = get_node<Input>(r->second.from_node)->output;
         v.erase(std::remove_if(v.begin(), v.end(), remove_fn));
         break;
     }
@@ -325,21 +328,21 @@ Error Scene::disconnect(relid id)
 
     switch (r->second.to_node.type) {
     case Node::Type::GATE: {
-        auto g = get_node<GateNode>(r->second.to_node);
+        auto g = get_node<Gate>(r->second.to_node);
 
         g->inputs[r->second.to_sock] = 0;
         g->on_signal();
         break;
     }
     case Node::Type::COMPONENT: {
-        auto c = get_node<ComponentNode>(r->second.to_node);
+        auto c = get_node<Component>(r->second.to_node);
 
         c->inputs[r->second.to_sock] = 0;
         c->on_signal();
         break;
     }
     case Node::Type::OUTPUT: {
-        auto o   = get_node<OutputNode>(r->second.to_node);
+        auto o   = get_node<Output>(r->second.to_node);
         o->input = 0;
         o->on_signal();
         break;
@@ -368,6 +371,10 @@ void Scene::signal(relid id, State value)
     lcs_assert(r != nullptr);
     if (r->value != value || r->value == DISABLED) {
         r->value = value;
+        L_INFO("%s:rel@%-2d %s:%d sent %s to %s:%d",
+            _parent != nullptr ? name.begin() : "root", id,
+            to_str<Node>(r->from_node), r->from_sock, to_str<State>(r->value),
+            to_str<Node>(r->to_node), r->to_sock);
         if (r->to_node.type != Node::Type::COMPONENT_OUTPUT) {
             auto n = get_base(r->to_node);
             lcs_assert(n != nullptr);
@@ -393,10 +400,10 @@ std::ostream& operator<<(std::ostream& os, const Scene& s)
 NRef<BaseNode> Scene::get_base(Node id)
 {
     switch (id.type) {
-    case Node::Type::GATE: return get_node<GateNode>(id)->base();
-    case Node::Type::COMPONENT: return get_node<ComponentNode>(id)->base();
-    case Node::Type::INPUT: return get_node<InputNode>(id)->base();
-    case Node::Type::OUTPUT: return get_node<OutputNode>(id)->base();
+    case Node::Type::GATE: return get_node<Gate>(id)->base();
+    case Node::Type::COMPONENT: return get_node<Component>(id)->base();
+    case Node::Type::INPUT: return get_node<Input>(id)->base();
+    case Node::Type::OUTPUT: return get_node<Output>(id)->base();
     default: break;
     }
     return nullptr;
@@ -423,6 +430,7 @@ void Scene::run(float delta)
     for (auto& in : _inputs) {
         if (!in.is_null() && in.is_timer()) { }
         if (f_uint % in._freq == 0) {
+            // FIXME This is wrong when component frame_s is altered
             in.toggle();
         }
     }

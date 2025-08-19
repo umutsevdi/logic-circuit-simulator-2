@@ -1,3 +1,14 @@
+# ┌───────────┐
+# │ Build NFD │
+# └───────────┘
+set(NFD_PORTAL ON)
+FetchContent_Declare(
+    nfd
+    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+    GIT_TAG v1.2.1
+)
+FetchContent_MakeAvailable(nfd)
+
 # ┌─────────────┐
 # │ Build ImGUI │
 # └─────────────┘
@@ -29,17 +40,28 @@ target_include_directories(imgui PRIVATE
 target_link_libraries(imgui glfw OpenGL::GL)
 
 
+# ┌───────────────┐
+# │ Build ImNodes │
+# └───────────────┘
+set(IMNODES_IMGUI_TARGET_NAME imgui)
 FetchContent_Declare(
     imnodes
     GIT_REPOSITORY https://github.com/Nelarius/imnodes.git
     GIT_TAG v0.5
 )
-FetchContent_MakeAvailable(imnodes)
-
-file(GLOB_RECURSE UI_RES *.cpp)
+file(GLOB_RECURSE UI_RES *.cpp ${imnodes_SOURCE_DIR}/imnodes.cpp
+.cpp)
 add_library(ui ${UI_RES})
+target_include_directories(ui PRIVATE
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+    ${imnodes_SOURCE_DIR}
+    ${nfd_SOURCE_DIR}
+)
+
 target_link_libraries(ui PRIVATE
     core
     imgui
-    imnodes
+    nfd
 )
+

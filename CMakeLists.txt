@@ -65,18 +65,21 @@ add_subdirectory(src/common)
 add_subdirectory(src/core)
 
 if(LCS_GUI)
-    include_directories(src/net)
-    add_subdirectory(src/net)
+    include_directories(include)
+    include_directories(src/api)
+    add_subdirectory(src/api)
     include_directories(src/ui)
     add_subdirectory(src/ui)
     file(GLOB SOURCES src/main.cpp)
     add_executable(LogicCircuitSimulator ${SOURCES})
     target_link_libraries(LogicCircuitSimulator PRIVATE
-        keychain
+        api
+        common
         core
         jsoncpp_static
+        keychain
         ui
-        net)
+        api)
 
     target_include_directories(LogicCircuitSimulator PRIVATE
         include
@@ -95,11 +98,9 @@ if(LCS_BUILD_TESTS)
         common
         core
         jsoncpp_static
-        ${LCS_TEST_DEP}
-    doctest::doctest)
+        doctest::doctest)
 
     target_include_directories(LogicCircuitSimulator.tst PRIVATE
-        include
         ${doctest_SOURCE_DIR}/doctest
     )
 

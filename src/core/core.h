@@ -27,9 +27,8 @@ using sockid = uint8_t;
 using relid = uint32_t;
 
 /**
- * Node is a handler that represents the index.
- * id is a non-zero identifier. Together with the type, represents a unique
- * node.
+ * Node is a handler that represents the index. Together with the type,
+ * represents a unique node.
  */
 struct Node {
     enum Type : uint8_t {
@@ -51,7 +50,13 @@ struct Node {
 
         NODE_S
     };
-    Node(uint16_t _id = UINT16_MAX, Type _type = GATE);
+
+    Node(uint16_t _id = UINT16_MAX, Node::Type _type = GATE)
+        : index { _id }
+        , type { _type }
+    {
+    }
+
     Node(Node&&)                 = default;
     Node(const Node&)            = default;
     Node& operator=(Node&&)      = default;
@@ -80,17 +85,22 @@ enum State {
 
 /** Position of a node or a curve in the surface */
 struct Point {
-    Point(int _x = 0, int _y = 0)
+    Point(int16_t _x = 0, int16_t _y = 0)
         : x { _x }
         , y { _y } { };
 
-    int x;
-    int y;
+    int16_t x;
+    int16_t y;
 };
 
 class BaseNode {
 public:
-    explicit BaseNode(Scene*, Point _p = { 0, 0 });
+    BaseNode(Scene* scene, Point _p = {})
+        : point { _p }
+        , _parent { scene }
+    {
+    }
+
     BaseNode(const BaseNode&)            = default;
     BaseNode(BaseNode&&)                 = default;
     BaseNode& operator=(BaseNode&&)      = default;
@@ -125,9 +135,25 @@ protected:
  * can have multiple output sockets.
  */
 struct Rel {
-    explicit Rel(relid _id, Node _from_node, Node _to_node, sockid _from_sock,
-        sockid _to_sock);
-    Rel();
+    Rel(relid _id, Node _from_node, Node _to_node, sockid _from_sock,
+        sockid _to_sock)
+        : id { _id }
+        , from_node { _from_node }
+        , to_node { _to_node }
+        , from_sock { _from_sock }
+        , to_sock { _to_sock }
+        , value { DISABLED }
+    {
+    }
+
+    Rel()
+        : id { 0 }
+        , from_sock { 0 }
+        , to_sock { 0 }
+        , value { DISABLED }
+    {
+    }
+
     ~Rel() = default;
 
     relid id;
@@ -141,15 +167,15 @@ struct Rel {
 /**
  * Describes a single logic gate.
  */
-class GateNode final : public BaseNode {
+class Gate final : public BaseNode {
 public:
     enum Type : uint8_t { NOT, AND, OR, XOR, NAND, NOR, XNOR };
-    explicit GateNode(Scene*, Type type = Type::AND, sockid max_in = 2);
-    GateNode(const GateNode&)            = default;
-    GateNode(GateNode&&)                 = default;
-    GateNode& operator=(GateNode&&)      = default;
-    GateNode& operator=(const GateNode&) = default;
-    ~GateNode()                          = default;
+    explicit Gate(Scene*, Type type = Type::AND, sockid max_in = 2);
+    Gate(const Gate&)            = default;
+    Gate(Gate&&)                 = default;
+    Gate& operator=(Gate&&)      = default;
+    Gate& operator=(const Gate&) = default;
+    ~Gate()                      = default;
 
     /** Get gate type. */
     Type type(void) const { return _type; };
@@ -175,14 +201,14 @@ private:
     State _value;
 };
 
-class ComponentNode final : public BaseNode {
+class Component final : public BaseNode {
 public:
-    explicit ComponentNode(Scene*);
-    ComponentNode(const ComponentNode&)            = default;
-    ComponentNode(ComponentNode&&)                 = default;
-    ComponentNode& operator=(ComponentNode&&)      = default;
-    ComponentNode& operator=(const ComponentNode&) = default;
-    ~ComponentNode()                               = default;
+    explicit Component(Scene*);
+    Component(const Component&)            = default;
+    Component(Component&&)                 = default;
+    Component& operator=(Component&&)      = default;
+    Component& operator=(const Component&) = default;
+    ~Component()                           = default;
 
     /** Assigns configurations of given component to this node. */
     LCS_ERROR set_component(uint8_t dep_idx);
@@ -203,17 +229,22 @@ private:
 
 /**
  * An input node where it's value can be arbitrarily changed. If
- * InputNode::_freq is defined, it will be toggled automatically.
+ * Input::_freq is defined, it will be toggled automatically.
  */
-class InputNode final : public BaseNode {
+class Input final : public BaseNode {
 public:
     enum Type : uint8_t { DEFAULT, TIMER };
-    InputNode(Scene* _scene, uint8_t _freq = 0);
-    InputNode(const InputNode&)            = default;
-    InputNode(InputNode&&)                 = default;
-    InputNode& operator=(InputNode&&)      = default;
-    InputNode& operator=(const InputNode&) = default;
-    ~InputNode()                           = default;
+    Input(Scene* _scene, uint8_t freq = 0)
+        : BaseNode { _scene }
+        , _freq { freq }
+    {
+    }
+
+    Input(const Input&)            = default;
+    Input(Input&&)                 = default;
+    Input& operator=(Input&&)      = default;
+    Input& operator=(const Input&) = default;
+    ~Input()                       = default;
 
     bool is_timer(void) const { return _freq != 0; }
     /** Set the value, and notify connected nodes.
@@ -242,18 +273,22 @@ public:
     uint8_t _freq;
 
 private:
-    bool _value;
+    bool _value = false;
 };
 
 /** An output node that displays the result */
-class OutputNode final : public BaseNode {
+class Output final : public BaseNode {
 public:
-    OutputNode(Scene* _scene);
-    OutputNode(const OutputNode&)            = default;
-    OutputNode(OutputNode&&)                 = default;
-    OutputNode& operator=(OutputNode&&)      = default;
-    OutputNode& operator=(const OutputNode&) = default;
-    ~OutputNode()                            = default;
+    explicit Output(Scene* _scene)
+        : BaseNode { _scene }
+    {
+    }
+
+    Output(const Output&)            = default;
+    Output(Output&&)                 = default;
+    Output& operator=(Output&&)      = default;
+    Output& operator=(const Output&) = default;
+    ~Output()                        = default;
 
     /* BaseNode */
     void on_signal(void) override;
@@ -261,17 +296,17 @@ public:
     State get(sockid slot = 0) const override;
     void clean(void) override;
 
-    relid input;
+    relid input = 0;
 
 private:
-    State _value;
+    State _value = State::DISABLED;
 };
 
 /**
  * A component scene contains the ComponentContext, Component Context can
  * execute a scene with given parameters.
  * NOTE: ComponentContext internally pushes ids by one to run shift
- * calculations correctly. However to be compatible with ComponentNodes it is
+ * calculations correctly. However to be compatible with Component it is
  * accessed via ComponentContext::get_input(sockid) and
  * ComponentContext::get_output(sockid) methods where it is
  * virtually increased by one.
@@ -292,9 +327,11 @@ struct ComponentContext {
      * Execute a scene using the given input.
      * @param input binary encoded input. Starting from the lowest bit
      * values are assigned to each input slot.
+     * @param frame_s time to calculate. Intended to inherit parent scene's
+     * time.
      * @returns binary encoded result
      */
-    uint64_t run(uint64_t input);
+    uint64_t run(uint64_t input, size_t frame_s = 0);
 
     /**
      * Execute a scene using the existing state.
@@ -328,16 +365,16 @@ private:
 /** Class to Node::Type conversion */
 template <typename T> constexpr Node::Type as_node_type(void)
 {
-    if constexpr (std::is_same<T, GateNode>::value) {
+    if constexpr (std::is_same<T, Gate>::value) {
         return Node::Type::GATE;
     }
-    if constexpr (std::is_same<T, ComponentNode>::value) {
+    if constexpr (std::is_same<T, Component>::value) {
         return Node::Type::COMPONENT;
     }
-    if constexpr (std::is_same<T, InputNode>::value) {
+    if constexpr (std::is_same<T, Input>::value) {
         return Node::Type::INPUT;
     }
-    if constexpr (std::is_same<T, OutputNode>::value) {
+    if constexpr (std::is_same<T, Output>::value) {
         return Node::Type::OUTPUT;
     }
     return Node::Type::NODE_S;
@@ -492,19 +529,33 @@ public:
      */
     void signal(relid id, State value);
 
-    /** Get a reference to the desired NodeType's vector. */
+    /** Get a reference to the desired Node::Type vector. */
     template <class T> constexpr std::vector<T>& vector()
     {
-        if constexpr (std::is_same<T, GateNode>()) {
+        if constexpr (std::is_same<T, Gate>()) {
             return _gates;
-        } else if constexpr (std::is_same<T, ComponentNode>()) {
+        } else if constexpr (std::is_same<T, Component>()) {
             return _components;
-        } else if constexpr (std::is_same<T, InputNode>()) {
+        } else if constexpr (std::is_same<T, Input>()) {
             return _inputs;
-        } else if constexpr (std::is_same<T, OutputNode>()) {
+        } else if constexpr (std::is_same<T, Output>()) {
             return _outputs;
         }
     }
+
+    /**
+     * Serializes given scene.
+     * @param buffer to write into
+     * @returns Error on failure
+     */
+    LCS_ERROR write_to(std::vector<uint8_t>& buffer) const;
+
+    /**
+     * Deserializes given scene.
+     * @param buffer to read from
+     * @returns Error on failure
+     */
+    LCS_ERROR read_from(const std::vector<uint8_t>& buffer);
 
     /** Returns a dependency string. */
     std::string to_dependency(void) const;
@@ -514,43 +565,55 @@ public:
     /** GitHub user names are limited to 40 characters. */
     std::array<char, 60> author {}; //
     int version;
-    std::vector<Scene> dependencies;
     std::optional<ComponentContext> component_context;
 
-    std::vector<GateNode> _gates;
-    std::vector<ComponentNode> _components;
-    std::vector<InputNode> _inputs;
-    std::vector<OutputNode> _outputs;
+    std::vector<Gate> _gates;
+    std::vector<Component> _components;
+    std::vector<Input> _inputs;
+    std::vector<Output> _outputs;
     std::map<relid, Rel> _relations;
     /** Delta counter in seconds. */
     float frame_s;
 
     Node _last_node[Node::Type::NODE_S];
     relid _last_rel;
+    Scene* _parent = nullptr;
+
+    void add_dependency(Scene&& scene)
+    {
+        _dependencies.emplace_back(std::move(scene));
+        _dependencies.back()._parent = this;
+    }
+
+    void remove_dependency(size_t idx)
+    {
+        size_t i = 0;
+        while (i < _components.size()) {
+            if (_components[i].dep_idx == idx) {
+                remove_node(i);
+            } else {
+                i++;
+            }
+        }
+    }
+
+    inline uint64_t run_dependency(size_t idx, uint64_t input)
+    {
+        return _dependencies[idx].component_context->run(input, frame_s);
+    }
+
+    inline const std::vector<Scene>& dependencies(void) const
+    {
+        return _dependencies;
+    }
 
 private:
+    std::vector<Scene> _dependencies;
     /** The helper method for move constructor and move assignment */
     void _move_from(Scene&&);
 };
 
-/**
- * Serializes given scene.
- * @param scene to serialize
- * @param buffer to write into
- * @returns Error on failure
- */
-LCS_ERROR serialize(const Scene& scene, std::vector<uint8_t>& buffer);
-
-/**
- * Deserializes given scene.
- * @param buffer to read from
- * @param scene to write into
- * @returns Error on failure
- */
-LCS_ERROR deserialize(const std::vector<uint8_t>& buffer, Scene& scene);
-
-namespace io {
-
+namespace tabs {
     /**
      * Creates an empty scene with given name
      * @param name Scene name
@@ -559,7 +622,7 @@ namespace io {
      * @param version Scene version
      * @returns scene index
      */
-    size_t scene_new(const std::string& name, const std::string& author,
+    size_t create(const std::string& name, const std::string& author,
         const std::string& description, int version);
 
     /**
@@ -572,14 +635,14 @@ namespace io {
      * - Error::NOT_FOUND
      * - deserialize
      */
-    LCS_ERROR scene_open(const std::string& path, size_t& idx);
+    LCS_ERROR open(const std::string& path, size_t& idx);
 
     /**
      * Closes the scene with selected path, erasing from memory.
      * @param idx index of the scene, active scene if not provided
      * @returns Error::OK
      */
-    LCS_ERROR scene_close(size_t idx = SIZE_MAX);
+    LCS_ERROR close(size_t idx = SIZE_MAX);
 
     /**
      * Updates the contents of given scene.
@@ -588,7 +651,7 @@ namespace io {
      *
      * - Error::NO_SAVE_PATH_DEFINED
      */
-    LCS_ERROR scene_save(size_t idx = SIZE_MAX);
+    LCS_ERROR save(size_t idx = SIZE_MAX);
 
     /**
      * Updates the contents of given scene.
@@ -598,23 +661,32 @@ namespace io {
      *
      * - Error::NO_SAVE_PATH_DEFINED
      */
-    LCS_ERROR scene_save_as(const std::string& new_path, size_t idx = SIZE_MAX);
+    LCS_ERROR save_as(const std::string& new_path, size_t idx = SIZE_MAX);
 
     /**
      * Alerts the changes in a scene.
      * @param idx to update
      */
-    void scene_notify(size_t idx = SIZE_MAX);
+    void notify(size_t idx = SIZE_MAX);
     /**
      * Selects a scene as current.
      * @param idx to select
      * @returns reference to scene
      */
-    NRef<Scene> scene_get(size_t idx = SIZE_MAX);
+    NRef<Scene> active(size_t idx = SIZE_MAX);
 
     bool is_saved(size_t idx = SIZE_MAX);
 
-    void iterate(std::function<bool(std::string_view name,
+    /**
+     * Iterate over each active scene.
+     * @param run method to execute.
+     *       - name: name of the scene
+     *       - path: path of the scene
+     *       - is_saved: whether the scene is saved.
+     *       - is_active: [Only in UI] If the scene is selected..
+     *
+     */
+    void for_each(std::function<bool(std::string_view name,
             std::string_view path, bool is_saved, bool is_active)>
             run);
 
@@ -628,23 +700,23 @@ namespace io {
      *
      * @returns whether there are changes within the scene
      */
-    bool has_changes(void);
+    bool is_changed(void);
+} // namespace tabs
 
-    /**
-     * Loads the given component. If the component does not
-     * exist in file system attempts to pull it from an available mirror.
-     * @param name component name
-     * @param scene to update
-     * @returns Error on failure:
-     *
-     * - Error::NOT_A_COMPONENT
-     * - Error::INVALID_DEPENDENCY_FORMAT
-     * - Error::COMPONENT_NOT_FOUND
-     * - Error::NOT_A_COMPONENT
-     * - deserialize
-     * - net::get_request
-     */
-    Error load_dependency(const std::string& name, Scene& scene);
+/**
+ * Loads the given component. If the component does not
+ * exist in file system attempts to pull it from an available mirror.
+ * @param name component name
+ * @param scene to update
+ * @returns Error on failure:
+ *
+ * - Error::NOT_A_COMPONENT
+ * - Error::INVALID_DEPENDENCY_FORMAT
+ * - Error::COMPONENT_NOT_FOUND
+ * - Error::NOT_A_COMPONENT
+ * - deserialize
+ * - net::get_request
+ */
+Error load_dependency(const std::string& name, Scene& scene);
 
-} // namespace io
 } // namespace lcs

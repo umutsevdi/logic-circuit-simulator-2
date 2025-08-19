@@ -1,14 +1,11 @@
-#include "IconsLucide.h"
+#include "components.h"
 #include "core.h"
 #include "imnodes.h"
-#include "io.h"
-#include "ui/components.h"
-#include "ui/configuration.h"
-#include "ui/layout.h"
-#include "ui/util.h"
+#include "ui.h"
+#include <IconsLucide.h>
 #include <imgui.h>
 
-namespace lcs::ui {
+namespace lcs::ui::layout {
 
 static void _disconnect_button_tooltip();
 static void _input_table(NRef<Scene>, const std::vector<relid>&);
@@ -37,8 +34,8 @@ void Inspector(NRef<Scene> scene)
                 for (int i = 0; i < ImNodes::NumSelectedNodes(); i++) {
                     Node node = decode_pair(nodeids[i]);
                     snprintf(buffer, 128, "%s@%u",
-                        NodeType_to_str_full(node.type), node.index);
-                    NodeType_to_str_full(node.type);
+                        to_str<Node::Type>(node.type), node.index);
+                    to_str<Node::Type>(node.type);
                     if (ImGui::BeginTabItem(
                             buffer, nullptr, ImGuiTabItemFlags_NoReorder)) {
                         _inspector_tab(&scene, node);
@@ -50,7 +47,7 @@ void Inspector(NRef<Scene> scene)
                     ImNodes::ClearNodeSelection();
                     for (int i = 0; i < len; i++) {
                         Node node = decode_pair(nodeids[i]);
-                        L_DEBUG("Delete %s@%u", NodeType_to_str_full(node.type),
+                        L_DEBUG("Delete %s@%u", to_str<Node::Type>(node.type),
                             node.index);
                         scene->remove_node(node);
                     }
@@ -69,23 +66,24 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
 {
     const static ImVec2 __table_l_size = ImGui::CalcTextSize("SOCKET COUNT");
 
-    Section("%s@%d", NodeType_to_str_full(node.type), node.index);
+    Section("%s@%d", to_str<Node::Type>(node.type), node.index);
     if (IconButton<NORMAL>(ICON_LC_EYE, "Focus")) {
         ImNodes::ClearNodeSelection();
         switch (node.type) {
-        case COMPONENT_INPUT:
-        case COMPONENT_OUTPUT:
+        case Node::Type::COMPONENT_INPUT:
+        case Node::Type::COMPONENT_OUTPUT:
             ImNodes::SelectNode(Node { 0, node.type }.numeric());
             break;
         default: ImNodes::SelectNode(node.numeric()); break;
         }
     }
-    if (node.type != COMPONENT_OUTPUT && node.type != COMPONENT_INPUT) {
+    if (node.type != Node::Type::COMPONENT_OUTPUT
+        && node.type != Node::Type::COMPONENT_INPUT) {
         ImGui::SameLine();
         if (IconButton<NORMAL>(ICON_LC_TRASH_2, "Delete Node")) {
             ImNodes::ClearNodeSelection();
-            L_INFO(
-                "remove %s %d:%d", node, node.to_str(), node.index, node.type);
+            L_INFO("remove %s %d:%d", node, to_str<Node>(node), node.index,
+                node.type);
             scene->remove_node(node);
             EndSection();
             return;
@@ -100,20 +98,21 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
         ImGui::TableSetupColumn("##Value", ImGuiTableColumnFlags_WidthStretch);
         TablePair(Field("Id"), ImGui::Text("%u", node.index));
         TablePair(
-            Field("Type"), ImGui::Text("%s", NodeType_to_str_full(node.type)));
+            Field("Type"), ImGui::Text("%s", to_str<Node::Type>(node.type)));
 
-        if (node.type != COMPONENT_INPUT && node.type != COMPONENT_OUTPUT) {
+        if (node.type != Node::Type::COMPONENT_INPUT
+            && node.type != Node::Type::COMPONENT_OUTPUT) {
             TablePair(Field("Position"));
             if (PositionSelector(scene->get_base(node)->point, "Inspector")) {
-                io::scene::notify_change();
+                tabs::notify();
             }
         }
 
         switch (node.type) {
-        case NodeType::INPUT: _inspector_input_node(&scene, node); break;
-        case NodeType::OUTPUT: _inspector_output_node(&scene, node); break;
-        case NodeType::GATE: _inspector_gate_node(&scene, node); break;
-        case NodeType::COMPONENT:
+        case Node::Type::INPUT: _inspector_input_node(&scene, node); break;
+        case Node::Type::OUTPUT: _inspector_output_node(&scene, node); break;
+        case Node::Type::GATE: _inspector_gate_node(&scene, node); break;
+        case Node::Type::COMPONENT:
             _inspector_component_node(&scene, node);
             break;
         default: _inspector_component_context_node(&scene, node); break;
@@ -123,18 +122,18 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
 }
 static void _inspector_input_node(NRef<Scene> scene, Node node)
 {
-    auto _node                = scene->get_node<InputNode>(node);
+    auto _node                = scene->get_node<Input>(node);
     constexpr size_t SIZE     = 20;
     static float values[SIZE] = { 0 };
     static int frame_count    = 0;
     if (_node->is_timer()) {
         TablePair(Field("Value"), ToggleButton(_node->get()));
         TablePair(Field("Frequency"));
-        float freq_value = _node->_freq.value();
+        float freq_value = _node->_freq;
         if (ImGui::SliderFloat("Hz", &freq_value, 0.1f, 5.0f, "%.1f")) {
-            if (freq_value != _node->_freq.value()) {
+            if (freq_value != _node->_freq) {
                 _node->_freq = freq_value;
-                io::scene::notify_change();
+                tabs::notify();
             }
         }
         if (++frame_count % SIZE == 0) {
@@ -172,7 +171,7 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
 
 static void _inspector_output_node(NRef<Scene> scene, Node node)
 {
-    auto _node = scene->get_node<OutputNode>(node);
+    auto _node = scene->get_node<Output>(node);
     TablePair(Field("Value"), ToggleButton(_node->get()));
     std::vector<relid> in;
     in.push_back(_node->input);
@@ -185,11 +184,11 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
 {
     const static ImVec2 __selector_size = ImGui::CalcTextSize("-000000000000");
 
-    auto _node = scene->get_node<GateNode>(node);
+    auto _node = scene->get_node<Gate>(node);
     TablePair(Field("Value"), ToggleButton(_node->get()));
-    TablePair(
-        Field("Gate Type"), ImGui::Text("%s", GateType_to_str(_node->type())));
-    ImGui::BeginDisabled(_node->type() == GateType::NOT);
+    TablePair(Field("Gate Type"),
+        ImGui::Text("%s", to_str<Gate::Type>(_node->type())));
+    ImGui::BeginDisabled(_node->type() == Gate::Type::NOT);
     TablePair(Field("Socket Count"));
     size_t socket_count = _node->inputs.size();
     size_t inc          = 1;
@@ -232,7 +231,7 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
 
 static void _inspector_component_node(NRef<Scene> scene, Node node)
 {
-    auto _node = scene->get_node<ComponentNode>(node);
+    auto _node = scene->get_node<Component>(node);
     TablePair(Field("Value"));
     ImGui::Text("(");
     ImGui::SameLine();
@@ -269,7 +268,7 @@ static void _inspector_component_node(NRef<Scene> scene, Node node)
 static void _inspector_component_context_node(NRef<Scene> scene, Node node)
 {
     ComponentContext& ctx = scene->component_context.value();
-    if (node.type == COMPONENT_INPUT) {
+    if (node.type == Node::Type::COMPONENT_INPUT) {
         TablePair(Field("Outputs"));
         if (ImGui::BeginTable("InputsComponentInputList", 3,
                 ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
@@ -331,7 +330,7 @@ static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
             ImGui::PushID(std::to_string(i).c_str());
             if (IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "")) {
                 scene->disconnect(inputs[i]);
-                io::scene::notify_change();
+                tabs::notify();
             }
             ImGui::PopID();
             ImGui::EndDisabled();
@@ -373,7 +372,7 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGui::PushID(("output_" + std::to_string(i)).c_str());
             if (IconButton<NORMAL>(ICON_LC_CIRCLE_SLASH_2, "")) {
                 scene->disconnect(outputs[i]);
-                io::scene::notify_change();
+                tabs::notify();
             }
             ImGui::PopID();
             ImGui::EndDisabled();
@@ -392,5 +391,5 @@ static void _disconnect_button_tooltip()
         ImGui::EndTooltip();
     }
 }
-} // namespace lcs::ui
+} // namespace lcs::ui::layout
   //

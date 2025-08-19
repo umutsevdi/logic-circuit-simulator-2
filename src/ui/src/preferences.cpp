@@ -1,10 +1,9 @@
 #include "IconsLucide.h"
-#include "ui/components.h"
-#include "ui/configuration.h"
+#include "components.h"
+#include "configuration.h"
 #include <imgui.h>
-#include <tinyfiledialogs.h>
 
-namespace lcs::ui {
+namespace lcs::ui::popup {
 
 static Configuration cfg = {};
 
@@ -158,7 +157,6 @@ static void _color_buttons(const LcsTheme& style)
     ImGui::SameLine();
     ImGui::ColorButton("Yellow", style.yellow);
 
-
     ImGui::ColorButton("Black Bright", style.black_bright);
     ImGui::SameLine();
     ImGui::ColorButton("Red Bright", style.red_bright);
@@ -184,5 +182,5 @@ static void _color_buttons(const LcsTheme& style)
     ImGui::ColorButton("White Bright", style.white_bright);
     ImGui::PopID();
 }
-} // namespace lcs::ui
+} // namespace lcs::ui::popup
   //

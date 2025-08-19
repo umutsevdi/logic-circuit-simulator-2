@@ -1,15 +1,14 @@
 #include "core.h"
-#include "io.h"
-#include "ui/layout.h"
+#include "ui.h"
 #include <imgui.h>
 #include <imnodes.h>
 
-namespace lcs::ui {
+namespace lcs::ui::layout {
 
-static void gates(const std::vector<GateNode>&);
-static void inputs(const std::vector<InputNode>&);
-static void outputs(const std::vector<OutputNode>&);
-static void components(const std::vector<ComponentNode>&);
+static void _gates(const std::vector<Gate>&);
+static void _inputs(const std::vector<Input>&);
+static void _outputs(const std::vector<Output>&);
+static void _components(const std::vector<Component>&);
 
 void DebugWindow(NRef<Scene> scene)
 {
@@ -26,32 +25,32 @@ void DebugWindow(NRef<Scene> scene)
                 ImGui::BulletText("Version: %d", scene->version);
             }
             if (ImGui::CollapsingHeader("Dependencies")) {
-                for (auto& s : scene->dependencies) {
-                    ImGui::BulletText("%s", s.c_str());
+                for (auto& s : scene->dependencies()) {
+                    ImGui::BulletText("%s", s.to_dependency().c_str());
                 }
             }
 
             if (ImGui::CollapsingHeader(
                     "Gates", ImGuiTreeNodeFlags_DefaultOpen)) {
-                gates(scene->_gates);
+                _gates(scene->_gates);
             }
             if (ImGui::CollapsingHeader(
                     "Inputs", ImGuiTreeNodeFlags_DefaultOpen)) {
-                inputs(scene->_inputs);
+                _inputs(scene->_inputs);
             }
             if (ImGui::CollapsingHeader(
                     "Outputs", ImGuiTreeNodeFlags_DefaultOpen)) {
-                outputs(scene->_outputs);
+                _outputs(scene->_outputs);
             }
             if (ImGui::CollapsingHeader(
                     "Components", ImGuiTreeNodeFlags_DefaultOpen)) {
-                components(scene->_components);
+                _components(scene->_components);
             }
         }
     }
     ImGui::End();
 }
-static void gates(const std::vector<GateNode>& v)
+static void _gates(const std::vector<Gate>& v)
 {
     for (size_t i = 0; i < v.size(); i++) {
         if (v[i].is_null()) {
@@ -59,13 +58,13 @@ static void gates(const std::vector<GateNode>& v)
             return;
         }
         if (ImGui::TreeNode(std::to_string(i).c_str())) {
-            ImGui::BulletText("Type: %s", to_str<GateNode::Type>(v[i].type()));
+            ImGui::BulletText("Type: %s", to_str<Gate::Type>(v[i].type()));
             ImGui::BulletText("Input Count: %zu", v[i].inputs.size());
             ImGui::TreePop();
         };
     }
 }
-static void inputs(const std::vector<InputNode>& v)
+static void _inputs(const std::vector<Input>& v)
 {
     for (size_t i = 0; i < v.size(); i++) {
         if (v[i].is_null()) {
@@ -77,7 +76,7 @@ static void inputs(const std::vector<InputNode>& v)
         }
     }
 }
-static void outputs(const std::vector<OutputNode>& v)
+static void _outputs(const std::vector<Output>& v)
 {
     for (size_t i = 0; i < v.size(); i++) {
         if (v[i].is_null()) {
@@ -89,7 +88,7 @@ static void outputs(const std::vector<OutputNode>& v)
         }
     }
 }
-static void components(const std::vector<ComponentNode>& v)
+static void _components(const std::vector<Component>& v)
 {
     for (size_t i = 0; i < v.size(); i++) {
         if (v[i].is_null()) {
@@ -101,4 +100,4 @@ static void components(const std::vector<ComponentNode>& v)
         }
     }
 }
-} // namespace lcs::ui
+} // namespace lcs::ui::layout

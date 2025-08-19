@@ -1,20 +1,20 @@
 #include "IconsLucide.h"
 #include "common.h"
-#include "ui/components.h"
-#include "ui/configuration.h"
-#include "ui/layout.h"
-#include "ui/util.h"
+#include "components.h"
+#include "configuration.h"
+#include "ui.h"
 #include <imgui.h>
 #include <string_view>
-namespace lcs::ui {
+namespace lcs::ui::layout {
 
-static ImVec4 _log_color(const LcsTheme& style, LogLevel level)
+static ImVec4 _log_color(const LcsTheme& style, Message::Severity level)
 {
     switch (level) {
-    case DEBUG: return style.blue_bright;
-    case INFO: return style.green;
-    case WARN: return style.magenta;
-    case ERROR: return style.red;
+    case Message::DEBUG: return style.blue_bright;
+    case Message::INFO: return style.green;
+    case Message::WARN: return style.magenta;
+    case Message::FATAL:;
+    case Message::ERROR: return style.red;
     }
 };
 
@@ -26,7 +26,7 @@ void Console(void)
     const LcsTheme& style = get_active_style();
     if (ImGui::Begin("Console", &user_data.console)) {
         if (IconButton<NORMAL>(ICON_LC_TRASH, "Clear")) {
-            lcs::l_clear();
+            lcs::fs::clear_log();
         }
         if (ImGui::BeginTable("##ConsoleTable", 5,
                 ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersInner
@@ -46,7 +46,7 @@ void Console(void)
                 "Message", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
 
-            lcs::l_iterate([&style](size_t idx, const Line& l) {
+            lcs::fs::logs_for_each([&style](size_t idx, const Message& l) {
                 bool selected = false;
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -86,4 +86,4 @@ void Console(void)
     ImGui::End();
 }
 
-} // namespace lcs::ui
+} // namespace lcs::ui::layout

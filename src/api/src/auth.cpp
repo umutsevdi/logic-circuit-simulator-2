@@ -1,14 +1,12 @@
+#include "api.h"
 #include "common.h"
 #include "port.h"
-#include "net.h"
-#include "ui/configuration.h"
-#include <base64.h>
 #include <json/reader.h>
 #include <keychain/keychain.h>
 #include <ctime>
 #include <filesystem>
 
-namespace lcs::net {
+namespace lcs::api {
 
 #ifdef _WIN32
 #define OS "win32";
@@ -21,17 +19,16 @@ namespace lcs::net {
 #else
 #define OS "unknown";
 #endif
-
+/*
 struct AuthInfo {
     Account account;
-    std::string access_token = "";
+    std::string access_token;
 };
 AuthInfo _auth;
 static AuthenticationFlow _flow;
 
 namespace gh {
-    LCS_ERROR
-    static _get_device_code(Json::Value& response, const std::string& _id)
+    LCS_ERROR get_device_code(Json::Value& response, const std::string& _id)
     {
         Error err = OK;
         ;
@@ -51,8 +48,7 @@ namespace gh {
         return err;
     }
 
-    LCS_ERROR
-    static _get_access_token(Json::Value& response,
+    LCS_ERROR get_access_token(Json::Value& response,
         const std::string& client_id, const std::string& device_code)
     {
         L_INFO("Get oauth access token");
@@ -77,9 +73,8 @@ namespace gh {
     }
 
 }; // namespace gh
-namespace api {
-    LCS_ERROR
-    static _get_client_id(Json::Value& response)
+namespace rest {
+    LCS_ERROR get_client_id(Json::Value& response)
     {
         std::string resp;
         Error err = get_request(
@@ -94,8 +89,7 @@ namespace api {
         return OK;
     }
 
-    LCS_ERROR
-    static _login_oauth(Json::Value& response, const std::string& token = "")
+    LCS_ERROR login_oauth(Json::Value& response, const std::string& token)
     {
         L_INFO("Send token to session server");
         std::string resp;
@@ -115,8 +109,7 @@ namespace api {
         return OK;
     }
 
-    LCS_ERROR
-    static _login_session(Json::Value& response, const std::string& token = "")
+    LCS_ERROR login_session(Json::Value& response, const std::string& token)
     {
         L_INFO("Send token to session server");
         std::string resp;
@@ -134,7 +127,7 @@ namespace api {
         }
         return OK;
     }
-} // namespace api
+} // namespace rest
 
 Error AuthenticationFlow::start(void)
 {
@@ -271,7 +264,7 @@ Error AuthenticationFlow::start_existing(void)
 {
     _last_status      = STARTED;
     std::string login = ui::user_data.login.begin();
-    if (login == "") {
+    if (login =) {
         return WARN(KEYCHAIN_NOT_FOUND);
     }
     keychain::Error keyerr;
@@ -318,7 +311,7 @@ Error AuthenticationFlow::start_existing(void)
 
 void AuthenticationFlow::resolve(void)
 {
-    if (_auth.account.login != "") {
+    if (_auth.account.login !) {
         keychain::Error err;
         keychain::deletePassword(
             APP_PKG, APPNAME_LONG, _auth.account.login, err);
@@ -327,7 +320,7 @@ void AuthenticationFlow::resolve(void)
         }
         ui::user_data.login = {};
     }
-    _reason      = "";
+    _reason;
     _auth        = {};
     _last_status = INACTIVE;
 }
@@ -336,22 +329,11 @@ AuthenticationFlow& get_flow(void) { return _flow; }
 
 const Account& get_account(void) { return _auth.account; }
 
-void open_browser(const std::string& url)
-{
-#ifdef _WIN32
-    std::string command = "start " + url;
-#elif __APPLE__
-    std::string command = "open " + url;
-#else
-    std::string command = "xdg-open " + url; // For Linux
-#endif
-    system(command.c_str());
-}
-
 Error upload_scene(NRef<const Scene> scene, std::string resp)
 {
     return net::post_request(ui::get_config().api_proxy + "/api/scene", resp,
         scene->to_json().toStyledString(), _auth.access_token);
 }
 
-} // namespace lcs::net
+*/
+} // namespace lcs::api

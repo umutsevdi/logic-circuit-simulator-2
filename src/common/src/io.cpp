@@ -1,6 +1,4 @@
 #include "common.h"
-#include "port.h"
-#include "tinyfiledialogs.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -155,7 +153,7 @@ namespace fs {
                 static const char* _default_ini =
 #include "default_ini.txt"
                     ;
-                lcs::write(INI, _default_ini);
+                fs::write(INI, _default_ini);
                 L_DEBUG("Placing default layout");
             }
             L_DEBUG(APPNAME_LONG " file system is ready.");
@@ -169,6 +167,7 @@ namespace fs {
 #define F_RED "\033[31m"
 #define F_GREEN "\033[32m"
 #define F_BLUE "\033[34m"
+#define F_INVERT "\033[7m"
 
 #define F_RESET "\033[0m"
 #ifdef _WIN32
@@ -194,15 +193,21 @@ namespace fs {
             _buffer[_next] = l;
         }
 
+        const char* clr;
+        switch (l.severity) {
+        case Message::FATAL:
+        case Message::ERROR: clr = F_RED; break;
+        case Message::INFO: clr = F_GREEN; break;
+        default: clr = F_TEAL; break;
+        }
+
         printf(F_BLUE "[%s] " F_BOLD "%s%-6s" F_RESET F_GREEN "|" F_RESET
                       "%-20s" F_GREEN " |%-18s|" F_RESET F_TEAL
-                      "%-25s" F_RESET F_GREEN "|" F_RESET "%s\r\n",
-            l.time_str.begin(),
-            (l.severity == Message::ERROR         ? F_RED
-                    : l.severity == Message::INFO ? F_GREEN
-                                                  : F_TEAL),
-            l.log_level_str.begin(), l.file_line.begin(), l.obj.begin(),
-            l.fn.begin(), l.expr.begin());
+                      "%-25s" F_RESET F_GREEN "|" F_RESET "%s%s\r\n" F_RESET,
+            l.time_str.begin(), clr, l.log_level_str.begin(),
+            l.file_line.begin(), l.obj.begin(), l.fn.begin(),
+            l.severity == Message::FATAL ? F_INVERT F_BOLD F_RED : "",
+            l.expr.begin());
         if (is_testing) {
             fprintf(__TEST_LOG__, "[%s] %-6s | %-20s | %-18s | %-25s | %s\r\n",
                 l.time_str.begin(), l.log_level_str.begin(),
@@ -213,13 +218,13 @@ namespace fs {
 
     void close(void)
     {
-        L_INFO("Closing module lcs::fs.");
         if (__TEST_LOG__ != nullptr) {
             fclose(__TEST_LOG__);
         }
+        L_INFO("Module lcs::fs is closed.");
     }
 
-    void iterate_logs(std::function<void(size_t, const Message& l)> fn)
+    void logs_for_each(std::function<void(size_t, const Message& l)> fn)
     {
         if (_size < LINE_SIZE) {
             for (size_t i = 0; i < _size; i++) {
@@ -242,87 +247,61 @@ namespace fs {
         _size = 0;
     }
 
-    int __expect(std::function<bool(void)> expr, const char* function,
-        const char* file, int line, const char* str_expr) noexcept
+    bool write(const std::string& path, const std::string& data)
     {
-        static const char* _title = "Logic Circuit Simulator";
-        std::stringstream s {};
-        s << "ERROR " << file << " : " << line << "\t" << function
-          << "(...) Assertion " << str_expr << " failed!" << std::endl;
+        L_DEBUG("Save %s.", path.c_str());
         try {
-            if (expr()) {
-                return 0;
+            std::filesystem::create_directories(std::string {
+                path.begin(), path.begin() + path.find_last_of("/") });
+            std::ofstream outfile { path };
+            if (outfile) {
+                outfile << data;
+                return true;
             }
-            tinyfd_messageBox(_title, s.str().c_str(), "ok", "error", 1);
-
-        } catch (const std::exception& ex) {
-            tinyfd_messageBox(_title, ex.what(), "ok", "error", 0);
-        } catch (const std::string& ex) {
-            tinyfd_messageBox(_title, ex.c_str(), "ok", "error", 0);
+            L_ERROR("Failed to open file for writing %s.", path.c_str());
+        } catch (const std::exception& e) {
+            L_ERROR("Exception occurred while writing %s.", e.what());
         }
-
-        _log(Message { Message::ERROR, file, line, function,
-            "Assertion %s failed!", str_expr });
-        return 1;
+        return false;
     }
+
+    bool write(const std::string& path, std::vector<unsigned char>& data)
+    {
+        L_DEBUG("Save %s", path.c_str());
+        try {
+            std::ofstream outfile { path, std::ios::binary };
+            if (outfile) {
+                outfile.write((char*)data.data(), data.size());
+                return true;
+            }
+            L_ERROR("Failed to open file for writing %s.", path.c_str());
+        } catch (const std::exception& e) {
+            L_ERROR("Exception occurred while writing %s.", e.what());
+        }
+        return false;
+    }
+
+    bool read(const std::string& path, std::string& data)
+    {
+        L_DEBUG("Opening %s.", path.c_str());
+        std::filesystem::path filepath = std::filesystem::path(path);
+        std::ifstream infile { filepath };
+        std::string content((std::istreambuf_iterator<char>(infile)),
+            std::istreambuf_iterator<char>());
+        data = content;
+        return !content.empty();
+    }
+
+    bool read(const std::string& path, std::vector<unsigned char>& data)
+    {
+        L_DEBUG("Opening %s.", path.c_str());
+        std::filesystem::path filepath = std::filesystem::path(path);
+        std::ifstream infile { filepath, std::ios::binary };
+        std::vector<unsigned char> buffer(
+            std::istreambuf_iterator<char>(infile), {});
+        data = std::move(buffer);
+        return !data.empty();
+    }
+
 } // namespace fs
-
-bool write(const std::string& path, const std::string& data)
-{
-    L_DEBUG("Save %s.", path.c_str());
-    try {
-        std::filesystem::create_directories(std::string {
-            path.begin(), path.begin() + path.find_last_of("/") });
-        std::ofstream outfile { path };
-        if (outfile) {
-            outfile << data;
-            return true;
-        }
-        L_ERROR("Failed to open file for writing %s.", path.c_str());
-    } catch (const std::exception& e) {
-        L_ERROR("Exception occurred while writing %s.", e.what());
-    }
-    return false;
-}
-
-bool write(const std::string& path, std::vector<unsigned char>& data)
-{
-    L_DEBUG("Save %s.", path.c_str());
-    try {
-        std::filesystem::create_directories(std::string {
-            path.begin(), path.begin() + path.find_last_of("/") });
-        std::ofstream outfile { path, std::ios::binary };
-        if (outfile) {
-            outfile.write((char*)data.data(), data.size());
-            return true;
-        }
-        L_ERROR("Failed to open file for writing %s.", path.c_str());
-    } catch (const std::exception& e) {
-        L_ERROR("Exception occurred while writing %s.", e.what());
-    }
-    return false;
-}
-
-bool read(const std::string& path, std::string& data)
-{
-    L_DEBUG("Opening %s.", path.c_str());
-    std::filesystem::path filepath = std::filesystem::path(path);
-    std::ifstream infile { filepath };
-    std::string content((std::istreambuf_iterator<char>(infile)),
-        std::istreambuf_iterator<char>());
-    data = content;
-    return !content.empty();
-}
-
-bool read(const std::string& path, std::vector<unsigned char>& data)
-{
-    L_DEBUG("Opening %s.", path.c_str());
-    std::filesystem::path filepath = std::filesystem::path(path);
-    std::ifstream infile { filepath, std::ios::binary };
-    std::vector<unsigned char> buffer(
-        std::istreambuf_iterator<char>(infile), {});
-    data = std::move(buffer);
-    return !data.empty();
-}
-
 } // namespace lcs

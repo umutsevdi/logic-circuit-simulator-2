@@ -103,3 +103,15 @@ std::string base64_decode(const std::string& input)
 
     return output;
 }
+
+void open_browser(const std::string& url)
+{
+#ifdef _WIN32
+    std::string command = "start " + url;
+#elif __APPLE__
+    std::string command = "open " + url;
+#else
+    std::string command = "xdg-open " + url; // For Linux
+#endif
+    system(command.c_str());
+}

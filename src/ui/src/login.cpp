@@ -1,15 +1,15 @@
-#include "IconsLucide.h"
-#include "net.h"
-#include "ui/components.h"
-#include "ui/util.h"
-#include <imgui.h>
-#include <imnodes.h>
-#include <tinyfiledialogs.h>
+// #include "IconsLucide.h"
+// #include "common.h"
+#include "components.h"
+// #include <imgui.h>
+// #include <imnodes.h>
+// #include <nfd.h>
 
-namespace lcs::ui {
+namespace lcs::ui::popup {
 
 void LoginWindow(bool& df_show)
 {
+    /*
     if (!df_show) {
         return;
     }
@@ -93,5 +93,6 @@ void LoginWindow(bool& df_show)
         df_show = false;
         net::get_flow().resolve();
     }
+    */
 }
-} // namespace lcs::ui
+} // namespace lcs::ui::popup

@@ -45,6 +45,8 @@ enum Error {
     INVALID_DEPENDENCY_FORMAT,
     /** Not a valid Scene document. */
     INVALID_SCENE_FORMAT,
+    /** Invalid JSON format. */
+    INVALID_JSON,
     /** No such file or directory in given path */
     NOT_FOUND,
     /** Failed to save file*/
@@ -69,6 +71,8 @@ enum Error {
     KEYCHAIN_ACCESS_DENIED,
     /** Attempted to start a flow that was already active. */
     UNTERMINATED_FLOW,
+    /** Native File Dialog related error. */
+    NFD,
     /** Represents the how many types of error codes exists. Not a valid error
        code.*/
     ERROR_S
@@ -95,6 +99,7 @@ constexpr const char* errmsg(Error e)
     case COMPONENT_NOT_FOUND: return "Component was not found.";
     case INVALID_NODE: return "Invalid node format.";
     case INVALID_DEPENDENCY_FORMAT: return "Invalid dependency string. ";
+    case INVALID_JSON: return "Invalid JSON format.";
     case INVALID_SCENE_FORMAT: return "Invalid scene document.";
     case NOT_FOUND: return "No such file or directory.";
     case NO_SAVE_PATH_DEFINED: return "Failed to save file.";
@@ -106,6 +111,7 @@ constexpr const char* errmsg(Error e)
     case KEYCHAIN_TOO_LONG: return "[WindowsOnly] key is too long.";
     case KEYCHAIN_ACCESS_DENIED: return "[AppleOnly] Authorization failure.";
     case UNTERMINATED_FLOW: return "Already active flowl.";
+    case NFD: return "NFD Eror.";
 
     case ERROR_S: return "Unknown Error.";
     }

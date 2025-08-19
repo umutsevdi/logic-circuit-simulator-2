@@ -1,7 +1,7 @@
 #include "IconsLucide.h"
-#include "imgui.h"
 #include "components.h"
-#include "ui/util.h"
+#include "imgui.h"
+#include "ui.h"
 
 namespace lcs::ui {
 static size_t last_time            = 0;
@@ -35,7 +35,7 @@ void Toast(
     const char* icon, const char* title, const char* message, bool is_error)
 {
     notifications.emplace_back(icon, title, message, is_error);
-    L_DEBUG("Push notification [%s] %s", title, message);
+    L_DEBUG("Push notification %s", title, message);
 }
 
 void RenderNotifications(void)
@@ -54,7 +54,6 @@ void RenderNotifications(void)
                 ImVec2(vp_size.x - ImGui::GetStyle().ItemSpacing.x,
                     vp_size.y - ImGui::GetStyle().ItemSpacing.y - height),
                 height)) {
-            L_DEBUG("Clear notification");
             i = notifications.erase(i);
         } else {
             i++;

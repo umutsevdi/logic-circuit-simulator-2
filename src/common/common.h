@@ -75,7 +75,7 @@ private:
  * written to the test output file and displayed on the Console window.
  */
 struct Message {
-    enum Severity { DEBUG, INFO, WARN, ERROR };
+    enum Severity { DEBUG, INFO, WARN, ERROR, FATAL };
     Message()         = default;
     Severity severity = DEBUG;
     std::array<char, 12> time_str {};
@@ -108,6 +108,7 @@ private:
     static constexpr const char* _severity_to_str(Severity l)
     {
         switch (l) {
+        case FATAL: return "FATAL";
         case DEBUG: return "DEBUG";
         case INFO: return "INFO ";
         case WARN: return "WARN ";
@@ -125,25 +126,34 @@ namespace fs {
 #define L_INFO(...) __LLOG__(Message::INFO, __VA_ARGS__)
 #define L_WARN(...) __LLOG__(Message::WARN, __VA_ARGS__)
 #define L_ERROR(...) __LLOG__(Message::ERROR, __VA_ARGS__)
-
-#ifndef NDEBUG
-#define L_DEBUG(...) __LLOG__(Message::DEBUG, __VA_ARGS__)
 /** Runs an assertion. Displays an error message on failure. In debug builds
  * also crashes the application. */
 #define lcs_assert(expr)                                                       \
     {                                                                          \
-        if (lcs::fs::__expect([&]() mutable -> bool { return expr; },          \
-                __FUNCTION__, __FILE_NAME__, __LINE__, #expr)) {               \
+        try {                                                                  \
+            if (!(expr)) {                                                     \
+                __LLOG__(Message::FATAL, "Assertion \"" #expr "\" failed!");   \
+                exit(1);                                                       \
+            }                                                                  \
+        } catch (const std::exception& ex) {                                   \
+            __LLOG__(Message::FATAL,                                           \
+                " Assertion \"" #expr                                          \
+                "\" failed with an exception! Cause: %s",                      \
+                ex.what());                                                    \
+            exit(1);                                                           \
+        } catch (const std::string& ex) {                                      \
+            __LLOG__(Message::FATAL,                                           \
+                "Assertion \"" #expr "\" failed with an exception! Cause: %s", \
+                ex.c_str());                                                   \
             exit(1);                                                           \
         }                                                                      \
     }
+
+#ifndef NDEBUG
+#define L_DEBUG(...) __LLOG__(Message::DEBUG, __VA_ARGS__)
+
 #else
 #define L_DEBUG(...)
-#define lcs_assert(expr)                                                       \
-    {                                                                          \
-        lcs::fs::__expect([&]() mutable -> bool { return expr; },              \
-            __FUNCTION__, __FILE_NAME__, __LINE__, #expr);                     \
-    }
 #endif
 
 #define S_ERROR(msg, ...) (L_ERROR(msg)), __VA_ARGS__
@@ -165,7 +175,7 @@ namespace fs {
      * Loop over existing logs starting from the oldest.
      * @param fn iteration function
      */
-    void iterate_logs(std::function<void(size_t, const Message& l)> fn);
+    void logs_for_each(std::function<void(size_t, const Message& l)> fn);
 
     /** Clears all log messages. */
     void clear_log(void);
@@ -188,6 +198,38 @@ namespace fs {
      * such as L_INFO, L_WARN, L_ERROR, L_DEBUG.
      */
     void _log(const Message& l);
+
+    /**
+     * Reads contents of the given string file and writes it to the buffer.
+     * @param path to read
+     * @param data to save
+     * @returns whether reading is successful or not
+     */
+    bool read(const std::string& path, std::string& data);
+
+    /**
+     * Reads contents of the given binary file and writes it to the buffer.
+     * @param path to read
+     * @param data to save
+     * @returns whether reading is successful or not
+     */
+    bool read(const std::string& path, std::vector<unsigned char>& data);
+
+    /**
+     * Write contents of data to the desired path.
+     * @param path to save
+     * @param data to save
+     * @returns Whether the operation is successful or not
+     */
+    bool write(const std::string& path, const std::string& data);
+
+    /**
+     * Write contents of data to the desired path. Used for binary files.
+     * @param path to save
+     * @param data to save
+     * @returns Whether the operation is successful or not
+     */
+    bool write(const std::string& path, std::vector<unsigned char>& data);
 
 } // namespace fs
 

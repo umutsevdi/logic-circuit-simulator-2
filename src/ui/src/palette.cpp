@@ -1,12 +1,11 @@
+#include "components.h"
+#include "configuration.h"
 #include "core.h"
-#include "io.h"
-#include "ui/components.h"
-#include "ui/configuration.h"
-#include "ui/layout.h"
+#include "ui.h"
 #include <imgui.h>
 #include <imnodes.h>
 
-namespace lcs::ui {
+namespace lcs::ui::layout {
 static bool is_dragging = false;
 static Node dragged_node;
 void Palette(NRef<Scene> scene)
@@ -25,55 +24,48 @@ void Palette(NRef<Scene> scene)
             ImGui::TableSetupColumn("##G2", ImGuiTableColumnFlags_WidthStretch);
             TablePair(
                 if (ImGui::Button("Input")) {
-                    dragged_node = scene->add_node<InputNode>();
+                    dragged_node = scene->add_node<Input>();
                     is_dragging  = true;
                 },
                 if (ImGui::Button("Output")) {
-                    dragged_node = scene->add_node<OutputNode>();
+                    dragged_node = scene->add_node<Output>();
                     is_dragging  = true;
                 });
             TablePair(
                 if (ImGui::Button("Timer")) {
-                    dragged_node = scene->add_node<InputNode>(1.0f);
+                    dragged_node = scene->add_node<Input>(1.0f);
                     is_dragging  = true;
                 },
                 if (ImGui::Button("NOT Gate")) {
-                    dragged_node
-                        = scene->add_node<GateNode>(GateNode::Type::NOT);
-                    is_dragging = true;
+                    dragged_node = scene->add_node<Gate>(Gate::Type::NOT);
+                    is_dragging  = true;
                 });
             TablePair(
                 if (ImGui::Button("AND Gate")) {
-                    dragged_node
-                        = scene->add_node<GateNode>(GateNode::Type::AND);
-                    is_dragging = true;
+                    dragged_node = scene->add_node<Gate>(Gate::Type::AND);
+                    is_dragging  = true;
                 },
                 if (ImGui::Button("NAND Gate")) {
-                    dragged_node
-                        = scene->add_node<GateNode>(GateNode::Type::NAND);
-                    is_dragging = true;
+                    dragged_node = scene->add_node<Gate>(Gate::Type::NAND);
+                    is_dragging  = true;
                 });
             TablePair(
                 if (ImGui::Button("OR Gate")) {
-                    dragged_node
-                        = scene->add_node<GateNode>(GateNode::Type::OR);
-                    is_dragging = true;
+                    dragged_node = scene->add_node<Gate>(Gate::Type::OR);
+                    is_dragging  = true;
                 },
                 if (ImGui::Button("NOR Gate")) {
-                    dragged_node
-                        = scene->add_node<GateNode>(GateNode::Type::NOR);
-                    is_dragging = true;
+                    dragged_node = scene->add_node<Gate>(Gate::Type::NOR);
+                    is_dragging  = true;
                 });
             TablePair(
                 if (ImGui::Button("XOR Gate")) {
-                    dragged_node
-                        = scene->add_node<GateNode>(GateNode::Type::XOR);
-                    is_dragging = true;
+                    dragged_node = scene->add_node<Gate>(Gate::Type::XOR);
+                    is_dragging  = true;
                 },
                 if (ImGui::Button("XNOR Gate")) {
-                    dragged_node
-                        = scene->add_node<GateNode>(GateNode::Type::XNOR);
-                    is_dragging = true;
+                    dragged_node = scene->add_node<Gate>(Gate::Type::XNOR);
+                    is_dragging  = true;
                 });
             ImGui::EndTable();
         }
@@ -97,4 +89,4 @@ void Palette(NRef<Scene> scene)
     }
     ImGui::End();
 }
-} // namespace lcs::ui
+} // namespace lcs::ui::layout

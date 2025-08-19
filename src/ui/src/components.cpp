@@ -1,5 +1,5 @@
 #include "components.h"
-#include "io.h"
+#include "core.h"
 #include <imnodes.h>
 
 namespace lcs::ui {
@@ -20,12 +20,16 @@ bool PositionSelector(Point& point, const char* prefix)
     ImGui::Text("x");
     ImGui::SameLine();
     ImGui::PushItemWidth(__selector_size.x);
+    int x = point.x, y = point.y;
     bool change_x
-        = ImGui::InputInt((s_prefix + "X").c_str(), &point.x, 1.0f, 10.0f, 0);
+        = ImGui::InputInt((s_prefix + "X").c_str(), &x, 1.0f, 10.0f, 0);
     ImGui::Text("y");
     ImGui::SameLine();
     bool change_y
-        = ImGui::InputInt((s_prefix + "Y").c_str(), &point.y, 1.0f, 10.0f, 0);
+        = ImGui::InputInt((s_prefix + "Y").c_str(), &y, 1.0f, 10.0f, 0);
+    point.x = x;
+    point.y = y;
+
     ImGui::PopItemWidth();
     return change_x || change_y;
 }
@@ -75,13 +79,13 @@ State ToggleButton(State state, bool clickable)
     return state;
 }
 
-void ToggleButton(NRef<InputNode> node)
+void ToggleButton(NRef<Input> node)
 {
     State s_old = node->get();
 
     if (s_old != ToggleButton(node->get(), true)) {
         node->toggle();
-        io::scene::notify_change();
+        tabs::notify();
     }
 }
 

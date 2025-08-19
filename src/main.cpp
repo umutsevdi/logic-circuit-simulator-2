@@ -1,23 +1,37 @@
+#include <cstdlib>
+#ifndef __TESTING__
+#define __TESTING__ 0
+#endif
+
 #if __TESTING__
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 #endif
+
 #include "common.h"
 #include "port.h"
 
-int main(int argc, char* argv[])
+namespace lcs::ui {
+int main(int, char**);
+}
+using namespace lcs;
+static void _cleanup(void)
 {
-    using namespace lcs;
-    fs::init(__TESTING__);
-    net::init(__TESTING__);
-#ifdef __TESTING__
-    doctest::Context context;
-    context.applyCommandLine(argc, argv);
-    int result = context.run();
-#else
-    int result = ui::main(argc, argv);
-#endif
+    L_WARN("Shutdown requested.");
     fs::close();
     net::close();
-    return result;
+}
+
+int main(int argc, char* argv[])
+{
+    fs::init(__TESTING__);
+    net::init(__TESTING__);
+    std::atexit(_cleanup);
+#if __TESTING__
+    doctest::Context context;
+    context.applyCommandLine(argc, argv);
+    return context.run();
+#else
+    return ui::main(argc, argv);
+#endif
 }

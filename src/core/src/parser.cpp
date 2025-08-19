@@ -101,9 +101,8 @@ static void _encode_meta(const Scene& s, std::vector<uint8_t>& buffer)
         _push_uint(buffer, s.component_context->inputs.size());
         _push_uint(buffer, s.component_context->outputs.size());
     }
-    for (auto& dep : s.dependencies) {
+    for (const auto& dep : s.dependencies()) {
         std::string name = dep.to_dependency();
-        L_DEBUG("%s", name.c_str());
         buffer.push_back(Instr::INCLUDE);
         buffer.insert(buffer.end(), name.begin(), name.begin() + name.length());
         buffer.push_back(Instr::END);
@@ -112,16 +111,16 @@ static void _encode_meta(const Scene& s, std::vector<uint8_t>& buffer)
 
 template <typename T> static constexpr Instr _get_instr(void)
 {
-    if constexpr (std::is_same<T, GateNode>()) {
+    if constexpr (std::is_same<T, Gate>()) {
         return ADD_GATE;
     }
-    if constexpr (std::is_same<T, InputNode>()) {
+    if constexpr (std::is_same<T, Input>()) {
         return ADD_INPUT;
     }
-    if constexpr (std::is_same<T, OutputNode>()) {
+    if constexpr (std::is_same<T, Output>()) {
         return ADD_OUT;
     }
-    if constexpr (std::is_same<T, ComponentNode>()) {
+    if constexpr (std::is_same<T, Component>()) {
         return ADD_COMP;
     }
 }
@@ -139,7 +138,7 @@ static inline void _encode_node(std::vector<uint8_t>& buffer, const T& it)
         memcpy(&pos[1], &it.point.y, sizeof(uint32_t));
         _push_uint(buffer, pos[0]);
         _push_uint(buffer, pos[1]);
-        if constexpr (std::is_same<T, InputNode>()) {
+        if constexpr (std::is_same<T, Input>()) {
             buffer.push_back(it._freq != 0 ? 1u : 0u);
             if (it._freq) {
                 uint32_t s;
@@ -148,10 +147,10 @@ static inline void _encode_node(std::vector<uint8_t>& buffer, const T& it)
             } else {
                 buffer.push_back(it.get() == State::TRUE ? 1u : 0u);
             }
-        } else if constexpr (std::is_same<T, GateNode>()) {
+        } else if constexpr (std::is_same<T, Gate>()) {
             buffer.push_back(it.type());
             _push_uint(buffer, it.inputs.size());
-        } else if constexpr (std::is_same<T, ComponentNode>()) {
+        } else if constexpr (std::is_same<T, Component>()) {
             buffer.push_back(it.dep_idx);
         }
     }
@@ -160,16 +159,16 @@ static inline void _encode_node(std::vector<uint8_t>& buffer, const T& it)
 static void _encode_nodes(const Scene& s, std::vector<uint8_t>& buffer)
 {
     for (const auto& it : s._gates) {
-        _encode_node<GateNode>(buffer, it);
+        _encode_node<Gate>(buffer, it);
     }
     for (const auto& it : s._inputs) {
-        _encode_node<InputNode>(buffer, it);
+        _encode_node<Input>(buffer, it);
     }
     for (const auto& it : s._outputs) {
-        _encode_node<OutputNode>(buffer, it);
+        _encode_node<Output>(buffer, it);
     }
     for (const auto& it : s._components) {
-        _encode_node<ComponentNode>(buffer, it);
+        _encode_node<Component>(buffer, it);
     }
 }
 
@@ -182,14 +181,14 @@ static void _encode_rel(const Scene& s, std::vector<uint8_t>& buffer)
     }
 }
 
-LCS_ERROR serialize(const Scene& s, std::vector<uint8_t>& buffer)
+LCS_ERROR Scene::write_to(std::vector<uint8_t>& buffer) const
 {
     buffer.clear();
-    buffer.reserve(sizeof(s));
+    buffer.reserve(sizeof(*this));
     buffer.push_back(1u);
-    _encode_meta(s, buffer);
-    _encode_nodes(s, buffer);
-    _encode_rel(s, buffer);
+    _encode_meta(*this, buffer);
+    _encode_nodes(*this, buffer);
+    _encode_rel(*this, buffer);
     return Error::OK;
 }
 
@@ -218,12 +217,12 @@ LCS_ERROR static inline _decode_dep(
     if (err) {
         return err;
     }
-    s.dependencies.push_back(Scene {});
-    err = io::load_dependency(
-        dependency.begin(), s.dependencies[s.dependencies.size() - 1]);
+    Scene dep {};
+    err = load_dependency(dependency.begin(), dep);
     if (err) {
         return err;
     }
+    s.add_dependency(std::move(dep));
     return Error::OK;
 }
 
@@ -244,42 +243,41 @@ LCS_ERROR static inline _decode_node(const uint8_t** bgnptr,
     uint32_t pos_x = _pop_uint(&cursor, endptr);
     uint32_t pos_y = _pop_uint(&cursor, endptr);
     Node n;
-    if constexpr (std::is_same<T, GateNode>()) {
-        GateNode::Type type = static_cast<GateNode::Type>(*cursor);
+    if constexpr (std::is_same<T, Gate>()) {
+        Gate::Type type = static_cast<Gate::Type>(*cursor);
         cursor++;
         uint32_t size = _pop_uint(&cursor, endptr);
 
-        n = s.add_node<GateNode>(type, size);
+        n = s.add_node<Gate>(type, size);
     }
-    if constexpr (std::is_same<T, InputNode>()) {
+    if constexpr (std::is_same<T, Input>()) {
         expect_at_least(cursor, endptr, uint16_t);
         uint8_t is_timer = *cursor;
         cursor++;
         if (is_timer) {
             uint8_t freq = *cursor;
             cursor++;
-            n = s.add_node<InputNode>(freq);
+            n = s.add_node<Input>(freq);
         } else {
             expect_at_least(cursor, endptr, uint8_t);
             State value = *cursor ? State::TRUE : State::FALSE;
             cursor++;
-            n = s.add_node<InputNode>();
-            s.get_node<InputNode>(n)->set(value);
+            n = s.add_node<Input>();
+            s.get_node<Input>(n)->set(value);
         }
     }
-    if constexpr (std::is_same<T, ComponentNode>()) {
-        n               = s.add_node<ComponentNode>();
+    if constexpr (std::is_same<T, Component>()) {
+        n               = s.add_node<Component>();
         uint8_t dep_idx = *cursor;
-        if (dep_idx >= s.dependencies.size()) {
+        if (dep_idx >= s.dependencies().size()) {
             return ERROR(Error::INVALID_NODE);
         }
-        if (Error err = s.get_node<ComponentNode>(n)->set_component(dep_idx);
-            err) {
+        if (Error err = s.get_node<Component>(n)->set_component(dep_idx); err) {
             return err;
         }
     }
-    if constexpr (std::is_same<T, OutputNode>()) {
-        n = s.add_node<OutputNode>();
+    if constexpr (std::is_same<T, Output>()) {
+        n = s.add_node<Output>();
     }
     s.get_node<T>(n)->point.x = pos_x;
     s.get_node<T>(n)->point.y = pos_y;
@@ -326,19 +324,19 @@ LCS_ERROR static inline _decode_branch(const uint8_t** bgnptr,
         break;
     case Instr::ADD_INPUT:
         L_DEBUG("Instr::ADD_INPUT");
-        err = _decode_node<InputNode>(&cursor, endptr, s, null_list);
+        err = _decode_node<Input>(&cursor, endptr, s, null_list);
         break;
     case Instr::ADD_OUT:
         L_DEBUG("Instr::ADD_OUTPUT");
-        err = _decode_node<OutputNode>(&cursor, endptr, s, null_list);
+        err = _decode_node<Output>(&cursor, endptr, s, null_list);
         break;
     case Instr::ADD_GATE:
         L_DEBUG("Instr::ADD_GATE");
-        err = _decode_node<GateNode>(&cursor, endptr, s, null_list);
+        err = _decode_node<Gate>(&cursor, endptr, s, null_list);
         break;
     case Instr::ADD_COMP:
         L_DEBUG("Instr::ADD_COMP");
-        err = _decode_node<ComponentNode>(&cursor, endptr, s, null_list);
+        err = _decode_node<Component>(&cursor, endptr, s, null_list);
         break;
     case Instr::CONNECT: {
         L_DEBUG("Instr::CONNECT");
@@ -362,7 +360,7 @@ LCS_ERROR static inline _decode_branch(const uint8_t** bgnptr,
     return err;
 }
 
-LCS_ERROR deserialize(const std::vector<uint8_t>& buffer, Scene& s)
+LCS_ERROR Scene::read_from(const std::vector<uint8_t>& buffer)
 {
     const uint8_t* cursor = buffer.data();
     uint8_t version       = *cursor;
@@ -378,12 +376,64 @@ LCS_ERROR deserialize(const std::vector<uint8_t>& buffer, Scene& s)
     const uint8_t* endptr = buffer.data() + buffer.size();
 
     while (cursor + sizeof(uint16_t) < buffer.data() + buffer.size()) {
-        Error err = _decode_branch(&cursor, endptr, s, null_list);
+        Error err = _decode_branch(&cursor, endptr, *this, null_list);
         if (err) {
             return err;
         }
     }
     return Error::OK;
+}
+
+static Error _check_fs(const std::string& name, Scene& s)
+{
+    std::string n { name };
+    std::vector<std::string> tokens = split(n, '/');
+    if (tokens.size() != 3) {
+        return ERROR(Error::INVALID_DEPENDENCY_FORMAT);
+    }
+    std::string path = fs::LIBRARY / (base64_encode(name) + ".lcs");
+    std::vector<uint8_t> data;
+    if (!fs::read(path, data)) {
+        return ERROR(Error::COMPONENT_NOT_FOUND);
+    }
+    Error err = s.read_from(data);
+    if (err) {
+        return err;
+    }
+    if (!s.component_context.has_value()) {
+        return ERROR(Error::NOT_A_COMPONENT);
+    }
+    return OK;
+}
+
+static Error _check_src(const std::string& path, Scene&)
+{
+    std::string url = API_ENDPOINT "/" + path;
+    std::vector<uint8_t> resp;
+    //  net::get_request_then(
+    //          [](net::HttpResponse&resp) {
+    //          Scene scene;
+    //          if(resp.err==Error::OK && resp.status_code ==200 &&
+    //          !resp.data.empty())
+    //          {
+    //          fs::write(fs::LIBRARY / (base64_encode(resp.path) + ".lcs"),
+    //          resp);
+    //          }
+    //          },url, ""
+    //          );
+    return Error::OK;
+}
+
+Error load_dependency(const std::string& name, Scene& scene)
+{
+    L_DEBUG("Fetching %s", name.c_str());
+    Error err = _check_fs(name, scene);
+    if (err == COMPONENT_NOT_FOUND) {
+        err = _check_src(name, scene);
+    } else if (err) {
+        return err;
+    }
+    return OK;
 }
 
 } // namespace lcs

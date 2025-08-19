@@ -1,12 +1,10 @@
 #include "IconsLucide.h"
+#include "components.h"
+#include "configuration.h"
 #include "imgui.h"
-#include "io.h"
-#include "net.h"
-#include "ui/components.h"
-#include "ui/configuration.h"
-#include "ui/layout.h"
+#include "ui.h"
 
-namespace lcs::ui {
+namespace lcs::ui ::layout {
 void SceneInfo(NRef<Scene> scene)
 {
     if (!user_data.scene_info) {
@@ -19,7 +17,7 @@ void SceneInfo(NRef<Scene> scene)
         if (scene != nullptr
             && ImGui::InputText("##SceneNameInputText", scene->name.data(),
                 scene->name.max_size(), ImGuiInputTextFlags_CharsNoBlank)) {
-            io::scene::notify_change();
+            tabs::notify();
         };
 
         Field("Description");
@@ -28,14 +26,14 @@ void SceneInfo(NRef<Scene> scene)
                 scene->description.data(), scene->description.max_size(),
                 ImVec2(ImGui::GetWindowWidth(),
                     ImGui::CalcTextSize("\n\n\n").y))) {
-            io::scene::notify_change();
+            tabs::notify();
         };
 
         Field("Version");
         if (scene != nullptr
             && ImGui::InputInt("##SceneVersion", &scene->version)) {
             scene->version = std::max(scene->version, 0);
-            io::scene::notify_change();
+            tabs::notify();
         };
         EndSection();
 
@@ -51,11 +49,11 @@ void SceneInfo(NRef<Scene> scene)
             if (input_size != scene->component_context->inputs.size()
                 || output_size != scene->component_context->outputs.size()) {
                 scene->component_context->setup(input_size, output_size);
-                io::scene::notify_change();
+                tabs::notify();
             }
             EndSection();
         }
-        if (scene != nullptr && !scene->dependencies.empty()) {
+        if (scene != nullptr && !scene->dependencies().empty()) {
             Section("Dependencies");
             if (ImGui::BeginTable("Dependencies", 4,
                     ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
@@ -72,10 +70,11 @@ void SceneInfo(NRef<Scene> scene)
                 ImGui::TableSetupColumn(
                     "Number of Nodes", ImGuiTableColumnFlags_WidthFixed);
                 ImGui::TableHeadersRow();
-                for (const std::string& d : scene->dependencies) {
-                    bool selected     = false;
-                    size_t author_end = d.find_first_of('/') + 1;
-                    size_t name_end   = d.find_last_of('/') + 1;
+                for (const auto& dep : scene->dependencies()) {
+                    const std::string d = dep.to_dependency();
+                    bool selected       = false;
+                    size_t author_end   = d.find_first_of('/') + 1;
+                    size_t name_end     = d.find_last_of('/') + 1;
                     ImGui ::TableNextRow();
                     ImGui ::TableSetColumnIndex(0);
                     ImGui::Selectable(("##" + d).c_str(), &selected,
@@ -90,11 +89,12 @@ void SceneInfo(NRef<Scene> scene)
                     ImGui::TextUnformatted(d.substr(name_end).c_str());
                     ImGui ::TableSetColumnIndex(3);
                     int count = 0;
-                    for (auto& x : scene->_components) {
-                        if (x.path == d) {
-                            count++;
-                        }
-                    }
+                    // FIXME
+                    //                  for (auto& x : scene->_components) {
+                    //                      if (x.path == d) {
+                    //                          count++;
+                    //                      }
+                    //                  }
                     ImGui::Text("%d", count);
                     if (selected) {
                         Toast(ICON_LC_CLIPBOARD_COPY, "Clipboard",
@@ -109,11 +109,11 @@ void SceneInfo(NRef<Scene> scene)
         }
         if (IconButton<NORMAL>(ICON_LC_UPLOAD, "Upload")) {
             std::string resp;
-            net::upload_scene(&scene, resp);
+            // net::upload_scene(&scene, resp);
         }
         ImGui::EndDisabled();
     }
     ImGui::End();
 }
 
-} // namespace lcs::ui
+} // namespace lcs::ui::layout
