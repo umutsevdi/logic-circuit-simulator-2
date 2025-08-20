@@ -20,7 +20,8 @@ void _sync_position(NRef<BaseNode> node, Node id, bool has_changes)
         pos      = { std::floor(pos.x), std::floor(pos.y) };
         ImNodes::SetNodeGridSpacePos(node_id, pos);
         if (pos.x != node->point.x || pos.y != node->point.y) {
-            node->point = { (int)pos.x, (int)pos.y };
+            node->point
+                = { static_cast<int16_t>(pos.x), static_cast<int16_t>(pos.y) };
             tabs::notify();
         }
     }
@@ -79,11 +80,11 @@ void _show_node<Input>(NRef<Input> node, uint16_t id, bool has_changes)
     ImNodes::BeginOutputAttribute(
         encode_pair(id, 0, true), to_shape(node->output.size() > 0, false));
     if (node->is_timer()) {
-        float freq_value = node->_freq;
         ImGui::PushItemWidth(60);
+        float freq_value = static_cast<float>(node->_freq) / 10.f;
         if (ImGui::SliderFloat("Hz", &freq_value, 0.1f, 5.0f, "%.1f")) {
             if (freq_value != node->_freq) {
-                node->_freq = freq_value;
+                node->_freq = freq_value * 10;
                 tabs::notify();
             }
         }

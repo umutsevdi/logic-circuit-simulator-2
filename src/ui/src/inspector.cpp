@@ -129,10 +129,10 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
     if (_node->is_timer()) {
         TablePair(Field("Value"), ToggleButton(_node->get()));
         TablePair(Field("Frequency"));
-        float freq_value = _node->_freq;
+        float freq_value = static_cast<float>(_node->_freq) / 10.f;
         if (ImGui::SliderFloat("Hz", &freq_value, 0.1f, 5.0f, "%.1f")) {
             if (freq_value != _node->_freq) {
-                _node->_freq = freq_value;
+                _node->_freq = freq_value * 10;
                 tabs::notify();
             }
         }

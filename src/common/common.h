@@ -23,6 +23,7 @@
 
 #define APP_PKG "com.lcs.app"
 #define APPNAME "LCS"
+#define APPNAME_BIN "LogicCircuitSimulator"
 #define APPNAME_LONG "Logic Circuit Simulator"
 
 #ifndef API_ENDPOINT

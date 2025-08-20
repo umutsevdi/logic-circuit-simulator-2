@@ -17,6 +17,25 @@ void DebugWindow(NRef<Scene> scene)
                 | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoDocking)) {
         if (scene != nullptr) {
             if (ImGui::CollapsingHeader(
+                    "Raw", ImGuiTreeNodeFlags_DefaultOpen)) {
+                std::vector<uint8_t> raw;
+                Error _ = scene->write_to(raw);
+                if (!raw.empty()) {
+                    std::array<char, 10 * 3 + 1> buf {};
+                    for (size_t i = 0; i < raw.size() / 10; i++) {
+                        size_t idx = 0;
+                        for (auto it = raw.begin() + 10 * i;
+                            it != raw.end() && it != raw.begin() + 10 * (i + 1);
+                            it++) {
+                            std::snprintf(buf.data() + idx, 4, "%02x ", *it);
+                            idx += 3;
+                        }
+                        ImGui::TextUnformatted(buf.begin());
+                    }
+                }
+            }
+
+            if (ImGui::CollapsingHeader(
                     "Meta", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::BulletText("Name: %s", scene->name.begin());
                 ImGui::BulletText(
@@ -30,22 +49,30 @@ void DebugWindow(NRef<Scene> scene)
                 }
             }
 
+            ImGui::PushID(to_str<Node::Type>(Node::Type::GATE));
             if (ImGui::CollapsingHeader(
                     "Gates", ImGuiTreeNodeFlags_DefaultOpen)) {
                 _gates(scene->_gates);
             }
+            ImGui::PopID();
+            ImGui::PushID(to_str<Node::Type>(Node::Type::INPUT));
             if (ImGui::CollapsingHeader(
                     "Inputs", ImGuiTreeNodeFlags_DefaultOpen)) {
                 _inputs(scene->_inputs);
             }
+            ImGui::PopID();
+            ImGui::PushID(to_str<Node::Type>(Node::Type::OUTPUT));
             if (ImGui::CollapsingHeader(
                     "Outputs", ImGuiTreeNodeFlags_DefaultOpen)) {
                 _outputs(scene->_outputs);
             }
+            ImGui::PopID();
+            ImGui::PushID(to_str<Node::Type>(Node::Type::COMPONENT));
             if (ImGui::CollapsingHeader(
                     "Components", ImGuiTreeNodeFlags_DefaultOpen)) {
                 _components(scene->_components);
             }
+            ImGui::PopID();
         }
     }
     ImGui::End();
@@ -60,6 +87,7 @@ static void _gates(const std::vector<Gate>& v)
         if (ImGui::TreeNode(std::to_string(i).c_str())) {
             ImGui::BulletText("Type: %s", to_str<Gate::Type>(v[i].type()));
             ImGui::BulletText("Input Count: %zu", v[i].inputs.size());
+            ImGui::BulletText("Value: %s", to_str<State>(v[i].get()));
             ImGui::TreePop();
         };
     }
@@ -72,6 +100,11 @@ static void _inputs(const std::vector<Input>& v)
             return;
         }
         if (ImGui::TreeNode(std::to_string(i).c_str())) {
+            ImGui::BulletText("Type: %s", v[i].is_timer() ? "TIMER" : "INPUT");
+            ImGui::BulletText("Value: %s", to_str<State>(v[i].get()));
+            if (v[i].is_timer()) {
+                ImGui::BulletText("Freq: %f", v[i]._freq / 10.f);
+            }
             ImGui::TreePop();
         }
     }
@@ -84,6 +117,7 @@ static void _outputs(const std::vector<Output>& v)
             return;
         }
         if (ImGui::TreeNode(std::to_string(i).c_str())) {
+            ImGui::BulletText("Value: %s", to_str<State>(v[i].get()));
             ImGui::TreePop();
         }
     }
@@ -96,6 +130,9 @@ static void _components(const std::vector<Component>& v)
             return;
         }
         if (ImGui::TreeNode(std::to_string(i).c_str())) {
+            ImGui::BulletText("DepId: %d", v[i].dep_idx);
+            ImGui::BulletText("Input Size: %zu", v[i].inputs.size());
+            ImGui::BulletText("Output Size: %zu", v[i].outputs.size());
             ImGui::TreePop();
         }
     }

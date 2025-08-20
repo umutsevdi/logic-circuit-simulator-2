@@ -104,6 +104,22 @@ namespace fs {
         TMP  = "/tmp/" APPNAME_LONG;
         ROOT = home ? std::string(home) + "/.local/share/" APPNAME_LONG
                     : "/tmp/" APPNAME_LONG;
+
+        std::string desktopfile = std::string(home)
+            + "/.local/share/applications/" APPNAME_LONG ".desktop";
+        if (!std::filesystem::exists(desktopfile)) {
+            std::printf("Desktop file does not exist\r\n");
+            std::string data =
+#include "lcs.desktop.txt"
+                ;
+            std::printf("APPNAME\r\n");
+            data = data.replace(data.find("%APPNAME%"), 9, APPNAME_BIN);
+            std::printf("HOME\r\n");
+            data = data.replace(data.find("%HOME%"), 6, home);
+            std::printf("APPNAME : %s\r\n", data.c_str());
+            data = data.replace(data.find("%APPNAME%"), 9, APPNAME_LONG);
+            write(desktopfile, data);
+        }
 #elif defined(__unix__)
         // TODO For BSD & Mac
 #endif

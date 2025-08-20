@@ -70,23 +70,19 @@ void SceneInfo(NRef<Scene> scene)
                 ImGui::TableSetupColumn(
                     "Number of Nodes", ImGuiTableColumnFlags_WidthFixed);
                 ImGui::TableHeadersRow();
-                for (const auto& dep : scene->dependencies()) {
-                    const std::string d = dep.to_dependency();
-                    bool selected       = false;
-                    size_t author_end   = d.find_first_of('/') + 1;
-                    size_t name_end     = d.find_last_of('/') + 1;
+                for (size_t i = 0; i < scene->dependencies().size(); i++) {
+                    const auto& dep = scene->dependencies()[i];
+                    bool selected   = false;
                     ImGui ::TableNextRow();
                     ImGui ::TableSetColumnIndex(0);
-                    ImGui::Selectable(("##" + d).c_str(), &selected,
-                        ImGuiSelectableFlags_SpanAllColumns);
+                    ImGui::Selectable(("##" + std::to_string(i)).c_str(),
+                        &selected, ImGuiSelectableFlags_SpanAllColumns);
                     ImGui::SameLine();
-                    ImGui::TextUnformatted(d.substr(0, author_end - 1).c_str());
+                    ImGui::TextUnformatted(dep.name.begin());
                     ImGui ::TableSetColumnIndex(1);
-                    ImGui::TextUnformatted(
-                        d.substr(author_end, name_end - author_end - 1)
-                            .c_str());
+                    ImGui::TextUnformatted(dep.author.begin());
                     ImGui ::TableSetColumnIndex(2);
-                    ImGui::TextUnformatted(d.substr(name_end).c_str());
+                    ImGui::Text("%d", dep.version);
                     ImGui ::TableSetColumnIndex(3);
                     int count = 0;
                     // FIXME
@@ -99,7 +95,7 @@ void SceneInfo(NRef<Scene> scene)
                     if (selected) {
                         Toast(ICON_LC_CLIPBOARD_COPY, "Clipboard",
                             "Dependency name was copied to the clipboard.");
-                        ImGui::SetClipboardText(d.c_str());
+                        ImGui::SetClipboardText(dep.to_dependency().c_str());
                     }
                 }
                 ImGui::EndTable();

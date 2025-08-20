@@ -130,12 +130,11 @@ int main(int, char**)
         ImGui::ShowDemoWindow(nullptr);
 #endif
         ui::loop(imio);
-        ImVec4 clear_color = get_active_style().bg;
         ImGui::Render();
         if (!get_config().is_applied) {
             set_style(imio);
-            clear_color = get_active_style().bg;
         }
+        ImVec4 clear_color = get_active_style().bg;
 
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);

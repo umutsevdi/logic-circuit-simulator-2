@@ -33,7 +33,7 @@ void Palette(NRef<Scene> scene)
                 });
             TablePair(
                 if (ImGui::Button("Timer")) {
-                    dragged_node = scene->add_node<Input>(1.0f);
+                    dragged_node = scene->add_node<Input>(10u);
                     is_dragging  = true;
                 },
                 if (ImGui::Button("NOT Gate")) {

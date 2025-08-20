@@ -428,13 +428,12 @@ void Scene::run(float delta)
     frame_s += delta;
     uint32_t f_uint = frame_s * 10;
     for (auto& in : _inputs) {
-        if (!in.is_null() && in.is_timer()) { }
-        if (f_uint % in._freq == 0) {
-            // FIXME This is wrong when component frame_s is altered
-            in.toggle();
+        if (!in.is_null() && in.is_timer()) {
+            if (f_uint % in._freq == 0) {
+                in.toggle();
+            }
         }
     }
-    // TODO Also run dependency scenes with the timer.
     if (frame_s > 10) {
         frame_s -= 10;
     }
