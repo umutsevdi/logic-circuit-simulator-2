@@ -25,6 +25,7 @@
 #define APPNAME "LCS"
 #define APPNAME_BIN "LogicCircuitSimulator"
 #define APPNAME_LONG "Logic Circuit Simulator"
+extern const char* __LICENSE__;
 
 #ifndef API_ENDPOINT
 #ifndef NDEBUG
@@ -190,8 +191,8 @@ namespace fs {
     extern std::string INI;
     extern FILE* __TEST_LOG__;
 
-    /** Runs an assertion, displays an error message on failure. Intended for
-     * macros. */
+    /** Runs an assertion, displays an error message on failure. Intended
+     * for macros. */
     int __expect(std::function<bool(void)> expr, const char* function,
         const char* file, int line, const char* str_expr) noexcept;
     /**

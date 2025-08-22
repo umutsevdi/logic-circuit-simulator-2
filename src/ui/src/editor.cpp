@@ -44,27 +44,10 @@ bool loop(ImGuiIO& imio)
     layout::Inspector(&scene);
     layout::Palette(&scene);
     layout::Console();
+#ifndef NDEBUG
     layout::DebugWindow(&scene);
-
-    ImGui::Begin("Font Window");
-    {
-        ImGui::PushFont(get_font(SMALL | ITALIC));
-        ImGui::Text("This is some useful text.");
-        ImGui::PopFont();
-        ImGui::PushFont(get_font(LARGE | BOLD));
-        ImGui::Text("This is some useful text.");
-        ImGui::PopFont();
-        ImGui::PushFont(get_font(NORMAL));
-        ImGui::Text("This is some useful text.");
-        ImGui::PopFont();
-        ImGui::PushFont(get_font(BOLD | ITALIC));
-        ImGui::Text("This is some useful text.");
-        ImGui::PopFont();
-
-        ImGui::Checkbox("Demo Window", &show_demo_window);
-
-        ImGui::End();
-    }
+    ImGui::ShowDemoWindow(nullptr);
+#endif
     RenderNotifications();
     return show_demo_window;
 }

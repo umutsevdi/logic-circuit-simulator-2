@@ -51,7 +51,7 @@ int encode_pair(Node node, sockid sock, bool is_out)
     lcs_assert(node.index < 0xFFFF);
     int x = node.index | (node.type << 16) | (sock << 20);
     if (is_out) {
-        x |= 1 << 31;
+        x |= 1 << 29;
     }
     return x;
 }
@@ -59,7 +59,7 @@ int encode_pair(Node node, sockid sock, bool is_out)
 Node decode_pair(int code, sockid* sock, bool* is_out)
 {
     if (is_out != nullptr) {
-        *is_out = code >> 31;
+        *is_out = (code >> 29) & 1;
     }
     if (sock != nullptr) {
         *sock = (code >> 20) & 0xFF;

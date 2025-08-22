@@ -80,6 +80,7 @@ void Console(void)
                     ImGui::SetClipboardText(buffer.str().c_str());
                 }
             });
+            ImGui::SetScrollHereY(1.0f);
             ImGui::EndTable();
         }
     }

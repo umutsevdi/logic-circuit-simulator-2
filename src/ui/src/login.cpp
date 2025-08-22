@@ -51,7 +51,9 @@ void LoginWindow(bool& df_show)
         ImGui::OpenPopup("Login");
     }
     if (ImGui::BeginPopupModal(
-            "Login", &df_show_cancel, ImGuiWindowFlags_NoSavedSettings)) {
+            "Login", &df_show_cancel, ImGuiWindowFlags_NoSavedSettings |
+ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking
+)) {
         static const float modal_size
             = ImGui::CalcTextSize("Enter the code to your browser").x;
         Field("Enter the code to your browser");

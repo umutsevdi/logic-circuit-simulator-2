@@ -38,7 +38,6 @@ namespace layout {
 } // namespace layout
 
 namespace popup {
-    void Preferences(bool& pref_show);
     void LoginWindow(bool& df_show);
 } // namespace popup
 

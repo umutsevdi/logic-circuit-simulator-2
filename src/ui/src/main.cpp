@@ -126,9 +126,6 @@ int main(int, char**)
 
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport();
-#ifndef NDEBUG
-        ImGui::ShowDemoWindow(nullptr);
-#endif
         ui::loop(imio);
         ImGui::Render();
         if (!get_config().is_applied) {

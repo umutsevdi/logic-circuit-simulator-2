@@ -6,8 +6,13 @@
 #include <cmath>
 
 namespace lcs::ui::layout {
-template <typename T>
-static void _show_node(NRef<T> base_node, uint16_t id, bool has_changes);
+static void _show_node(NRef<Input> base_node, uint16_t id, bool has_changes);
+static void _show_node(NRef<Output> base_node, uint16_t id, bool has_changes);
+static void _show_node(NRef<Gate> base_node, uint16_t id, bool has_changes);
+static void _show_node(
+    NRef<Component> base_node, uint16_t id, bool has_changes);
+static void _show_node(
+    NRef<ComponentContext> base_node, uint16_t id, bool has_changes);
 
 void _sync_position(NRef<BaseNode> node, Node id, bool has_changes)
 {
@@ -36,8 +41,7 @@ static inline ImNodesPinShape_ to_shape(bool value, bool is_input)
     return value ? ImNodesPinShape_QuadFilled : ImNodesPinShape_Quad;
 }
 
-template <>
-void _show_node<ComponentContext>(NRef<ComponentContext> node, uint16_t, bool)
+void _show_node(NRef<ComponentContext> node, uint16_t, bool)
 {
     uint32_t compin  = Node { 0, Node::COMPONENT_INPUT }.numeric();
     uint32_t compout = Node { 0, Node::COMPONENT_OUTPUT }.numeric();
@@ -67,10 +71,10 @@ void _show_node<ComponentContext>(NRef<ComponentContext> node, uint16_t, bool)
     ImNodes::EndNode();
 }
 
-template <>
-void _show_node<Input>(NRef<Input> node, uint16_t id, bool has_changes)
+void _show_node(NRef<Input> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::INPUT }.numeric();
+//    L_INFO("%d %d", nodeid, encode_pair(id, 0, true));
     ImNodes::BeginNode(nodeid);
     _sync_position(node->base(), id, has_changes);
     ImNodes::BeginNodeTitleBar();
@@ -102,8 +106,7 @@ void _show_node<Input>(NRef<Input> node, uint16_t id, bool has_changes)
     ImNodes::EndNode();
 }
 
-template <>
-void _show_node<Output>(NRef<Output> node, uint16_t id, bool has_changes)
+void _show_node(NRef<Output> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::OUTPUT }.numeric();
     ImNodes::BeginNode(nodeid);
@@ -120,8 +123,7 @@ void _show_node<Output>(NRef<Output> node, uint16_t id, bool has_changes)
     ImNodes::EndNode();
 }
 
-template <>
-void _show_node<Gate>(NRef<Gate> node, uint16_t id, bool has_changes)
+void _show_node(NRef<Gate> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::GATE }.numeric();
     ImNodes::BeginNode(nodeid);
@@ -148,8 +150,7 @@ void _show_node<Gate>(NRef<Gate> node, uint16_t id, bool has_changes)
     ImNodes::EndNode();
 }
 
-template <>
-void _show_node<Component>(NRef<Component> node, uint16_t id, bool has_changes)
+void _show_node(NRef<Component> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::COMPONENT }.numeric();
     ImNodes::BeginNode(nodeid);
@@ -192,27 +193,26 @@ void NodeEditor(NRef<Scene> scene)
         const LcsTheme& style = get_active_style();
         bool has_changes      = tabs::is_changed();
         if (scene->component_context.has_value()) {
-            _show_node<ComponentContext>(
-                &scene->component_context.value(), 0, has_changes);
+            _show_node(&scene->component_context.value(), 0, has_changes);
         }
         for (size_t i = 0; i < scene->_inputs.size(); i++) {
             if (!scene->_inputs[i].is_null()) {
-                _show_node<Input>(&scene->_inputs[i], i, has_changes);
+                _show_node(&scene->_inputs[i], i, has_changes);
             }
         }
         for (size_t i = 0; i < scene->_outputs.size(); i++) {
             if (!scene->_outputs[i].is_null()) {
-                _show_node<Output>(&scene->_outputs[i], i, has_changes);
+                _show_node(&scene->_outputs[i], i, has_changes);
             }
         }
         for (size_t i = 0; i < scene->_gates.size(); i++) {
             if (!scene->_gates[i].is_null()) {
-                _show_node<Gate>(&scene->_gates[i], i, has_changes);
+                _show_node(&scene->_gates[i], i, has_changes);
             }
         }
         for (size_t i = 0; i < scene->_components.size(); i++) {
             if (!scene->_components[i].is_null()) {
-                _show_node<Component>(&scene->_components[i], i, has_changes);
+                _show_node(&scene->_components[i], i, has_changes);
             }
         }
         for (auto& r : scene->_relations) {

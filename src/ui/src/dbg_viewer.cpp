@@ -13,9 +13,28 @@ static void _components(const std::vector<Component>&);
 void DebugWindow(NRef<Scene> scene)
 {
     if (ImGui::Begin("Scene Debug", nullptr,
-            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing
-                | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoDocking)) {
+            ImGuiWindowFlags_NoFocusOnAppearing
+                | ImGuiWindowFlags_NoNavFocus)) {
         if (scene != nullptr) {
+            ImVec2 wsize = ImVec2((ImGui::GetContentRegionAvail().x
+                                      - ImGui::GetStyle().ItemSpacing.x)
+                    * 0.5f,
+                ImGui::GetContentRegionAvail().y);
+            ImGui::BeginChild("##Left", wsize);
+            if (ImGui::CollapsingHeader(
+                    "Meta", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::BulletText("Name: %s", scene->name.begin());
+                ImGui::BulletText(
+                    "Description: %s", scene->description.begin());
+                ImGui::BulletText("Author: %s", scene->author.begin());
+                ImGui::BulletText("Version: %d", scene->version);
+            }
+            if (ImGui::CollapsingHeader(
+                    "Dependencies", ImGuiTreeNodeFlags_DefaultOpen)) {
+                for (auto& s : scene->dependencies()) {
+                    ImGui::BulletText("%s", s.to_dependency().c_str());
+                }
+            }
             if (ImGui::CollapsingHeader(
                     "Raw", ImGuiTreeNodeFlags_DefaultOpen)) {
                 std::vector<uint8_t> raw;
@@ -35,20 +54,9 @@ void DebugWindow(NRef<Scene> scene)
                 }
             }
 
-            if (ImGui::CollapsingHeader(
-                    "Meta", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::BulletText("Name: %s", scene->name.begin());
-                ImGui::BulletText(
-                    "Description: %s", scene->description.begin());
-                ImGui::BulletText("Author: %s", scene->author.begin());
-                ImGui::BulletText("Version: %d", scene->version);
-            }
-            if (ImGui::CollapsingHeader("Dependencies")) {
-                for (auto& s : scene->dependencies()) {
-                    ImGui::BulletText("%s", s.to_dependency().c_str());
-                }
-            }
-
+            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::BeginChild("##Right", wsize);
             ImGui::PushID(to_str<Node::Type>(Node::Type::GATE));
             if (ImGui::CollapsingHeader(
                     "Gates", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -73,6 +81,7 @@ void DebugWindow(NRef<Scene> scene)
                 _components(scene->_components);
             }
             ImGui::PopID();
+            ImGui::EndChild();
         }
     }
     ImGui::End();

@@ -139,12 +139,13 @@ static inline void _encode_node(std::vector<uint8_t>& buffer, const T& it)
         _push_uint(buffer, pos[0]);
         _push_uint(buffer, pos[1]);
         if constexpr (std::is_same<T, Input>()) {
-            buffer.push_back(it._freq != 0 ? 1u : 0u);
-            if (it._freq) {
+            if (it.is_timer()) {
+                buffer.push_back(1u);
                 uint32_t s;
                 memcpy(&s, &it._freq, sizeof(float));
                 _push_uint(buffer, s);
             } else {
+                buffer.push_back(0u);
                 buffer.push_back(it.get() == State::TRUE ? 1u : 0u);
             }
         } else if constexpr (std::is_same<T, Gate>()) {

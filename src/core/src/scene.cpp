@@ -425,17 +425,18 @@ std::string Scene::to_dependency() const
 
 void Scene::run(float delta)
 {
+    uint32_t frame_pre = frame_s * 10;
     frame_s += delta;
-    uint32_t f_uint = frame_s * 10;
-    for (auto& in : _inputs) {
-        if (!in.is_null() && in.is_timer()) {
-            if (f_uint % in._freq == 0) {
-                in.toggle();
+    uint32_t frame = frame_s * 10;
+    if (frame != frame_pre) {
+        L_INFO("delta: %f frame:%d frame_pre:%d", delta, frame, frame_pre);
+        for (auto& in : _inputs) {
+            if (!in.is_null() && in.is_timer()) {
+                if (frame % in._freq == 0) {
+                    in.set(frame / 10 % 2 == 0);
+                }
             }
         }
-    }
-    if (frame_s > 10) {
-        frame_s -= 10;
     }
 }
 

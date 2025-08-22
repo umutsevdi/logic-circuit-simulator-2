@@ -70,6 +70,19 @@ struct Node {
     Type type : 4;
 };
 
+/**
+ * ┌────────────── 16 bits ────────────────┐
+ * │ node.index (bits 0‑15)                │
+ * ├─────────────────── 4 bits ────────────┤
+ * │ node.type  (bits 16‑19)               │
+ * ├─────────────────── 8 bits ────────────┤
+ * │ sock       (bits 20‑27)               │
+ * ├─────────────────── 1 bit  ────────────┤
+ * │ is_out     (bit  29)                  │
+ * └─────────────────────── remaining bits ┘
+ *
+ * Note: bit 30 stays unused – it can be repurposed later if needed.
+ */
 int encode_pair(Node node, sockid sock, bool is_out);
 Node decode_pair(int pair_code, sockid* sock = nullptr, bool* is_out = nullptr);
 
