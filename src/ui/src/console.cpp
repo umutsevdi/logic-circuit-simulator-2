@@ -24,8 +24,9 @@ void Console(void)
         return;
     }
     const LcsTheme& style = get_active_style();
-    if (ImGui::Begin("Console", &user_data.console)) {
-        if (IconButton<NORMAL>(ICON_LC_TRASH, "Clear")) {
+    std::string title     = std::string { _("Console") } + "###Console";
+    if (ImGui::Begin(title.c_str(), &user_data.console)) {
+        if (IconButton<NORMAL>(ICON_LC_TRASH, _("Clear"))) {
             lcs::fs::clear_log();
         }
         if (ImGui::BeginTable("##ConsoleTable", 5,
@@ -33,17 +34,19 @@ void Console(void)
                     | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY
                     | ImGuiTableColumnFlags_NoResize)) {
             ImGui::TableHeader("##Console");
-            ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed);
             ImGui::TableSetupColumn(
-                "Severity", ImGuiTableColumnFlags_WidthFixed);
-            ImGui::NextColumn();
-            ImGui::TableSetupColumn("Node", ImGuiTableColumnFlags_WidthFixed);
-            ImGui::NextColumn();
+                _("Time"), ImGuiTableColumnFlags_WidthFixed);
             ImGui::TableSetupColumn(
-                "Function", ImGuiTableColumnFlags_WidthFixed);
+                _("Severity"), ImGuiTableColumnFlags_WidthFixed);
             ImGui::NextColumn();
             ImGui::TableSetupColumn(
-                "Message", ImGuiTableColumnFlags_WidthStretch);
+                _("Node"), ImGuiTableColumnFlags_WidthFixed);
+            ImGui::NextColumn();
+            ImGui::TableSetupColumn(
+                _("Function"), ImGuiTableColumnFlags_WidthFixed);
+            ImGui::NextColumn();
+            ImGui::TableSetupColumn(
+                _("Message"), ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
 
             lcs::fs::logs_for_each([&style](size_t idx, const Message& l) {
@@ -75,8 +78,8 @@ void Console(void)
                            << l.file_line.begin() << '\t' << l.obj.begin()
                            << "\t" << l.fn.begin() << '\t' << l.expr.begin()
                            << std::endl;
-                    Toast(ICON_LC_CLIPBOARD_COPY, "Clipboard",
-                        "Log message was copied to the clipboard.");
+                    Toast(ICON_LC_CLIPBOARD_COPY, _("Clipboard"),
+                        _("Message is copied to the clipboard."));
                     ImGui::SetClipboardText(buffer.str().c_str());
                 }
             });

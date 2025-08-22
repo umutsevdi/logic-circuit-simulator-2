@@ -429,7 +429,7 @@ void Scene::run(float delta)
     frame_s += delta;
     uint32_t frame = frame_s * 10;
     if (frame != frame_pre) {
-        L_INFO("delta: %f frame:%d frame_pre:%d", delta, frame, frame_pre);
+//        L_INFO("delta: %f frame:%d frame_pre:%d", delta, frame, frame_pre);
         for (auto& in : _inputs) {
             if (!in.is_null() && in.is_timer()) {
                 if (frame % in._freq == 0) {

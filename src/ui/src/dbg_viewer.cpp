@@ -12,7 +12,9 @@ static void _components(const std::vector<Component>&);
 
 void DebugWindow(NRef<Scene> scene)
 {
-    if (ImGui::Begin("Scene Debug", nullptr,
+    std::string title
+        = std::string { _("Memory Debugger") } + "###MemoryDebugger";
+    if (ImGui::Begin(title.c_str(), nullptr,
             ImGuiWindowFlags_NoFocusOnAppearing
                 | ImGuiWindowFlags_NoNavFocus)) {
         if (scene != nullptr) {
@@ -22,21 +24,21 @@ void DebugWindow(NRef<Scene> scene)
                 ImGui::GetContentRegionAvail().y);
             ImGui::BeginChild("##Left", wsize);
             if (ImGui::CollapsingHeader(
-                    "Meta", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::BulletText("Name: %s", scene->name.begin());
+                    _("Meta"), ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::BulletText(_("Name: %s"), scene->name.begin());
                 ImGui::BulletText(
-                    "Description: %s", scene->description.begin());
-                ImGui::BulletText("Author: %s", scene->author.begin());
-                ImGui::BulletText("Version: %d", scene->version);
+                    _("Description: %s"), scene->description.begin());
+                ImGui::BulletText(_("Author: %s"), scene->author.begin());
+                ImGui::BulletText(_("Version: %d"), scene->version);
             }
             if (ImGui::CollapsingHeader(
-                    "Dependencies", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    _("Dependencies"), ImGuiTreeNodeFlags_DefaultOpen)) {
                 for (auto& s : scene->dependencies()) {
                     ImGui::BulletText("%s", s.to_dependency().c_str());
                 }
             }
             if (ImGui::CollapsingHeader(
-                    "Raw", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    _("Raw"), ImGuiTreeNodeFlags_DefaultOpen)) {
                 std::vector<uint8_t> raw;
                 Error _ = scene->write_to(raw);
                 if (!raw.empty()) {
@@ -59,25 +61,25 @@ void DebugWindow(NRef<Scene> scene)
             ImGui::BeginChild("##Right", wsize);
             ImGui::PushID(to_str<Node::Type>(Node::Type::GATE));
             if (ImGui::CollapsingHeader(
-                    "Gates", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    _("Gates"), ImGuiTreeNodeFlags_DefaultOpen)) {
                 _gates(scene->_gates);
             }
             ImGui::PopID();
             ImGui::PushID(to_str<Node::Type>(Node::Type::INPUT));
             if (ImGui::CollapsingHeader(
-                    "Inputs", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    _("Inputs"), ImGuiTreeNodeFlags_DefaultOpen)) {
                 _inputs(scene->_inputs);
             }
             ImGui::PopID();
             ImGui::PushID(to_str<Node::Type>(Node::Type::OUTPUT));
             if (ImGui::CollapsingHeader(
-                    "Outputs", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    _("Outputs"), ImGuiTreeNodeFlags_DefaultOpen)) {
                 _outputs(scene->_outputs);
             }
             ImGui::PopID();
             ImGui::PushID(to_str<Node::Type>(Node::Type::COMPONENT));
             if (ImGui::CollapsingHeader(
-                    "Components", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    _("Components"), ImGuiTreeNodeFlags_DefaultOpen)) {
                 _components(scene->_components);
             }
             ImGui::PopID();

@@ -14,9 +14,8 @@ static void _show_node(
 static void _show_node(
     NRef<ComponentContext> base_node, uint16_t id, bool has_changes);
 
-void _sync_position(NRef<BaseNode> node, Node id, bool has_changes)
+void _sync_position(NRef<BaseNode> node, uint32_t node_id, bool has_changes)
 {
-    uint32_t node_id = id.numeric();
     if (has_changes) {
         ImNodes::SetNodeGridSpacePos(
             node_id, { (float)node->point.x, (float)node->point.y });
@@ -48,7 +47,7 @@ void _show_node(NRef<ComponentContext> node, uint16_t, bool)
 
     ImNodes::BeginNode(compin);
     ImNodes::BeginNodeTitleBar();
-    ImGui::Text("Component Input");
+    ImGui::Text(_("Component Input"));
     ImNodes::EndNodeTitleBar();
     for (size_t i = 0; i < node->inputs.size(); i++) {
         ImNodes::BeginOutputAttribute(encode_pair(node->get_input(i), 0, true),
@@ -60,7 +59,7 @@ void _show_node(NRef<ComponentContext> node, uint16_t, bool)
 
     ImNodes::BeginNode(compout);
     ImNodes::BeginNodeTitleBar();
-    ImGui::Text("Component Output");
+    ImGui::Text(_("Component Output"));
     ImNodes::EndNodeTitleBar();
     for (size_t i = 0; i < node->outputs.size(); i++) {
         ImNodes::BeginInputAttribute(encode_pair(node->get_output(i), 0, false),
@@ -74,11 +73,11 @@ void _show_node(NRef<ComponentContext> node, uint16_t, bool)
 void _show_node(NRef<Input> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::INPUT }.numeric();
-//    L_INFO("%d %d", nodeid, encode_pair(id, 0, true));
+    //    L_INFO("%d %d", nodeid, encode_pair(id, 0, true));
     ImNodes::BeginNode(nodeid);
-    _sync_position(node->base(), id, has_changes);
+    _sync_position(node->base(), nodeid, has_changes);
     ImNodes::BeginNodeTitleBar();
-    ImGui::Text("%s %u", node->is_timer() ? "Timer " : "Input ", id);
+    ImGui::Text("%s %u", node->is_timer() ? _("Timer") : _("Input"), id);
     ImNodes::EndNodeTitleBar();
 
     ImNodes::BeginOutputAttribute(
@@ -100,7 +99,7 @@ void _show_node(NRef<Input> node, uint16_t id, bool has_changes)
         }
     }
     ImGui::SameLine();
-    ImGui::Text("%d", 1);
+    ImGui::Text("1");
     ImNodes::EndOutputAttribute();
 
     ImNodes::EndNode();
@@ -110,14 +109,14 @@ void _show_node(NRef<Output> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::OUTPUT }.numeric();
     ImNodes::BeginNode(nodeid);
-    _sync_position(node->base(), id, has_changes);
+    _sync_position(node->base(), nodeid, has_changes);
     ImNodes::BeginNodeTitleBar();
-    ImGui::Text("Output %u", id);
+    ImGui::Text(_("Output %u"), id);
     ImNodes::EndNodeTitleBar();
 
     ImNodes::BeginInputAttribute(
         encode_pair(id, 0, false), to_shape(node->is_connected(), false));
-    ImGui::Text("%d", 1);
+    ImGui::Text("1");
     ImNodes::EndInputAttribute();
 
     ImNodes::EndNode();
@@ -127,9 +126,9 @@ void _show_node(NRef<Gate> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::GATE }.numeric();
     ImNodes::BeginNode(nodeid);
-    _sync_position(node->base(), id, has_changes);
+    _sync_position(node->base(), nodeid, has_changes);
     ImNodes::BeginNodeTitleBar();
-    ImGui::Text("%s Gate %u", to_str<Gate::Type>(node->type()), id);
+    ImGui::Text(_("%s Gate %u"), to_str<Gate::Type>(node->type()), id);
     ImNodes::EndNodeTitleBar();
 
     for (size_t i = 0; i < node->inputs.size(); i++) {
@@ -154,9 +153,9 @@ void _show_node(NRef<Component> node, uint16_t id, bool has_changes)
 {
     uint32_t nodeid = Node { id, Node::Type::COMPONENT }.numeric();
     ImNodes::BeginNode(nodeid);
-    _sync_position(node->base(), id, has_changes);
+    _sync_position(node->base(), nodeid, has_changes);
     ImNodes::BeginNodeTitleBar();
-    ImGui::Text("Component Node %u", id);
+    ImGui::Text(_("Component Node %u"), id);
     ImNodes::EndNodeTitleBar();
 
     for (size_t i = 0; i < node->inputs.size(); i++) {
@@ -181,158 +180,162 @@ void _show_node(NRef<Component> node, uint16_t id, bool has_changes)
 
 void NodeEditor(NRef<Scene> scene)
 {
-    if (ImGui::Begin("Editor", nullptr,
+
+    std::string title = std::string { _("Editor") } + "###Editor";
+    if (ImGui::Begin(title.c_str(), nullptr,
             ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing
                 | ImGuiWindowFlags_NoNavFocus)) {
         ImNodes::BeginNodeEditor();
-        if (scene == nullptr) {
+        if (scene != nullptr) {
+            const LcsTheme& style = get_active_style();
+            bool has_changes      = tabs::is_changed();
+            if (scene->component_context.has_value()) {
+                _show_node(&scene->component_context.value(), 0, has_changes);
+            }
+            for (size_t i = 0; i < scene->_inputs.size(); i++) {
+                if (!scene->_inputs[i].is_null()) {
+                    _show_node(&scene->_inputs[i], i, has_changes);
+                }
+            }
+            for (size_t i = 0; i < scene->_outputs.size(); i++) {
+                if (!scene->_outputs[i].is_null()) {
+                    _show_node(&scene->_outputs[i], i, has_changes);
+                }
+            }
+            for (size_t i = 0; i < scene->_gates.size(); i++) {
+                if (!scene->_gates[i].is_null()) {
+                    _show_node(&scene->_gates[i], i, has_changes);
+                }
+            }
+            for (size_t i = 0; i < scene->_components.size(); i++) {
+                if (!scene->_components[i].is_null()) {
+                    _show_node(&scene->_components[i], i, has_changes);
+                }
+            }
+            for (auto& r : scene->_relations) {
+
+                ImNodes::PushColorStyle(ImNodesCol_Link,
+                    r.second.value == State::TRUE
+                        ? ImGui::GetColorU32(style.green)
+                        : r.second.value == State::FALSE
+                        ? ImGui::GetColorU32(style.red)
+                        : ImGui::GetColorU32(style.black_bright));
+                ImNodes::Link(r.first,
+                    encode_pair(r.second.from_node, r.second.from_sock, true),
+                    encode_pair(r.second.to_node, r.second.to_sock, false));
+                ImNodes::PopColorStyle();
+            }
+            ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
             ImNodes::EndNodeEditor();
-            ImGui::End();
-            return;
-        }
-        const LcsTheme& style = get_active_style();
-        bool has_changes      = tabs::is_changed();
-        if (scene->component_context.has_value()) {
-            _show_node(&scene->component_context.value(), 0, has_changes);
-        }
-        for (size_t i = 0; i < scene->_inputs.size(); i++) {
-            if (!scene->_inputs[i].is_null()) {
-                _show_node(&scene->_inputs[i], i, has_changes);
-            }
-        }
-        for (size_t i = 0; i < scene->_outputs.size(); i++) {
-            if (!scene->_outputs[i].is_null()) {
-                _show_node(&scene->_outputs[i], i, has_changes);
-            }
-        }
-        for (size_t i = 0; i < scene->_gates.size(); i++) {
-            if (!scene->_gates[i].is_null()) {
-                _show_node(&scene->_gates[i], i, has_changes);
-            }
-        }
-        for (size_t i = 0; i < scene->_components.size(); i++) {
-            if (!scene->_components[i].is_null()) {
-                _show_node(&scene->_components[i], i, has_changes);
-            }
-        }
-        for (auto& r : scene->_relations) {
 
-            ImNodes::PushColorStyle(ImNodesCol_Link,
-                r.second.value == State::TRUE ? ImGui::GetColorU32(style.green)
-                    : r.second.value == State::FALSE
-                    ? ImGui::GetColorU32(style.red)
-                    : ImGui::GetColorU32(style.black_bright));
-            ImNodes::Link(r.first,
-                encode_pair(r.second.from_node, r.second.from_sock, true),
-                encode_pair(r.second.to_node, r.second.to_sock, false));
-            ImNodes::PopColorStyle();
-        }
-        ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
-        ImNodes::EndNodeEditor();
-
-        int linkid = 0;
-        if (ImNodes::IsLinkHovered(&linkid)) {
-            if (auto r = scene->get_rel(linkid);
-                r != nullptr && ImGui::BeginTooltip()) {
-                SubSection("Relation %d", linkid);
-                Field("From");
-                ImGui::SameLine();
-                NodeTypeTitle(r->from_node, r->from_sock);
-                Field("To");
-                ImGui::SameLine();
-                NodeTypeTitle(r->to_node, r->to_sock);
-                Field("Value");
-                ImGui::SameLine();
-                ToggleButton(r->value);
-                EndSection();
-                ImGui::EndTooltip();
-            }
-        }
-
-        int nodeid_encoded = 0;
-        if (ImNodes::IsNodeHovered(&nodeid_encoded)) {
-            Node nodeid { static_cast<uint16_t>(0xFFFF & nodeid_encoded),
-                (Node::Type)(nodeid_encoded >> 16) };
-            if (NRef<BaseNode> n = scene->get_base(nodeid);
-                n != nullptr && ImGui::BeginTooltip()) {
-                SubSection("Node %s@%d", to_str<Node::Type>(nodeid.type),
-                    nodeid.index);
-                Field("Position");
-                ImGui::SameLine();
-                ImGui::Text("(%d, %d)", n->point.x, n->point.y);
-                Field("Connected");
-                ImGui::SameLine();
-                ImGui::Text("%s", n->is_connected() ? "true" : "false");
-                Field("Value");
-                ImGui::SameLine();
-                if (nodeid.type != Node::Type::COMPONENT) {
-                    ToggleButton(n->get());
-                } else {
-                    auto comp = scene->get_node<Component>(nodeid);
-                    ImGui::Text("(");
+            int linkid = 0;
+            if (ImNodes::IsLinkHovered(&linkid)) {
+                if (auto r = scene->get_rel(linkid);
+                    r != nullptr && ImGui::BeginTooltip()) {
+                    SubSection(_("Relation %d"), linkid);
+                    Field(_("From"));
                     ImGui::SameLine();
-                    for (size_t i = 0; i < comp->outputs.size(); i++) {
-                        ToggleButton(comp->get(i));
-                        ImGui::SameLine();
-                    }
-                    ImGui::Text(")");
+                    NodeTypeTitle(r->from_node, r->from_sock);
+                    Field(_("To"));
+                    ImGui::SameLine();
+                    NodeTypeTitle(r->to_node, r->to_sock);
+                    Field(_("Value"));
+                    ImGui::SameLine();
+                    ToggleButton(r->value);
+                    EndSection();
+                    ImGui::EndTooltip();
                 }
-                EndSection();
-                ImGui::EndTooltip();
             }
-        }
 
-        int pin_id = 0;
-        if (ImNodes::IsPinHovered(&pin_id)) {
-            bool is_out = false;
-            sockid sock = 0;
-            Node nodeid = decode_pair(pin_id, &sock, &is_out);
-            if (ImGui::BeginTooltip()) {
-                sock = nodeid.type == Node::Type::COMPONENT_INPUT
-                        || nodeid.type == Node::Type::COMPONENT_OUTPUT
-                    ? nodeid.index
-                    : sock;
-                SubSection("%s Socket %u", is_out ? "Output" : "Input", sock);
-                Field("Owner");
-                ImGui::SameLine();
-                NodeTypeTitle(nodeid);
-                if (is_out) {
-                    Field("Value");
+            int nodeid_encoded = 0;
+            if (ImNodes::IsNodeHovered(&nodeid_encoded)) {
+                Node nodeid { static_cast<uint16_t>(0xFFFF & nodeid_encoded),
+                    (Node::Type)(nodeid_encoded >> 16) };
+                if (NRef<BaseNode> n = scene->get_base(nodeid);
+                    n != nullptr && ImGui::BeginTooltip()) {
+                    SubSection(_("Node %s@%d"), to_str<Node::Type>(nodeid.type),
+                        nodeid.index);
+                    Field(_("Position"));
                     ImGui::SameLine();
-                    if (nodeid.type == Node::Type::COMPONENT_INPUT
-                        || nodeid.type == Node::Type::COMPONENT_OUTPUT) {
-                        ToggleButton(
-                            scene->component_context->get_value(nodeid));
+                    ImGui::Text("(%d, %d)", n->point.x, n->point.y);
+                    Field(_("Connected"));
+                    ImGui::SameLine();
+                    ImGui::Text(
+                        "%s", n->is_connected() ? _("True") : _("False"));
+                    Field(_("Value"));
+                    ImGui::SameLine();
+                    if (nodeid.type != Node::Type::COMPONENT) {
+                        ToggleButton(n->get());
                     } else {
-                        ToggleButton(scene->get_base(nodeid)->get(sock));
+                        auto comp = scene->get_node<Component>(nodeid);
+                        ImGui::Text("(");
+                        ImGui::SameLine();
+                        for (size_t i = 0; i < comp->outputs.size(); i++) {
+                            ToggleButton(comp->get(i));
+                            ImGui::SameLine();
+                        }
+                        ImGui::Text(")");
                     }
+                    EndSection();
+                    ImGui::EndTooltip();
                 }
-                EndSection();
-                ImGui::EndTooltip();
             }
-        }
-        int start_pin_id = 0;
-        int end_pin_id   = 0;
-        if (ImNodes::IsLinkCreated(&start_pin_id, &end_pin_id)) {
-            sockid from_sock = 0, to_sock = 0;
-            Node from = decode_pair(start_pin_id, &from_sock);
-            Node to   = decode_pair(end_pin_id, &to_sock);
-            if (!scene->connect(to, to_sock, from, from_sock)) {
-                tabs::notify();
-            }
-        };
-        if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)
-            && ImNodes::NumSelectedNodes() > 0) {
-            size_t node_s = ImNodes::NumSelectedNodes();
-            size_t link_s = ImNodes::NumSelectedLinks();
-            if (node_s && link_s) {
-                L_INFO("Context for Nodes && Links");
 
-            } else if (node_s) {
-                L_INFO("Context for Nodes");
-            } else if (link_s) {
-                L_INFO("Context for Links");
+            int pin_id = 0;
+            if (ImNodes::IsPinHovered(&pin_id)) {
+                bool is_out = false;
+                sockid sock = 0;
+                Node nodeid = decode_pair(pin_id, &sock, &is_out);
+                if (ImGui::BeginTooltip()) {
+                    sock = nodeid.type == Node::Type::COMPONENT_INPUT
+                            || nodeid.type == Node::Type::COMPONENT_OUTPUT
+                        ? nodeid.index
+                        : sock;
+                    SubSection(_("%s Socket %u"),
+                        is_out ? _("Output") : _("Input"), sock);
+                    Field(_("Owner"));
+                    ImGui::SameLine();
+                    NodeTypeTitle(nodeid);
+                    if (is_out) {
+                        Field(_("Value"));
+                        ImGui::SameLine();
+                        if (nodeid.type == Node::Type::COMPONENT_INPUT
+                            || nodeid.type == Node::Type::COMPONENT_OUTPUT) {
+                            ToggleButton(
+                                scene->component_context->get_value(nodeid));
+                        } else {
+                            ToggleButton(scene->get_base(nodeid)->get(sock));
+                        }
+                    }
+                    EndSection();
+                    ImGui::EndTooltip();
+                }
             }
+            int start_pin_id = 0;
+            int end_pin_id   = 0;
+            if (ImNodes::IsLinkCreated(&start_pin_id, &end_pin_id)) {
+                sockid from_sock = 0, to_sock = 0;
+                Node from = decode_pair(start_pin_id, &from_sock);
+                Node to   = decode_pair(end_pin_id, &to_sock);
+                if (!scene->connect(to, to_sock, from, from_sock)) {
+                    tabs::notify();
+                }
+            };
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)
+                && ImNodes::NumSelectedNodes() > 0) {
+                size_t node_s = ImNodes::NumSelectedNodes();
+                size_t link_s = ImNodes::NumSelectedLinks();
+                if (node_s && link_s) {
+                    L_INFO("Context for Nodes && Links");
+
+                } else if (node_s) {
+                    L_INFO("Context for Nodes");
+                } else if (link_s) {
+                    L_INFO("Context for Links");
+                }
+            }
+        } else {
+            ImNodes::EndNodeEditor();
         }
     }
     ImGui::End();

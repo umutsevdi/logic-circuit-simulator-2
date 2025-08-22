@@ -83,8 +83,7 @@ constexpr const char* errmsg(Error e)
     switch (e) {
     case OK: return "Operation is successful.";
     case INCOMPLETE_INSTR:
-        return "Parser encountered end of file before end of a "
-               "instruction.";
+        return "Parser encountered end of file before end of a instruction.";
     case INVALID_BYTE:
         return "Deserialization failed due to unexpected byte in the file.";
     case INVALID_STRING: return "Parser encountered a invalid string. ";

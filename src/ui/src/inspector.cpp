@@ -25,7 +25,8 @@ void Inspector(NRef<Scene> scene)
     if (!user_data.inspector) {
         return;
     }
-    if (ImGui::Begin("Inspector", &user_data.inspector)) {
+    std::string title = std::string { _("Inspector") } + "###Inspector";
+    if (ImGui::Begin(title.c_str(), &user_data.inspector)) {
         if (scene != nullptr && ImNodes::NumSelectedNodes() > 0) {
             int len = ImNodes::NumSelectedNodes();
             ImNodes::GetSelectedNodes(nodeids);
@@ -43,7 +44,7 @@ void Inspector(NRef<Scene> scene)
                     };
                 }
                 ImGui::SameLine();
-                if (IconButton<NORMAL>(ICON_LC_DELETE, "Delete All")) {
+                if (IconButton<NORMAL>(ICON_LC_DELETE, _("Delete All"))) {
                     ImNodes::ClearNodeSelection();
                     for (int i = 0; i < len; i++) {
                         Node node = decode_pair(nodeids[i]);
@@ -67,7 +68,7 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
     const static ImVec2 __table_l_size = ImGui::CalcTextSize("SOCKET COUNT");
 
     Section("%s@%d", to_str<Node::Type>(node.type), node.index);
-    if (IconButton<NORMAL>(ICON_LC_EYE, "Focus")) {
+    if (IconButton<NORMAL>(ICON_LC_EYE, _("Focus"))) {
         ImNodes::ClearNodeSelection();
         switch (node.type) {
         case Node::Type::COMPONENT_INPUT:
@@ -80,7 +81,7 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
     if (node.type != Node::Type::COMPONENT_OUTPUT
         && node.type != Node::Type::COMPONENT_INPUT) {
         ImGui::SameLine();
-        if (IconButton<NORMAL>(ICON_LC_TRASH_2, "Delete Node")) {
+        if (IconButton<NORMAL>(ICON_LC_TRASH_2, _("Delete Node"))) {
             ImNodes::ClearNodeSelection();
             L_INFO("remove %s %d:%d", node, to_str<Node>(node), node.index,
                 node.type);
@@ -96,14 +97,15 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
 
         ImGui::NextColumn();
         ImGui::TableSetupColumn("##Value", ImGuiTableColumnFlags_WidthStretch);
-        TablePair(Field("Id"), ImGui::Text("%u", node.index));
+        TablePair(Field(_("Id")), ImGui::Text("%u", node.index));
         TablePair(
-            Field("Type"), ImGui::Text("%s", to_str<Node::Type>(node.type)));
+            Field(_("Type")), ImGui::Text("%s", to_str<Node::Type>(node.type)));
 
         if (node.type != Node::Type::COMPONENT_INPUT
             && node.type != Node::Type::COMPONENT_OUTPUT) {
-            TablePair(Field("Position"));
-            if (PositionSelector(scene->get_base(node)->point, "Inspector")) {
+            TablePair(Field(_("Position")));
+            if (PositionSelector(
+                    scene->get_base(node)->point, _("Inspector"))) {
                 tabs::notify();
             }
         }
@@ -127,8 +129,8 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
     static float values[SIZE] = { 0 };
     static int frame_count    = 0;
     if (_node->is_timer()) {
-        TablePair(Field("Value"), ToggleButton(_node->get()));
-        TablePair(Field("Frequency"));
+        TablePair(Field(_("Value")), ToggleButton(_node->get()));
+        TablePair(Field(_("Frequency")));
         float freq_value = static_cast<float>(_node->_freq) / 10.f;
         if (ImGui::SliderFloat("Hz", &freq_value, 0.1f, 5.0f, "%.1f")) {
             if (freq_value != _node->_freq) {
@@ -145,20 +147,20 @@ static void _inspector_input_node(NRef<Scene> scene, Node node)
         ImGui::PlotLines("##Frequency", values, SIZE, 0, nullptr, 0.0f, 1.0f);
     } else {
         TablePair(
-            Field("Value"), State old = _node->get();
+            Field(_("Value")), State old = _node->get();
             if (State t = ToggleButton(old, true);
                 t != old) { _node->toggle(); });
     }
 
-    TablePair(Field("Outputs"));
+    TablePair(Field(_("Outputs")));
     if (ImGui::BeginTable("InputList", 3,
             ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
-        ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Socket"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
-            "Connection", ImGuiTableColumnFlags_WidthStretch);
+            _("Connection"), ImGuiTableColumnFlags_WidthStretch);
         ImGui::NextColumn();
-        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Value"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
         TablePair(Field("1"));
         _output_table(&scene, _node->output);
@@ -175,7 +177,7 @@ static void _inspector_output_node(NRef<Scene> scene, Node node)
     TablePair(Field("Value"), ToggleButton(_node->get()));
     std::vector<relid> in;
     in.push_back(_node->input);
-    TablePair(Field("Inputs"));
+    TablePair(Field(_("Inputs")));
     _input_table(&scene, in);
     ImGui::EndTable();
 }
@@ -185,11 +187,11 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
     const static ImVec2 __selector_size = ImGui::CalcTextSize("-000000000000");
 
     auto _node = scene->get_node<Gate>(node);
-    TablePair(Field("Value"), ToggleButton(_node->get()));
-    TablePair(Field("Gate Type"),
+    TablePair(Field(_("Value")), ToggleButton(_node->get()));
+    TablePair(Field(_("Gate Type")),
         ImGui::Text("%s", to_str<Gate::Type>(_node->type())));
     ImGui::BeginDisabled(_node->type() == Gate::Type::NOT);
-    TablePair(Field("Socket Count"));
+    TablePair(Field(_("Socket Count")));
     size_t socket_count = _node->inputs.size();
     size_t inc          = 1;
     ImGui::PushItemWidth(__selector_size.x);
@@ -207,18 +209,18 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
     ImGui::EndDisabled();
     ImGui::TableNextRow();
     ImGui::TableSetColumnIndex(0);
-    TablePair(Field("Inputs"));
+    TablePair(Field(_("Inputs")));
     _input_table(&scene, _node->inputs);
 
-    TablePair(Field("Outputs"));
+    TablePair(Field(_("Outputs")));
     if (ImGui::BeginTable("InputList", 3,
             ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
-        ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Socket"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
-            "Connection", ImGuiTableColumnFlags_WidthStretch);
+            _("Connection"), ImGuiTableColumnFlags_WidthStretch);
         ImGui::NextColumn();
-        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Value"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
         TablePair(Field("1"));
         _output_table(&scene, _node->output);
@@ -232,7 +234,7 @@ static void _inspector_gate_node(NRef<Scene> scene, Node node)
 static void _inspector_component_node(NRef<Scene> scene, Node node)
 {
     auto _node = scene->get_node<Component>(node);
-    TablePair(Field("Value"));
+    TablePair(Field(_("Value")));
     ImGui::Text("(");
     ImGui::SameLine();
     for (size_t i = 0; i < _node->outputs.size(); i++) {
@@ -240,17 +242,17 @@ static void _inspector_component_node(NRef<Scene> scene, Node node)
         ImGui::SameLine();
     }
     ImGui::Text(")");
-    TablePair(Field("Inputs"));
+    TablePair(Field(_("Inputs")));
     _input_table(&scene, _node->inputs);
-    TablePair(Field("Outputs"));
+    TablePair(Field(_("Outputs")));
     if (ImGui::BeginTable("InputList", 3,
             ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
-        ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Socket"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
             "Connection", ImGuiTableColumnFlags_WidthStretch);
         ImGui::NextColumn();
-        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Value"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
 
         for (auto& out : _node->outputs) {
@@ -269,16 +271,17 @@ static void _inspector_component_context_node(NRef<Scene> scene, Node node)
 {
     ComponentContext& ctx = scene->component_context.value();
     if (node.type == Node::Type::COMPONENT_INPUT) {
-        TablePair(Field("Outputs"));
+        TablePair(Field(_("Outputs")));
         if (ImGui::BeginTable("InputsComponentInputList", 3,
                 ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn(
+                _("Socket"), ImGuiTableColumnFlags_WidthFixed);
             ImGui::NextColumn();
             ImGui::TableSetupColumn(
-                "Connection", ImGuiTableColumnFlags_WidthStretch);
+                _("Connection"), ImGuiTableColumnFlags_WidthStretch);
             ImGui::NextColumn();
             ImGui::TableSetupColumn(
-                "Value", ImGuiTableColumnFlags_WidthStretch);
+                _("Value"), ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
             for (size_t i = 0; i < ctx.inputs.size(); i++) {
                 TablePair(Field("%zu", i + 1));
@@ -295,7 +298,7 @@ static void _inspector_component_context_node(NRef<Scene> scene, Node node)
             ImGui::EndTable();
         }
     } else {
-        TablePair(Field("Inputs"));
+        TablePair(Field(_("Inputs")));
         _input_table(&scene, scene->component_context->outputs);
     }
     ImGui::EndTable();
@@ -305,15 +308,15 @@ static void _input_table(NRef<Scene> scene, const std::vector<relid>& inputs)
 {
     if (ImGui::BeginTable("Inputs", 4,
             ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
-        ImGui::TableSetupColumn("Socket", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Socket"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
-            "Connection", ImGuiTableColumnFlags_WidthStretch);
+            _("Connection"), ImGuiTableColumnFlags_WidthStretch);
         ImGui::NextColumn();
         ImGui::TableSetupColumn(
             "##Disconnect", ImGuiTableColumnFlags_WidthFixed);
         ImGui::NextColumn();
-        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(_("Value"), ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
         for (size_t i = 0; i < inputs.size(); i++) {
             TablePair(Field("%zu", i + 1));
@@ -351,16 +354,17 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
             ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg)) {
         ImGui::TableHeader("Outputs");
         ImGui::TableSetupColumn(
-            "Connection", ImGuiTableColumnFlags_WidthStretch);
+            _("Connection"), ImGuiTableColumnFlags_WidthStretch);
         ImGui::NextColumn();
-        ImGui::TableSetupColumn("Disconnect", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(
+            _("Disconnect"), ImGuiTableColumnFlags_WidthFixed);
         for (size_t i = 0; i < outputs.size(); i++) {
             ImGui ::TableNextRow();
             ImGui ::TableSetColumnIndex(0);
             ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
             if (outputs[i] == 0) {
-                ImGui::TextColored(
-                    get_active_style().black_bright, "DISCONNECTED");
+                ImGui::TextColored(get_active_style().black_bright, "%s",
+                    to_str<State>(State::DISABLED));
             } else {
                 NRef<Rel> r = scene->get_rel(outputs[i]);
                 NodeTypeTitle(r->to_node, r->to_sock);
@@ -387,7 +391,7 @@ static void _output_table(NRef<Scene> scene, const std::vector<relid>& outputs)
 static void _disconnect_button_tooltip()
 {
     if (ImGui::BeginTooltip()) {
-        ImGui::Text("Disconnect relation");
+        ImGui::Text(_("Disconnect relation"));
         ImGui::EndTooltip();
     }
 }

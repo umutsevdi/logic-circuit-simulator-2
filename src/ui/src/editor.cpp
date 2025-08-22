@@ -1,5 +1,4 @@
 #include "common.h"
-#include "components.h"
 #include "configuration.h"
 #include "imnodes.h"
 #include "ui.h"

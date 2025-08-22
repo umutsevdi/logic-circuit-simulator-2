@@ -119,7 +119,7 @@ static bool _show_toast(
     height += ImGui::GetWindowHeight() + ImGui::GetStyle().ItemSpacing.y;
     ImGui::TextUnformatted(n.message.begin());
 
-    if (IconButton<NORMAL>(ICON_LC_EYE_OFF, "Dismiss")) {
+    if (IconButton<NORMAL>(ICON_LC_EYE_OFF, _("Dismiss"))) {
         n.duration = 0;
     }
     ImGui::End();

@@ -88,7 +88,7 @@ public:
     int rounded_corners        = 0;
     int scale                  = 100;
     std::string api_proxy      = API_ENDPOINT;
-    std::string language       = "en_us"; // TODO
+    std::string language       = "en_US";
     int startup_win_x          = 1980;
     int startup_win_y          = 1080;
     bool start_fullscreen      = true;

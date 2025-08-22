@@ -17,7 +17,6 @@ int main(int, char**);
 using namespace lcs;
 static void _cleanup(void)
 {
-    L_WARN("Shutdown requested.");
     fs::close();
     net::close();
 }

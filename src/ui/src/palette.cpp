@@ -15,55 +15,57 @@ void Palette(NRef<Scene> scene)
     }
     auto io = ImGui::GetIO();
 
-    if (ImGui::Begin("Palette", &user_data.palette)) {
+    std::string title = std::string { _("Palette") } + "###Palette";
+    if (ImGui::Begin(title.c_str(), &user_data.palette)) {
         ImGui::BeginDisabled(scene == nullptr);
-        if (ImGui::CollapsingHeader("Gates", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader(
+                _("Gates"), ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::BeginTable("##GatesPalette", 2);
             ImGui::TableSetupColumn("##G1", ImGuiTableColumnFlags_WidthStretch);
             ImGui::NextColumn();
             ImGui::TableSetupColumn("##G2", ImGuiTableColumnFlags_WidthStretch);
             TablePair(
-                if (ImGui::Button("Input")) {
+                if (ImGui::Button(_("Input"))) {
                     dragged_node = scene->add_node<Input>();
                     is_dragging  = true;
                 },
-                if (ImGui::Button("Output")) {
+                if (ImGui::Button(_("Output"))) {
                     dragged_node = scene->add_node<Output>();
                     is_dragging  = true;
                 });
             TablePair(
-                if (ImGui::Button("Timer")) {
+                if (ImGui::Button(_("Timer"))) {
                     dragged_node = scene->add_node<Input>(10u);
                     is_dragging  = true;
                 },
-                if (ImGui::Button("NOT Gate")) {
+                if (ImGui::Button(_("NOT Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::NOT);
                     is_dragging  = true;
                 });
             TablePair(
-                if (ImGui::Button("AND Gate")) {
+                if (ImGui::Button(_("AND Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::AND);
                     is_dragging  = true;
                 },
-                if (ImGui::Button("NAND Gate")) {
+                if (ImGui::Button(_("NAND Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::NAND);
                     is_dragging  = true;
                 });
             TablePair(
-                if (ImGui::Button("OR Gate")) {
+                if (ImGui::Button(_("OR Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::OR);
                     is_dragging  = true;
                 },
-                if (ImGui::Button("NOR Gate")) {
+                if (ImGui::Button(_("NOR Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::NOR);
                     is_dragging  = true;
                 });
             TablePair(
-                if (ImGui::Button("XOR Gate")) {
+                if (ImGui::Button(_("XOR Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::XOR);
                     is_dragging  = true;
                 },
-                if (ImGui::Button("XNOR Gate")) {
+                if (ImGui::Button(_("XNOR Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::XNOR);
                     is_dragging  = true;
                 });

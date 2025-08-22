@@ -146,6 +146,7 @@ void init(bool)
             + std::string(curl_easy_strerror(res)));
     }
     _thread = std::thread { [&]() {
+        L_INFO("Module lcs::net is ready");
         bool term = false;
         while (true) {
             std::vector<size_t> erase_list;

@@ -43,32 +43,33 @@ State ToggleButton(State state, bool clickable)
         if (clickable) {
             ImGui::PushStyleColor(ImGuiCol_Button, style.green);
             ImGui::PushStyleColor(ImGuiCol_Text, style.fg);
-            if (ImGui::Button("TRUE ")) {
+            if (ImGui::Button(to_str<State>(State::TRUE))) {
                 state = FALSE;
             };
             ImGui::PopStyleColor();
         } else {
-            ImGui::TextColored(style.green, "TRUE");
+            ImGui::TextColored(style.green, "%s", to_str<State>(State::TRUE));
         }
         break;
     case State::FALSE:
         if (clickable) {
             ImGui::PushStyleColor(ImGuiCol_Button, style.red);
-            if (ImGui::Button("FALSE")) {
+            if (ImGui::Button(to_str<State>(State::FALSE))) {
                 state = TRUE;
             };
         } else {
-            ImGui::TextColored(style.red, "FALSE");
+            ImGui::TextColored(style.red, "%s", to_str<State>(State::FALSE));
         }
         break;
     case State::DISABLED:
         if (clickable) {
             ImGui::PushStyleColor(ImGuiCol_Button, style.black_bright);
             ImGui::PushStyleColor(ImGuiCol_Text, style.white_bright);
-            ImGui::Button("DISCONNECTED");
+            ImGui::Button(_(to_str<State>(State::DISABLED)));
             ImGui::PopStyleColor();
         } else {
-            ImGui::TextColored(style.black_bright, "DISCONNECTED");
+            ImGui::TextColored(
+                style.black_bright, "%s", to_str<State>(State::DISABLED));
         }
         break;
     }

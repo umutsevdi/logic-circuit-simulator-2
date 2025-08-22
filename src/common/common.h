@@ -11,6 +11,7 @@
  ******************************************************************************/
 
 #include "errors.h"
+#include <libintl.h>
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -18,6 +19,8 @@
 #include <functional>
 #include <string>
 #include <vector>
+
+#define _(String) gettext(String)
 
 #define VERSION 1
 
@@ -110,11 +113,11 @@ private:
     static constexpr const char* _severity_to_str(Severity l)
     {
         switch (l) {
-        case FATAL: return "FATAL";
-        case DEBUG: return "DEBUG";
-        case INFO: return "INFO ";
-        case WARN: return "WARN ";
-        default: return "ERROR";
+        case FATAL: return _("FATAL");
+        case DEBUG: return _("DEBUG");
+        case INFO: return _("INFO ");
+        case WARN: return _("WARN ");
+        default: return _("ERROR");
         }
     }
 };
@@ -188,6 +191,8 @@ namespace fs {
     extern std::filesystem::path LIBRARY;
     extern std::filesystem::path CACHE;
     extern std::filesystem::path MISC;
+    extern std::filesystem::path LOCALE;
+    extern std::vector<std::string> LOCALE_LANG;
     extern std::string INI;
     extern FILE* __TEST_LOG__;
 

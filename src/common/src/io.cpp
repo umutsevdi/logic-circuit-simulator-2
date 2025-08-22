@@ -80,6 +80,8 @@ namespace fs {
     std::filesystem::path LIBRARY;
     std::filesystem::path CACHE;
     std::filesystem::path MISC;
+    std::filesystem::path LOCALE;
+    std::vector<std::string> LOCALE_LANG {};
     std::string INI;
     FILE* __TEST_LOG__ = nullptr;
 
@@ -148,6 +150,7 @@ namespace fs {
         CACHE   = ROOT / ".cache";
         INI     = ROOT / "profile.ini";
         MISC    = ROOT / "misc";
+        LOCALE  = MISC / "locale";
         try {
             if (!std::filesystem::exists(TMP)) {
                 L_DEBUG("Creating %s directory.", TMP.c_str());
@@ -156,6 +159,10 @@ namespace fs {
             if (!std::filesystem::exists(MISC)) {
                 L_DEBUG("Creating %s directory.", MISC.c_str());
                 std::filesystem::create_directories(MISC);
+            }
+            if (!std::filesystem::exists(LOCALE)) {
+                L_DEBUG("Creating %s directory.", LOCALE.c_str());
+                std::filesystem::create_directories(LOCALE);
             }
             if (!std::filesystem::exists(LIBRARY)) {
                 L_DEBUG("Creating %s directory.", LIBRARY.c_str());
@@ -172,10 +179,18 @@ namespace fs {
                 fs::write(INI, _default_ini);
                 L_DEBUG("Placing default layout");
             }
-            L_DEBUG(APPNAME_LONG " file system is ready.");
         } catch (const std::exception& e) {
             L_ERROR("Directory creation failed. %s ", e.what());
         }
+        for (auto& l : std::filesystem::directory_iterator(LOCALE)) {
+            if (l.exists() && l.is_directory()) {
+                std::string localname = l.path().filename();
+                L_DEBUG("Locale %s discovered", localname.c_str());
+                LOCALE_LANG.push_back(
+                    localname.substr(0, localname.rfind('.')));
+            }
+        }
+        L_INFO("Module lcs::fs is ready");
     }
 
 #define F_BOLD "\033[1m"

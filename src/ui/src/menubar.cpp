@@ -29,44 +29,44 @@ void MenuBar(void)
 
     ImGui::PushFont(get_font(FontFlags::NORMAL));
     if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (IconButton<NORMAL>(ICON_LC_PLUS, "New")) {
+        if (ImGui::BeginMenu(_("File"))) {
+            if (IconButton<NORMAL>(ICON_LC_PLUS, _("New"))) {
                 _show_new = true;
             }
-            if (IconButton<NORMAL>(ICON_LC_FOLDER_OPEN, "Open")) {
+            if (IconButton<NORMAL>(ICON_LC_FOLDER_OPEN, _("Open"))) {
                 dialog::open_file();
             }
             ImGui::BeginDisabled(tabs::active() == nullptr);
-            if (IconButton<NORMAL>(ICON_LC_SAVE, "Save")) {
+            if (IconButton<NORMAL>(ICON_LC_SAVE, _("Save"))) {
                 if (tabs::save() == Error::NO_SAVE_PATH_DEFINED) {
                     dialog::save_file_as();
                 };
             }
 
-            if (IconButton<NORMAL>(ICON_LC_SAVE_ALL, "Save As")) {
+            if (IconButton<NORMAL>(ICON_LC_SAVE_ALL, _("Save As"))) {
                 dialog::save_file_as();
             }
             ImGui::EndDisabled();
-            if (IconButton<NORMAL>(ICON_LC_SETTINGS_2, "Preferences")) {
+            if (IconButton<NORMAL>(ICON_LC_SETTINGS_2, _("Preferences"))) {
                 _show_pref = true;
             }
-            if (IconButton<NORMAL>(ICON_LC_X, "Close")) {
+            if (IconButton<NORMAL>(ICON_LC_X, _("Close"))) {
                 _popup_close();
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Edit")) {
+        if (ImGui::BeginMenu(_("Edit"))) {
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("View")) {
-            ImGui::Checkbox("Palette", &user_data.palette);
-            ImGui::Checkbox("Inspector", &user_data.inspector);
-            ImGui::Checkbox("Console", &user_data.console);
-            ImGui::Checkbox("Scene Info", &user_data.scene_info);
+        if (ImGui::BeginMenu(_("View"))) {
+            ImGui::Checkbox(_("Palette"), &user_data.palette);
+            ImGui::Checkbox(_("Inspector"), &user_data.inspector);
+            ImGui::Checkbox(_("Console"), &user_data.console);
+            ImGui::Checkbox(_("Scene Info"), &user_data.scene_info);
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Help")) {
-            if (IconButton<NORMAL>(ICON_LC_INFO, "About")) {
+        if (ImGui::BeginMenu(_("Help"))) {
+            if (IconButton<NORMAL>(ICON_LC_INFO, _("About"))) {
                 _show_about = true;
             }
             ImGui::EndMenu();
@@ -144,7 +144,7 @@ void MenuBar(void)
 
 void tab_window(void)
 {
-    ImGui::BeginTabBar("Scene Tabs", ImGuiTabBarFlags_FittingPolicyScroll);
+    ImGui::BeginTabBar(_("Scene Tabs"), ImGuiTabBarFlags_FittingPolicyScroll);
     tabs::for_each([](std::string_view name, std::string_view path,
                        bool is_saved, bool is_active) -> bool {
         bool result = false;
@@ -156,7 +156,7 @@ void tab_window(void)
         } else if (!path.empty()) {
             scene_name = path;
         } else {
-            scene_name = "Untitled Scene";
+            scene_name = _("Untitled Scene");
         }
         if (ImGui::BeginTabItem(scene_name.begin(), &keep,
                 (is_saved ? ImGuiTabItemFlags_None
@@ -187,8 +187,10 @@ static void _popup_new(void)
     if (!_show_new) {
         return;
     }
-    ImGui::OpenPopup("New Scene");
-    if (ImGui::BeginPopupModal("New Scene", &_show_new,
+
+    std::string title = std::string { _("New Scene") } + "###NewScene";
+    ImGui::OpenPopup(title.c_str());
+    if (ImGui::BeginPopupModal(title.c_str(), &_show_new,
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings)) {
         static bool is_scene         = true;
         static char author[60]       = "local";
@@ -204,39 +206,39 @@ static void _popup_new(void)
             ImGui::TableSetupColumn(
                 "##Value", ImGuiTableColumnFlags_WidthStretch);
 
-            TablePair(Field("Scene Name"),
+            TablePair(Field(_("Scene Name")),
                 ImGui::InputText("##SceneCreate_Name", name, 128,
                     ImGuiInputTextFlags_CharsNoBlank));
 
-            TablePair(Field("Author"),
+            TablePair(Field(_("Author")),
                 ImGui::PushFont(
                     get_font(FontFlags::ITALIC | FontFlags::NORMAL)),
                 ImGui::InputText("##SceneCreate_Author", author, 60,
                     ImGuiInputTextFlags_ReadOnly),
                 ImGui::PopFont());
 
-            TablePair(Field("Description"),
+            TablePair(Field(_("Description")),
                 ImGui::InputTextMultiline(
                     "##SceneCreate_Desc", description, 512));
 
-            TablePair(Field("Type"));
+            TablePair(Field(_("Type")));
             if (ImGui::RadioButton("##IsScene", is_scene)) {
                 is_scene = true;
             }
             ImGui::SameLine();
-            IconText<NORMAL>(ICON_LC_LAND_PLOT, "Scene");
+            IconText<NORMAL>(ICON_LC_LAND_PLOT, _("Scene"));
             ImGui::SameLine();
             if (ImGui::RadioButton("##IsComponent", !is_scene)) {
                 is_scene = false;
             }
             ImGui::SameLine();
-            IconText<NORMAL>(ICON_LC_PACKAGE, "Component");
+            IconText<NORMAL>(ICON_LC_PACKAGE, _("Component"));
 
             if (!is_scene) {
                 ImGui::Separator();
-                TablePair(Field("Input Size"));
+                TablePair(Field(_("Input Size")));
                 ImGui::InputInt("##CompInputSize", (int*)&input_size);
-                TablePair(Field("Output Size"));
+                TablePair(Field(_("Output Size")));
                 ImGui::InputInt("##CompOutputSize", (int*)&output_size);
             }
             TablePair(
@@ -249,7 +251,7 @@ static void _popup_new(void)
                     }
                     _show_new = false;
                 },
-                if (ImGui::Button("Cancel")) {
+                if (ImGui::Button(_("Cancel"))) {
                     ImGui::CloseCurrentPopup();
                     _show_new = false;
                 });
@@ -272,20 +274,21 @@ static void _popup_close(void)
             _show_close = false;
         }
     } else {
-        ImGui::OpenPopup("Close Scene");
-        if (ImGui::BeginPopupModal("Close Scene", &_show_close,
+        std::string title = std::string { _("Close Scene") } + "###CloseScene";
+        ImGui::OpenPopup(title.c_str());
+        if (ImGui::BeginPopupModal(title.c_str(), &_show_close,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings)) {
-            ImGui::Text(
-                "You have unsaved changes. Would you like to save your changes "
-                "before closing?");
-            if (IconButton<NORMAL>(ICON_LC_SAVE, "Save & Close")
+            ImGui::Text(_("You have unsaved changes. Would you like to save "
+                          "your changes before closing?"));
+            if (IconButton<NORMAL>(ICON_LC_SAVE, _("Save & Close"))
                 && dialog::save_file_as() == Error::OK) {
                 if (!tabs::close()) {
                     _show_close = false;
                 }
             }
             ImGui::SameLine();
-            if (IconButton<NORMAL>(ICON_LC_SAVE_OFF, "Exit Without Saving")) {
+            if (IconButton<NORMAL>(
+                    ICON_LC_SAVE_OFF, _("Exit Without Saving"))) {
                 if (!tabs::close()) {
                     _show_close = false;
                 }
@@ -305,19 +308,19 @@ static void _popup_about(void)
     if (!_show_about) {
         return;
     }
-    ImGui::OpenPopup("About");
-    if (ImGui::BeginPopupModal("About", &_show_about,
+    std::string title = std::string { _("About") } + "###About";
+    ImGui::OpenPopup(title.c_str());
+    if (ImGui::BeginPopupModal(title.c_str(), &_show_about,
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings)) {
-        ImGui::Text("Logic Circuit Simulator is a free and open-source "
-                    "cross-platform desktop\r\n"
-                    "application to simulate logic circuits.");
-        ImGui::Text("Developed by");
+        ImGui::Text(_(
+            "Logic Circuit Simulator is a free and open-source cross-platform "
+            "desktop\napplication to simulate logic circuits."));
+        ImGui::Text(_("Developer: "));
         ImGui::SameLine();
         if (ImGui::TextLink("Umut Sevdi")) {
             open_browser(site);
         }
-        ImGui::SameLine();
-        ImGui::Text(". Source code is available at ");
+        ImGui::Text(_("Source code is available at "));
         ImGui::SameLine();
         if (ImGui::TextLink("GitHub.")) {
             open_browser(prj);
@@ -326,13 +329,13 @@ static void _popup_about(void)
             "License", ImVec2(0, 450), ImGuiChildFlags_FrameStyle);
         ImGui::TextUnformatted(__LICENSE__);
         ImGui::EndChild();
-        ImGui::TextUnformatted("Contact");
+        ImGui::TextUnformatted(_("Contact"));
         ImGui::SameLine();
-        if (IconButton<NORMAL>(ICON_LC_MAIL, "Email")) {
+        if (IconButton<NORMAL>(ICON_LC_MAIL, _("Email"))) {
             open_browser(mail);
         }
         ImGui::SameLine();
-        if (IconButton<NORMAL>(ICON_LC_LINK, "Website")) {
+        if (IconButton<NORMAL>(ICON_LC_LINK, _("Website"))) {
             open_browser(site);
         }
         ImGui::SameLine();
@@ -346,53 +349,67 @@ static void _popup_about(void)
 static void _color_buttons(const LcsTheme& style)
 {
     ImGui::PushID(style.name.c_str());
-    ImGui::ColorButton("Background", style.bg);
+    ImGui::ColorButton(_("Background"), style.bg);
     ImGui::SameLine();
-    ImGui::ColorButton("Foreground", style.fg);
+    ImGui::ColorButton(_("Foreground"), style.fg);
 
-    ImGui::ColorButton("Black", style.black);
+    ImGui::ColorButton(_("Black"), style.black);
     ImGui::SameLine();
-    ImGui::ColorButton("Red", style.red);
+    ImGui::ColorButton(_("Red"), style.red);
     ImGui::SameLine();
-    ImGui::ColorButton("Green", style.green);
+    ImGui::ColorButton(_("Green"), style.green);
     ImGui::SameLine();
-    ImGui::ColorButton("Yellow", style.yellow);
+    ImGui::ColorButton(_("Yellow"), style.yellow);
 
-    ImGui::ColorButton("Black Bright", style.black_bright);
+    ImGui::ColorButton(_("Black Bright"), style.black_bright);
     ImGui::SameLine();
-    ImGui::ColorButton("Red Bright", style.red_bright);
+    ImGui::ColorButton(_("Red Bright"), style.red_bright);
     ImGui::SameLine();
-    ImGui::ColorButton("Green Bright", style.green_bright);
+    ImGui::ColorButton(_("Green Bright"), style.green_bright);
     ImGui::SameLine();
-    ImGui::ColorButton("Yellow Bright", style.yellow_bright);
+    ImGui::ColorButton(_("Yellow Bright"), style.yellow_bright);
 
-    ImGui::ColorButton("Blue", style.blue);
+    ImGui::ColorButton(_("Blue"), style.blue);
     ImGui::SameLine();
-    ImGui::ColorButton("Magenta", style.magenta);
+    ImGui::ColorButton(_("Magenta"), style.magenta);
     ImGui::SameLine();
-    ImGui::ColorButton("Cyan", style.cyan);
+    ImGui::ColorButton(_("Cyan"), style.cyan);
     ImGui::SameLine();
-    ImGui::ColorButton("White", style.white);
+    ImGui::ColorButton(_("White"), style.white);
 
-    ImGui::ColorButton("Blue Bright", style.blue_bright);
+    ImGui::ColorButton(_("Blue Bright"), style.blue_bright);
     ImGui::SameLine();
-    ImGui::ColorButton("Magenta Bright", style.magenta_bright);
+    ImGui::ColorButton(_("Magenta Bright"), style.magenta_bright);
     ImGui::SameLine();
-    ImGui::ColorButton("Cyan Bright", style.cyan_bright);
+    ImGui::ColorButton(_("Cyan Bright"), style.cyan_bright);
     ImGui::SameLine();
-    ImGui::ColorButton("White Bright", style.white_bright);
+    ImGui::ColorButton(_("White Bright"), style.white_bright);
     ImGui::PopID();
 }
 void _popup_pref(void)
 {
     static int light_idx = 0;
     static int dark_idx  = 0;
+    static int lang_idx  = -1;
+    static std::vector<const char*> lang_data {};
+    if (lang_data.empty()) {
+        lang_data.reserve(fs::LOCALE_LANG.size());
+        for (size_t i = 0; i < fs::LOCALE_LANG.size(); i++) {
+            lang_data.push_back(fs::LOCALE_LANG[i].c_str());
+        }
+    }
+    for (size_t i = 0; i < fs::LOCALE_LANG.size(); i++) {
+        if (fs::LOCALE_LANG[i] == cfg.language) {
+            lang_idx = i;
+            break;
+        }
+    }
     static const ImVec2 __table_l_size
         = ImGui::CalcTextSize("LIGHT THEME STYLE");
-    static const char* pref_table[] = {
-        "Follow OS",
-        "Always Light",
-        "Always Dark",
+    const char* pref_table[] = {
+        _("Follow Device"),
+        _("Light Theme"),
+        _("Dark Theme"),
     };
     if (!_show_pref) {
         return;
@@ -412,8 +429,9 @@ void _popup_pref(void)
             }
         }
     }
-    bool keep = true;
-    ImGui::Begin("Preferences", &keep,
+    bool keep         = true;
+    std::string title = std::string { _("Preferences") } + "###Preferences";
+    ImGui::Begin(title.c_str(), &keep,
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
             | ImGuiWindowFlags_NoDocking
             | (!get_config().is_saved ? ImGuiWindowFlags_UnsavedDocument
@@ -421,7 +439,7 @@ void _popup_pref(void)
 
     ImGui::SetWindowPos(
         ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing);
-    Section("Appearance");
+    Section(_("Appearance"));
     if (ImGui::BeginTable(
             "##AppearanceTable", 2, ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableSetupColumn(
@@ -429,12 +447,19 @@ void _popup_pref(void)
         ImGui::NextColumn();
         ImGui::TableSetupColumn("##Value", ImGuiTableColumnFlags_WidthStretch);
 
-        TablePair(Field("UI Scale"));
+        TablePair(Field(_("UI Scale")));
         if (ImGui::SliderInt("%", &cfg.scale, 75, 150)) {
             cfg.is_applied = false;
         };
+        TablePair(Field(_("Language")));
+
+        if (ImGui::Combo(
+                "##Language", &lang_idx, lang_data.data(), lang_data.size())) {
+            cfg.is_applied = false;
+            cfg.language   = fs::LOCALE_LANG[lang_idx];
+        }
         {
-            TablePair(Field("Light Theme Style"));
+            TablePair(Field(_("Light Theme Style")));
             auto light_themes = get_available_styles(false);
             if (ImGui::Combo("##Select Theme", &light_idx, light_themes.data(),
                     light_themes.size())) {
@@ -445,7 +470,7 @@ void _popup_pref(void)
             _color_buttons(style);
         }
         {
-            TablePair(Field("Dark Theme Style"));
+            TablePair(Field(_("Dark Theme Style")));
             if (ImGui::Combo("##Select Theme Dark", &dark_idx,
                     dark_themes.data(), dark_themes.size())) {
                 cfg.is_applied = false;
@@ -454,22 +479,22 @@ void _popup_pref(void)
             const LcsTheme& style = ui::get_theme(cfg.dark_theme);
             _color_buttons(style);
         }
-        TablePair(Field("Rounded Corners"));
+        TablePair(Field(_("Rounded Corners")));
         if (ImGui::SliderInt(
                 "##Rounded Corners", &cfg.rounded_corners, 0, 20)) {
             cfg.is_applied = false;
         }
-        TablePair(Field("Theme Preference"));
+        TablePair(Field(_("Theme Preference")));
         if (ImGui::Combo(
                 "##ThemePreference", (int*)&cfg.preference, pref_table, 3)) {
             cfg.is_applied = false;
         }
-        TablePair(Field("Start in Fullscreen"));
+        TablePair(Field(_("Start in Fullscreen")));
         if (ImGui::Checkbox("##Fullscreen", &cfg.start_fullscreen)) {
             cfg.is_applied = false;
         };
         ImGui::BeginDisabled(cfg.start_fullscreen);
-        TablePair(Field("Startup Window"));
+        TablePair(Field(_("Startup Window")));
         Point p = { static_cast<int16_t>(cfg.startup_win_x),
             static_cast<int16_t>(cfg.startup_win_y) };
         if (PositionSelector(p, "##StartupWindow")) {
@@ -485,33 +510,34 @@ void _popup_pref(void)
     ImGui::Text(
         "FPS: %4.f Uptime: %4.f seconds", imio.Framerate, ImGui::GetTime());
     ImGui::BeginDisabled(cfg.is_applied);
-    if (IconButton<NORMAL>(ICON_LC_REDO_DOT, "Apply")) {
+    if (IconButton<NORMAL>(ICON_LC_REDO_DOT, _("Apply"))) {
         cfg.is_saved = false;
         set_config(cfg);
         cfg            = get_config();
         cfg.is_applied = true;
-        Toast(ICON_LC_SETTINGS_2, "Preferences",
-            "Configuration changes were applied.");
+        Toast(ICON_LC_SETTINGS_2, _("Preferences"),
+            _("Configuration changes were applied."));
     }
     ImGui::EndDisabled();
     ImGui::SameLine(ImGui::GetWindowSize().x * 5 / 6);
     ImGui::BeginDisabled(cfg.is_saved);
-    if (IconButton<NORMAL>(ICON_LC_SAVE, "Save")) {
+    if (IconButton<NORMAL>(ICON_LC_SAVE, _("Save"))) {
         set_config(cfg);
         cfg = get_config();
         save_config();
         cfg.is_applied = true;
         cfg.is_saved   = true;
         L_DEBUG("Configuration changes were saved.");
-        Toast(ICON_LC_SAVE, "Preferences", "Configuration changes were saved.");
+        Toast(ICON_LC_SAVE, _("Preferences"),
+            _("Configuration changes were saved."));
     }
     ImGui::EndDisabled();
     ImGui::End();
     if (!keep) {
         if (!get_config().is_saved) {
             L_DEBUG("Configuration changes were reverted.");
-            Toast(ICON_LC_UNDO, "Preferences",
-                "Configuration changes were reverted.");
+            Toast(ICON_LC_UNDO, _("Preferences"),
+                _("Configuration changes were reverted."));
             set_config(load_config());
             cfg = get_config();
         }

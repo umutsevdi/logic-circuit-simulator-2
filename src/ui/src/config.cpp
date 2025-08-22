@@ -5,6 +5,9 @@
 #include "json/value.h"
 // #include "port.h"
 #include <IconsLucide.h>
+#include <libintl.h>
+#include <clocale>
+#include <filesystem>
 
 namespace lcs {
 
@@ -20,6 +23,7 @@ const char* to_str<ui::Configuration::ThemePreference>(
 }
 
 namespace ui {
+    static void _set_locale(const std::string& locale);
 
     static Configuration::ThemePreference str_to_ThemePreference(
         const std::string& s)
@@ -37,10 +41,10 @@ namespace ui {
     Configuration& load_config(void)
     {
         std::string data;
-        ;
         if (!fs::read(fs::ROOT / "config.json", data)) {
-            L_ERROR("Configuration file was not found at %s",
-                fs::ROOT / "config.json");
+            L_WARN("Configuration file was not found at %s. Initializing "
+                   "defaults.",
+                (fs::ROOT / "config.json").c_str());
             fs::write(
                 fs::ROOT / "config.json", _config.to_json().toStyledString());
             return _config;
@@ -59,6 +63,7 @@ namespace ui {
             _config = Configuration();
         }
         L_DEBUG("Configuration was loaded.");
+        _set_locale(_config.language);
         return _config;
     }
 
@@ -66,6 +71,10 @@ namespace ui {
 
     void set_config(const Configuration& cfg)
     {
+        if (cfg.language != _config.language) {
+            L_INFO("Update locale to %s", cfg.language.c_str());
+            _set_locale(cfg.language);
+        }
         _config            = cfg;
         _config.is_applied = false;
         _config.is_saved   = false;
@@ -81,8 +90,8 @@ namespace ui {
     Json::Value Configuration::to_json() const
     {
         Json::Value v;
-        v["theme"]["light"]       = get_theme(light_theme).name;
-        v["theme"]["dark"]        = get_theme(dark_theme).name;
+        v["theme"]["light"]       = light_theme;
+        v["theme"]["dark"]        = dark_theme;
         v["theme"]["prefer"]      = to_str<ThemePreference>(preference);
         v["theme"]["corners"]     = rounded_corners;
         v["scale"]                = scale;
@@ -127,6 +136,30 @@ namespace ui {
             return ERROR(INVALID_JSON);
         }
         return Error::OK;
+    }
+
+    static void _set_locale(const std::string& locale)
+    {
+        std::filesystem::path mo_path
+            = fs::LOCALE / locale / "LC_MESSAGES" / (locale + ".mo");
+        const char* domain = APPNAME_BIN;
+        const char* dir    = fs::LOCALE.c_str();
+        if (!(bindtextdomain(domain, dir)
+                && bind_textdomain_codeset(domain, "UTF-8"))) {
+            L_ERROR("Error while updating translations.");
+            return;
+        }
+
+        if (setlocale(LC_ALL, (locale + ".UTF-8").c_str()) == nullptr) {
+            L_WARN("setlocale failed for %s", locale.c_str());
+        }
+
+        if (setenv("LC_ALL", locale.c_str(), 1)) {
+            L_WARN("Not all LOCALE environment variables were updated.");
+        }
+        if (!textdomain(domain)) {
+            L_WARN("textdomain failed");
+        };
     }
 
     UserData user_data {
@@ -193,6 +226,7 @@ namespace ui {
         handler.ApplyAllFn = _apply_all;
         handler.UserData   = nullptr;
         ctx->SettingsHandlers.push_back(handler);
+        L_DEBUG("Bind .ini completed.");
     }
 
 } // namespace ui

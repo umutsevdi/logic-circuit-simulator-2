@@ -5,12 +5,12 @@ namespace lcs {
 template <> const char* to_str<Node::Type>(Node::Type s)
 {
     switch (s) {
-    case Node::Type::GATE: return "Gate";
-    case Node::Type::COMPONENT: return "Component";
-    case Node::Type::INPUT: return "Input";
-    case Node::Type::OUTPUT: return "Output";
-    case Node::Type::COMPONENT_INPUT: return "Component Input";
-    case Node::Type::COMPONENT_OUTPUT: return "Component Output";
+    case Node::Type::GATE: return _("Gate");
+    case Node::Type::COMPONENT: return _("Component");
+    case Node::Type::INPUT: return _("Input");
+    case Node::Type::OUTPUT: return _("Output");
+    case Node::Type::COMPONENT_INPUT: return _("Component Input");
+    case Node::Type::COMPONENT_OUTPUT: return _("Component Output");
     default: return "Unknown";
     }
 }
@@ -28,7 +28,7 @@ template <> const char* to_str<State>(State s)
     switch (s) {
     case State::TRUE: return "TRUE";
     case State::FALSE: return "FALSE";
-    default: return "DISABLED";
+    default: return _("DISABLED");
     }
 }
 
