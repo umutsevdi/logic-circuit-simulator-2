@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 /*******************************************************************************
  * \file
  * File: common.h
@@ -10,15 +10,15 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "errors.h"
-#include <libintl.h>
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <functional>
+#include <libintl.h>
 #include <string>
 #include <vector>
+#include "errors.h"
 
 #define _(String) gettext(String)
 
@@ -90,8 +90,13 @@ struct Message {
     std::array<char, 25> fn {};
     std::array<char, 512> expr {};
 
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
+#elif defined(_MSC_VER)
+#pragma warning(disable : 4477) // suppress format‑string security warning
+#pragma warning(push)
+#endif
     template <typename... Args>
     Message(Severity l, const char* file, int line, const char* _fn,
         const char* fmt, Args... args)
@@ -105,8 +110,11 @@ struct Message {
         _fn_parse(_fn);
         std::snprintf(expr.data(), expr.max_size(), fmt, args...);
     }
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
-
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 private:
     void _fn_parse(const char* name);
     void _set_time(void);
@@ -124,9 +132,17 @@ private:
 
 namespace fs {
 
+#if defined(__GNUC__)
 #define __LLOG__(STATUS, ...)                                                  \
     lcs::fs::_log(Message {                                                    \
         STATUS, __FILE_NAME__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__ })
+#elif defined(_MSC_VER)
+#define __FILENAME__                                                           \
+    (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#define __LLOG__(STATUS, ...)                                                  \
+    lcs::fs::_log(                                                             \
+        Message { STATUS, __FILENAME__, __LINE__, __FUNCSIG__, __VA_ARGS__ })
+#endif
 
 #define L_INFO(...) __LLOG__(Message::INFO, __VA_ARGS__)
 #define L_WARN(...) __LLOG__(Message::WARN, __VA_ARGS__)
@@ -193,7 +209,7 @@ namespace fs {
     extern std::filesystem::path MISC;
     extern std::filesystem::path LOCALE;
     extern std::vector<std::string> LOCALE_LANG;
-    extern std::string INI;
+    extern std::filesystem::path INI;
     extern FILE* __TEST_LOG__;
 
     /** Runs an assertion, displays an error message on failure. Intended
@@ -212,7 +228,7 @@ namespace fs {
      * @param data to save
      * @returns whether reading is successful or not
      */
-    bool read(const std::string& path, std::string& data);
+    bool read(const std::filesystem::path& path, std::string& data);
 
     /**
      * Reads contents of the given binary file and writes it to the buffer.
@@ -220,7 +236,8 @@ namespace fs {
      * @param data to save
      * @returns whether reading is successful or not
      */
-    bool read(const std::string& path, std::vector<unsigned char>& data);
+    bool read(
+        const std::filesystem::path& path, std::vector<unsigned char>& data);
 
     /**
      * Write contents of data to the desired path.
@@ -228,7 +245,7 @@ namespace fs {
      * @param data to save
      * @returns Whether the operation is successful or not
      */
-    bool write(const std::string& path, const std::string& data);
+    bool write(const std::filesystem::path& path, const std::string& data);
 
     /**
      * Write contents of data to the desired path. Used for binary files.
@@ -236,7 +253,7 @@ namespace fs {
      * @param data to save
      * @returns Whether the operation is successful or not
      */
-    bool write(const std::string& path, std::vector<unsigned char>& data);
+    bool write(const std::filesystem::path& path, std::vector<unsigned char>& data);
 
 } // namespace fs
 

@@ -116,4 +116,13 @@ constexpr const char* errmsg(Error e)
     }
 };
 
+#ifdef ERROR
+#undef ERROR
+#endif
+#ifdef TRUE
+#undef TRUE
+#endif
+#ifdef FALSE
+#undef FALSE
+#endif
 } // namespace lcs

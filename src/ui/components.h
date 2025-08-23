@@ -10,9 +10,9 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
+#include <imgui.h>
 #include "configuration.h"
 #include "core.h"
-#include <imgui.h>
 
 namespace lcs::ui {
 
@@ -53,7 +53,7 @@ struct ImageHandle {
 };
 
 /**
- * Read a texture from given given vector and load as OpenGL texture.
+ * Read a texture from given given vector and register as an OpenGL texture.
  * @param key to obtain image back
  * @param buffer to read from
  *
@@ -61,7 +61,7 @@ struct ImageHandle {
 bool load_texture(const std::string& key, std::vector<unsigned char>& buffer);
 
 /**
- * Read a texture from given file and load as OpenGL texture.
+ * Read a texture from given file and register as an OpenGL texture.
  * @param key to obtain image back
  * @param file_path to read from
  *
@@ -69,8 +69,9 @@ bool load_texture(const std::string& key, std::vector<unsigned char>& buffer);
 bool load_texture(const std::string& key, const std::string& file_path);
 
 /**
- * Get a reference to the loaded image with given name.
- *
+ * Get a reference to a registered image by given key.
+ * @param key lookup key
+ * @returns ImageHandle
  */
 const ImageHandle* get_texture(const std::string& key);
 

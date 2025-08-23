@@ -1,7 +1,7 @@
-#include "IconsLucide.h"
+#include <IconsLucide.h>
 #include "components.h"
-#include "imgui.h"
 #include "ui.h"
+#include <IconsLucide.h>
 
 namespace lcs::ui {
 static size_t last_time            = 0;
@@ -112,12 +112,12 @@ static bool _show_toast(
 
     ImGui::PushStyleColor(
         ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_Border));
-    IconText<LARGE>(n.icon, "%s", n.title.begin());
+    IconText<LARGE>(n.icon, "%s", n.title.data());
     ImGui::PopStyleColor();
     ImGui::ProgressBar(n.duration / (float)MAX_DURATION,
         ImVec2(ImGui::GetWindowWidth(), ImGui::GetStyle().ItemSpacing.y), "##");
     height += ImGui::GetWindowHeight() + ImGui::GetStyle().ItemSpacing.y;
-    ImGui::TextUnformatted(n.message.begin());
+    ImGui::TextUnformatted(n.message.data());
 
     if (IconButton<NORMAL>(ICON_LC_EYE_OFF, _("Dismiss"))) {
         n.duration = 0;

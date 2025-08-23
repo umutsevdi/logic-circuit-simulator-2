@@ -1,0 +1,10 @@
+{
+  "name": "logic-circuit-simulator-2",
+  "dependencies": [
+    "curl",
+    "gettext-libintl",
+    "gettext",
+    "glfw3",
+    "opengl"
+  ]
+}

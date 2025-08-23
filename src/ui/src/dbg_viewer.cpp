@@ -1,7 +1,7 @@
-#include "core.h"
-#include "ui.h"
 #include <imgui.h>
 #include <imnodes.h>
+#include "core.h"
+#include "ui.h"
 
 namespace lcs::ui::layout {
 
@@ -25,10 +25,10 @@ void DebugWindow(NRef<Scene> scene)
             ImGui::BeginChild("##Left", wsize);
             if (ImGui::CollapsingHeader(
                     _("Meta"), ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::BulletText(_("Name: %s"), scene->name.begin());
+                ImGui::BulletText(_("Name: %s"), scene->name.data());
                 ImGui::BulletText(
-                    _("Description: %s"), scene->description.begin());
-                ImGui::BulletText(_("Author: %s"), scene->author.begin());
+                    _("Description: %s"), scene->description.data());
+                ImGui::BulletText(_("Author: %s"), scene->author.data());
                 ImGui::BulletText(_("Version: %d"), scene->version);
             }
             if (ImGui::CollapsingHeader(
@@ -51,7 +51,7 @@ void DebugWindow(NRef<Scene> scene)
                             std::snprintf(buf.data() + idx, 4, "%02x ", *it);
                             idx += 3;
                         }
-                        ImGui::TextUnformatted(buf.begin());
+                        ImGui::TextUnformatted(buf.data());
                     }
                 }
             }

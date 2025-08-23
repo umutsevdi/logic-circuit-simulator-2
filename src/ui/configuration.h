@@ -10,10 +10,10 @@
  * License:
  ******************************************************************************/
 
-#include "common.h"
-#include "core.h"
 #include <imgui.h>
 #include <json/json.h>
+#include "common.h"
+#include "core.h"
 
 namespace lcs::ui {
 
@@ -46,7 +46,7 @@ const LcsTheme& get_theme(const std::string& s);
 const LcsTheme& get_active_style(void);
 const std::vector<const char*>& get_available_styles(bool is_dark);
 
-inline ImVec4 NodeType_to_color(mode_t type)
+inline ImVec4 NodeType_to_color(Node::Type type)
 {
     const LcsTheme& style = get_active_style();
     switch (type) {

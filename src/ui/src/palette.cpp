@@ -1,9 +1,8 @@
+#include <imnodes.h>
 #include "components.h"
 #include "configuration.h"
 #include "core.h"
 #include "ui.h"
-#include <imgui.h>
-#include <imnodes.h>
 
 namespace lcs::ui::layout {
 static bool is_dragging = false;
@@ -35,8 +34,9 @@ void Palette(NRef<Scene> scene)
                 });
             TablePair(
                 if (ImGui::Button(_("Timer"))) {
-                    dragged_node = scene->add_node<Input>(10u);
-                    is_dragging  = true;
+                    dragged_node
+                        = scene->add_node<Input>(static_cast<sockid>(10));
+                    is_dragging = true;
                 },
                 if (ImGui::Button(_("NOT Gate"))) {
                     dragged_node = scene->add_node<Gate>(Gate::Type::NOT);

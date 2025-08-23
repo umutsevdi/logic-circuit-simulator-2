@@ -1,9 +1,9 @@
-#include "common.h"
-#include "core.h"
 #include <algorithm>
 #include <cstring>
 #include <sstream>
 #include <utility>
+#include "common.h"
+#include "core.h"
 
 namespace lcs {
 
@@ -372,7 +372,7 @@ void Scene::signal(relid id, State value)
     if (r->value != value || r->value == DISABLED) {
         r->value = value;
         L_INFO("%s:rel@%-2d %s:%d sent %s to %s:%d",
-            _parent != nullptr ? name.begin() : "root", id,
+            _parent != nullptr ? name.data() : "root", id,
             to_str<Node>(r->from_node), r->from_sock, to_str<State>(r->value),
             to_str<Node>(r->to_node), r->to_sock);
         if (r->to_node.type != Node::Type::COMPONENT_OUTPUT) {
@@ -412,13 +412,13 @@ NRef<BaseNode> Scene::get_base(Node id)
 std::string Scene::to_dependency() const
 {
     std::stringstream dep_str {};
-    std::string_view str_author { author.begin() };
+    std::string_view str_author { author.data() };
     if (str_author.empty()) {
         dep_str << "local/";
     } else {
         dep_str << str_author << '/';
     }
-    dep_str << std::string_view { name.begin() } << '/'
+    dep_str << std::string_view { name.data() } << '/'
             << std::to_string(version);
     return dep_str.str();
 }
@@ -429,7 +429,8 @@ void Scene::run(float delta)
     frame_s += delta;
     uint32_t frame = frame_s * 10;
     if (frame != frame_pre) {
-//        L_INFO("delta: %f frame:%d frame_pre:%d", delta, frame, frame_pre);
+        //        L_INFO("delta: %f frame:%d frame_pre:%d", delta, frame,
+        //        frame_pre);
         for (auto& in : _inputs) {
             if (!in.is_null() && in.is_timer()) {
                 if (frame % in._freq == 0) {

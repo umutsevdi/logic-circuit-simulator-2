@@ -10,12 +10,13 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include "common.h"
 #include <array>
 #include <bitset>
 #include <cstdint>
+#include <filesystem>
 #include <map>
 #include <optional>
+#include "common.h"
 
 namespace lcs {
 
@@ -198,10 +199,10 @@ public:
     bool decrement(void);
 
     /* BaseNode */
-    bool is_connected(void) const override;
-    State get(sockid slot = 0) const override;
-    void on_signal(void) override;
-    void clean(void) override;
+    virtual bool is_connected(void) const override;
+    virtual State get(sockid slot = 0) const override;
+    virtual void on_signal(void) override;
+    virtual void clean(void) override;
 
     /** max_in number of inputs, denoted with relation id */
     std::vector<relid> inputs;
@@ -227,10 +228,10 @@ public:
     LCS_ERROR set_component(uint8_t dep_idx);
 
     /* BaseNode */
-    void on_signal(void) override;
-    bool is_connected(void) const override;
-    State get(sockid slot = 0) const override;
-    void clean(void) override;
+    virtual void on_signal(void) override;
+    virtual bool is_connected(void) const override;
+    virtual State get(sockid slot = 0) const override;
+    virtual void clean(void) override;
 
     std::vector<relid> inputs;
     std::map<sockid, std::vector<relid>> outputs;
@@ -268,10 +269,10 @@ public:
     void toggle(void);
 
     /* BaseNode */
-    void on_signal(void) override;
-    bool is_connected(void) const override;
-    State get(sockid slot = 0) const override;
-    void clean(void) override;
+    virtual void on_signal(void) override;
+    virtual bool is_connected(void) const override;
+    virtual State get(sockid slot = 0) const override;
+    virtual void clean(void) override;
 
     std::vector<relid> output;
 
@@ -304,10 +305,10 @@ public:
     ~Output()                        = default;
 
     /* BaseNode */
-    void on_signal(void) override;
-    bool is_connected(void) const override;
-    State get(sockid slot = 0) const override;
-    void clean(void) override;
+    virtual void on_signal(void) override;
+    virtual bool is_connected(void) const override;
+    virtual State get(sockid slot = 0) const override;
+    virtual void clean(void) override;
 
     relid input = 0;
 
@@ -648,7 +649,7 @@ namespace tabs {
      * - Error::NOT_FOUND
      * - deserialize
      */
-    LCS_ERROR open(const std::string& path, size_t& idx);
+    LCS_ERROR open(const std::filesystem::path& path, size_t& idx);
 
     /**
      * Closes the scene with selected path, erasing from memory.
@@ -674,7 +675,8 @@ namespace tabs {
      *
      * - Error::NO_SAVE_PATH_DEFINED
      */
-    LCS_ERROR save_as(const std::string& new_path, size_t idx = SIZE_MAX);
+    LCS_ERROR save_as(
+        const std::filesystem::path& new_path, size_t idx = SIZE_MAX);
 
     /**
      * Alerts the changes in a scene.
@@ -700,7 +702,7 @@ namespace tabs {
      *
      */
     void for_each(std::function<bool(std::string_view name,
-            std::string_view path, bool is_saved, bool is_active)>
+            const std::filesystem::path& path, bool is_saved, bool is_active)>
             run);
 
     /**

@@ -1,13 +1,13 @@
-#include "common.h"
-#include "components.h"
-#include "configuration.h"
-#include "ui.h"
 #include <IconsLucide.h>
+#include <cstdlib>
 #include <imgui.h>
 #include <imnodes.h>
 #include <json/reader.h>
 #include <json/value.h>
-#include <cstdlib>
+#include "common.h"
+#include "components.h"
+#include "configuration.h"
+#include "ui.h"
 
 namespace lcs::ui {
 static std::map<std::string, LcsTheme> themes;
@@ -119,9 +119,7 @@ static void _init_fonts(ImGuiIO& io)
     auto dir         = fs::MISC / "font" / "Archivo" / "ttf";
     auto font_lucide = fs::MISC / "font" / "Lucide" / "Lucide.ttf";
 
-    auto font = dir / "Archivo-Regular.ttf";
-#define add_to_atlas(size, ...)                                                \
-    atlas->AddFontFromFileTTF(font.c_str(), size, nullptr __VA_ARGS__)
+    std::string font = (dir / "Archivo-Regular.ttf").string();
     _FONT[SMALL | REGULAR]
         = atlas->AddFontFromFileTTF(font.c_str(), 0.75 * fsize, nullptr);
     _FONT[NORMAL | REGULAR]
@@ -129,7 +127,7 @@ static void _init_fonts(ImGuiIO& io)
     _FONT[LARGE | REGULAR]
         = atlas->AddFontFromFileTTF(font.c_str(), 1.25 * fsize, nullptr);
 
-    font = dir / "Archivo-Italic.ttf";
+    font = (dir / "Archivo-Italic.ttf").string();
     _FONT[SMALL | ITALIC]
         = atlas->AddFontFromFileTTF(font.c_str(), 0.75 * fsize, nullptr);
     _FONT[NORMAL | ITALIC]
@@ -137,7 +135,7 @@ static void _init_fonts(ImGuiIO& io)
     _FONT[LARGE | ITALIC]
         = atlas->AddFontFromFileTTF(font.c_str(), 1.25 * fsize, nullptr);
 
-    font                = dir / "Archivo-Bold.ttf";
+    font                = (dir / "Archivo-Bold.ttf").string();
     _FONT[SMALL | BOLD] = atlas->AddFontFromFileTTF(
         font.c_str(), 0.75 * fsize, nullptr, atlas->GetGlyphRangesDefault());
     _FONT[NORMAL | BOLD] = atlas->AddFontFromFileTTF(
@@ -145,7 +143,7 @@ static void _init_fonts(ImGuiIO& io)
     _FONT[LARGE | BOLD] = atlas->AddFontFromFileTTF(
         font.c_str(), 1.25 * fsize, nullptr, atlas->GetGlyphRangesDefault());
 
-    font                         = dir / "Archivo-BoldItalic.ttf";
+    font                         = (dir / "Archivo-BoldItalic.ttf").string();
     _FONT[SMALL | BOLD | ITALIC] = atlas->AddFontFromFileTTF(
         font.c_str(), 0.75 * fsize, nullptr, atlas->GetGlyphRangesDefault());
     _FONT[NORMAL | BOLD | ITALIC] = atlas->AddFontFromFileTTF(
@@ -153,7 +151,7 @@ static void _init_fonts(ImGuiIO& io)
     _FONT[LARGE | BOLD | ITALIC] = atlas->AddFontFromFileTTF(
         font.c_str(), 1.25 * fsize, nullptr, atlas->GetGlyphRangesDefault());
 
-    font                = fs::MISC / "font" / "Lucide" / "Lucide.ttf";
+    font = (fs::MISC / "font" / "Lucide" / "Lucide.ttf").string();
     _FONT[SMALL | ICON] = atlas->AddFontFromFileTTF(
         font.c_str(), 0.75 * fsize, nullptr, icon_ranges);
     _FONT[NORMAL | ICON]

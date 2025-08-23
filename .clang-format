@@ -8,10 +8,12 @@ IndentWidth: 4
 UseTab: Never
 FixNamespaceComments: 'true'
 IncludeCategories:
-  - Regex: ^".*"$
+  - Regex: ^<.*>$
     Priority: 1
   - Regex: ^<.*\.h>$
     Priority: 2
-  - Regex: ^<.*>$
+  - Regex: ^".*"$
     Priority: 3
+  - Regex: ^".*\.h"$
+    Priority: 4
 ...

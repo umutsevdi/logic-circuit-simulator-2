@@ -1,13 +1,12 @@
+#include <IconsLucide.h>
+#include <clocale>
+#include <filesystem>
+#include <json/reader.h>
+#include <libintl.h>
 #include "common.h"
 #include "configuration.h"
 #include "imgui_internal.h"
-#include "json/reader.h"
 #include "json/value.h"
-// #include "port.h"
-#include <IconsLucide.h>
-#include <libintl.h>
-#include <clocale>
-#include <filesystem>
 
 namespace lcs {
 
@@ -140,11 +139,9 @@ namespace ui {
 
     static void _set_locale(const std::string& locale)
     {
-        std::filesystem::path mo_path
-            = fs::LOCALE / locale / "LC_MESSAGES" / (locale + ".mo");
         const char* domain = APPNAME_BIN;
-        const char* dir    = fs::LOCALE.c_str();
-        if (!(bindtextdomain(domain, dir)
+        std::string dir    = fs::LOCALE.string();
+        if (!(bindtextdomain(domain, dir.c_str())
                 && bind_textdomain_codeset(domain, "UTF-8"))) {
             L_ERROR("Error while updating translations.");
             return;
@@ -154,7 +151,14 @@ namespace ui {
             L_WARN("setlocale failed for %s", locale.c_str());
         }
 
-        if (setenv("LC_ALL", locale.c_str(), 1)) {
+        if (
+#ifdef _WIN32
+            _putenv_s("LC_ALL", locale.c_str())
+
+#else
+            setenv("LC_ALL", locale.c_str(), 1)
+#endif
+        ) {
             L_WARN("Not all LOCALE environment variables were updated.");
         }
         if (!textdomain(domain)) {
@@ -209,8 +213,9 @@ namespace ui {
         ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf)
     {
         buf->appendf("[%s][%s]\n", APPNAME_LONG, "default");
-        uint32_t layout = user_data.palette | user_data.inspector << 1
-            | user_data.scene_info << 2 | user_data.console << 3;
+        uint32_t layout = user_data.palette
+            | (user_data.inspector ? 1u : 0u << 1) | (user_data.scene_info << 2)
+            | (user_data.console << 3);
         buf->appendf("layout=0x%X\n", layout);
         buf->appendf("login=\"%s\"\n\n", user_data.login.begin());
     }

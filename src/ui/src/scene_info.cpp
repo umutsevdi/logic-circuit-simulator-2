@@ -1,7 +1,6 @@
-#include "IconsLucide.h"
+#include <IconsLucide.h>
 #include "components.h"
 #include "configuration.h"
-#include "imgui.h"
 #include "ui.h"
 
 namespace lcs::ui ::layout {
@@ -80,9 +79,9 @@ void SceneInfo(NRef<Scene> scene)
                     ImGui::Selectable(("##" + std::to_string(i)).c_str(),
                         &selected, ImGuiSelectableFlags_SpanAllColumns);
                     ImGui::SameLine();
-                    ImGui::TextUnformatted(dep.name.begin());
+                    ImGui::TextUnformatted(dep.name.data());
                     ImGui ::TableSetColumnIndex(1);
-                    ImGui::TextUnformatted(dep.author.begin());
+                    ImGui::TextUnformatted(dep.author.data());
                     ImGui ::TableSetColumnIndex(2);
                     ImGui::Text("%d", dep.version);
                     ImGui ::TableSetColumnIndex(3);

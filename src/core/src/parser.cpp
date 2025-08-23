@@ -1,6 +1,6 @@
+#include <cstring>
 #include "common.h"
 #include "core.h"
-#include <cstring>
 
 #define expect_at_least(BGNPTR, ENDPTR, TYPE)                                  \
     {                                                                          \
@@ -74,24 +74,24 @@ static uint32_t _pop_uint(const uint8_t** cursor, const uint8_t* endptr)
 
 static void _encode_meta(const Scene& s, std::vector<uint8_t>& buffer)
 {
-    size_t name_s   = strnlen(s.name.begin(), s.name.size());
-    size_t desc_s   = strnlen(s.description.begin(), s.description.size());
-    size_t author_s = strnlen(s.author.begin(), s.author.size());
+    size_t name_s   = strnlen(s.name.data(), s.name.size());
+    size_t desc_s   = strnlen(s.description.data(), s.description.size());
+    size_t author_s = strnlen(s.author.data(), s.author.size());
     if (name_s > 0) {
         buffer.push_back(Instr::SET_NAME);
-        buffer.insert(buffer.end(), s.name.begin(), s.name.begin() + name_s);
+        buffer.insert(buffer.end(), s.name.data(), s.name.data() + name_s);
         buffer.push_back(Instr::END);
     }
     if (desc_s > 0) {
         buffer.push_back(Instr::SET_DESC);
-        buffer.insert(buffer.end(), s.description.begin(),
-            s.description.begin() + desc_s);
+        buffer.insert(
+            buffer.end(), s.description.data(), s.description.data() + desc_s);
         buffer.push_back(Instr::END);
     }
     if (author_s > 0) {
         buffer.push_back(Instr::SET_AUTHOR);
         buffer.insert(
-            buffer.end(), s.author.begin(), s.author.begin() + author_s);
+            buffer.end(), s.author.data(), s.author.data() + author_s);
         buffer.push_back(Instr::END);
     }
     buffer.push_back(Instr::SET_VERSION);
@@ -104,7 +104,7 @@ static void _encode_meta(const Scene& s, std::vector<uint8_t>& buffer)
     for (const auto& dep : s.dependencies()) {
         std::string name = dep.to_dependency();
         buffer.push_back(Instr::INCLUDE);
-        buffer.insert(buffer.end(), name.begin(), name.begin() + name.length());
+        buffer.insert(buffer.end(), name.data(), name.data() + name.length());
         buffer.push_back(Instr::END);
     }
 }
@@ -150,7 +150,7 @@ static inline void _encode_node(std::vector<uint8_t>& buffer, const T& it)
             }
         } else if constexpr (std::is_same<T, Gate>()) {
             buffer.push_back(it.type());
-            _push_uint(buffer, it.inputs.size());
+            _push_uint(buffer, static_cast<uint32_t>(it.inputs.size()));
         } else if constexpr (std::is_same<T, Component>()) {
             buffer.push_back(it.dep_idx);
         }
@@ -219,7 +219,7 @@ LCS_ERROR static inline _decode_dep(
         return err;
     }
     Scene dep {};
-    err = load_dependency(dependency.begin(), dep);
+    err = load_dependency(dependency.data(), dep);
     if (err) {
         return err;
     }
@@ -249,7 +249,7 @@ LCS_ERROR static inline _decode_node(const uint8_t** bgnptr,
         cursor++;
         uint32_t size = _pop_uint(&cursor, endptr);
 
-        n = s.add_node<Gate>(type, size);
+        n = s.add_node<Gate>(type, static_cast<sockid>(size));
     }
     if constexpr (std::is_same<T, Input>()) {
         expect_at_least(cursor, endptr, uint16_t);
@@ -280,8 +280,8 @@ LCS_ERROR static inline _decode_node(const uint8_t** bgnptr,
     if constexpr (std::is_same<T, Output>()) {
         n = s.add_node<Output>();
     }
-    s.get_node<T>(n)->point.x = pos_x;
-    s.get_node<T>(n)->point.y = pos_y;
+    s.get_node<T>(n)->point.x = static_cast<int16_t>(pos_x);
+    s.get_node<T>(n)->point.y = static_cast<int16_t>(pos_y);
     *bgnptr                   = cursor;
     return Error::OK;
 }
@@ -364,8 +364,8 @@ LCS_ERROR static inline _decode_branch(const uint8_t** bgnptr,
 LCS_ERROR Scene::read_from(const std::vector<uint8_t>& buffer)
 {
     const uint8_t* cursor = buffer.data();
-    uint8_t version       = *cursor;
-    if (version != 1) {
+    uint8_t lcs_version   = *cursor;
+    if (lcs_version != 1) {
         return ERROR(Error::INVALID_SCENE_FORMAT);
     }
     cursor++; // skip version
@@ -392,7 +392,7 @@ static Error _check_fs(const std::string& name, Scene& s)
     if (tokens.size() != 3) {
         return ERROR(Error::INVALID_DEPENDENCY_FORMAT);
     }
-    std::string path = fs::LIBRARY / (base64_encode(name) + ".lcs");
+    std::filesystem::path path = fs::LIBRARY / (base64_encode(name) + ".lcs");
     std::vector<uint8_t> data;
     if (!fs::read(path, data)) {
         return ERROR(Error::COMPONENT_NOT_FOUND);

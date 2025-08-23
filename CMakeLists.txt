@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 3.15)
+if (WIN32)
+    message(${CMAKE_SOURCE_DIR})
+    # If Win32 use vcpkg to get dependencies.
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
+endif()
+
 project(LogicCircuitSimulator C CXX)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -21,8 +28,13 @@ option(LCS_BUILD_TESTS "Build and run tests" YES)
 option(LCS_GUI "Build with user interface" YES)
 
 set(CMAKE_C_STANDARD 11)
+if (MSVC)
+set(CMAKE_CXX_STANDARD 20)
+else()
 set(CMAKE_CXX_STANDARD 17)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 message(STATUS "Started CMake for ${PROJECT_NAME} v${PROJECT_VERSION}...\n")
 message("Build Tests: ${LCS_BUILD_TESTS}")
@@ -30,11 +42,15 @@ message("Doxygen: ${LCS_ENABLE_DOXYGEN}")
 message("GUI: ${LCS_GUI}")
 message("Build Type: ${CMAKE_BUILD_TYPE}")
 
+if(MSVC)
+    add_compile_options(/W4)
+else()
 add_compile_options(-Wall -Wextra)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-g -Og -Wpedantic)
 else()
     add_compile_options(-O3)
+endif()
 endif()
 
 include(FetchContent)

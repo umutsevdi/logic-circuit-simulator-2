@@ -3,7 +3,7 @@
 namespace lcs::tabs {
 
 struct Inode {
-    Inode(bool _is_saved, std::string _path, Scene _scene)
+    Inode(bool _is_saved, std::filesystem::path _path, Scene _scene)
         : is_saved { _is_saved }
         , path { _path }
         , scene { std::move(_scene) }
@@ -11,13 +11,13 @@ struct Inode {
     }
     bool is_saved;
     bool has_changes = true;
-    std::string path;
+    std::filesystem::path path;
     Scene scene;
 };
 static std::vector<Inode> SCENE_STORAGE;
 static size_t active_scene = SIZE_MAX;
 
-LCS_ERROR open(const std::string& path, size_t& idx)
+LCS_ERROR open(const std::filesystem::path& path, size_t& idx)
 {
     for (size_t i = 0; i < SCENE_STORAGE.size(); i++) {
         if (SCENE_STORAGE[i].path == path) {
@@ -102,7 +102,7 @@ LCS_ERROR save(size_t idx)
     return OK;
 }
 
-LCS_ERROR save_as(const std::string& new_path, size_t idx)
+LCS_ERROR save_as(const std::filesystem::path& new_path, size_t idx)
 {
     if (idx == SIZE_MAX) {
         idx = active_scene;
@@ -145,15 +145,15 @@ size_t create(const std::string& name, const std::string& author,
     return SCENE_STORAGE.size() - 1;
 }
 
-void for_each(std::function<bool(std::string_view name, std::string_view path,
-        bool is_saved, bool is_active)>
+void for_each(std::function<bool(std::string_view name,
+        const std::filesystem::path& path, bool is_saved, bool is_active)>
         run)
 {
     size_t updated_scene = active_scene;
     for (size_t i = 0; i < SCENE_STORAGE.size(); i++) {
-        if (run(std::string_view { SCENE_STORAGE[i].scene.name.begin() },
-                std::string_view { SCENE_STORAGE[i].path },
-                SCENE_STORAGE[i].is_saved, i == active_scene)) {
+        if (run(std::string_view { SCENE_STORAGE[i].scene.name.data() },
+                SCENE_STORAGE[i].path, SCENE_STORAGE[i].is_saved,
+                i == active_scene)) {
             updated_scene = i;
         };
     }

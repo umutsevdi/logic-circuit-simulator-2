@@ -1,6 +1,7 @@
+#include <imnodes.h>
+
 #include "components.h"
 #include "core.h"
-#include <imnodes.h>
 
 namespace lcs::ui {
 void ShowIcon(FontFlags size, const char* icon)

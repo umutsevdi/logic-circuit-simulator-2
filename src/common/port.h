@@ -10,8 +10,8 @@
  * License: GNU GENERAL PUBLIC LICENSE
  ******************************************************************************/
 
-#include <errors.h>
 #include <cstdint>
+#include <errors.h>
 #include <string>
 #include <vector>
 

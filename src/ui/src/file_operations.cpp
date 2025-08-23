@@ -1,9 +1,8 @@
-
-#include "common.h"
-#include "core.h"
 #include <imgui.h>
 #include <nfd.h>
 #include <string>
+#include "common.h"
+#include "core.h"
 
 namespace lcs::ui {
 namespace dialog {

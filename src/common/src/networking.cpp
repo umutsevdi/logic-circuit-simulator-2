@@ -1,11 +1,11 @@
-#include "common.h"
-#include "port.h"
-#include <curl/curl.h>
 #include <condition_variable>
+#include <curl/curl.h>
 #include <map>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
+#include "common.h"
+#include "port.h"
 
 namespace lcs::net {
 

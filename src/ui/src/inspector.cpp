@@ -1,9 +1,9 @@
-#include "components.h"
-#include "core.h"
-#include "imnodes.h"
-#include "ui.h"
 #include <IconsLucide.h>
 #include <imgui.h>
+#include <imnodes.h>
+#include "components.h"
+#include "core.h"
+#include "ui.h"
 
 namespace lcs::ui::layout {
 
@@ -48,8 +48,7 @@ void Inspector(NRef<Scene> scene)
                     ImNodes::ClearNodeSelection();
                     for (int i = 0; i < len; i++) {
                         Node node = decode_pair(nodeids[i]);
-                        L_DEBUG("Delete %s@%u", to_str<Node::Type>(node.type),
-                            node.index);
+                        L_DEBUG("Delete %s", to_str<Node>(node), node.index);
                         scene->remove_node(node);
                     }
                 }
@@ -83,8 +82,7 @@ static void _inspector_tab(NRef<Scene> scene, Node node)
         ImGui::SameLine();
         if (IconButton<NORMAL>(ICON_LC_TRASH_2, _("Delete Node"))) {
             ImNodes::ClearNodeSelection();
-            L_INFO("remove %s %d:%d", node, to_str<Node>(node), node.index,
-                node.type);
+            L_INFO("Remove %s", to_str<Node>(node));
             scene->remove_node(node);
             EndSection();
             return;

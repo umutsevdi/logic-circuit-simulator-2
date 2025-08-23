@@ -9,8 +9,8 @@
  * Project: umutsevdi/logic-circuit-simulator-2.git
  * License:
  ******************************************************************************/
-#include "common.h"
 #include <json/value.h>
+#include "common.h"
 namespace lcs::api {
 
 namespace gh {

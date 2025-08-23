@@ -1,10 +1,10 @@
-#include "IconsLucide.h"
+#include <IconsLucide.h>
+#include <imgui.h>
+#include <string_view>
 #include "common.h"
 #include "components.h"
 #include "configuration.h"
 #include "ui.h"
-#include <imgui.h>
-#include <string_view>
 namespace lcs::ui::layout {
 
 static ImVec4 _log_color(const LcsTheme& style, Message::Severity level)
@@ -20,6 +20,7 @@ static ImVec4 _log_color(const LcsTheme& style, Message::Severity level)
 
 void Console(void)
 {
+    static bool auto_scroll = true;
     if (!user_data.console) {
         return;
     }
@@ -29,6 +30,8 @@ void Console(void)
         if (IconButton<NORMAL>(ICON_LC_TRASH, _("Clear"))) {
             lcs::fs::clear_log();
         }
+        ImGui::SameLine();
+        ImGui::Checkbox(_("Auto Scroll"), &auto_scroll);
         if (ImGui::BeginTable("##ConsoleTable", 5,
                 ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersInner
                     | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY
@@ -56,34 +59,35 @@ void Console(void)
                 ImGui::Selectable(("##" + std::to_string(idx)).c_str(),
                     &selected, ImGuiSelectableFlags_SpanAllColumns);
                 ImGui::SameLine();
-                ImGui::TextUnformatted(l.time_str.begin());
+                ImGui::TextUnformatted(l.time_str.data());
 
                 ImGui::TableSetColumnIndex(1);
                 ImGui::TextColored(_log_color(style, l.severity), "%s",
-                    l.log_level_str.begin());
+                    l.log_level_str.data());
                 if (!std::string_view { l.obj.data() }.empty()) {
                     ImGui::TableSetColumnIndex(2);
                     ImGui::PushID(idx);
-                    ImGui::TextColored(style.yellow, "%s", l.obj.begin());
+                    ImGui::TextColored(style.yellow, "%s", l.obj.data());
                     ImGui::PopID();
                 }
                 ImGui::TableSetColumnIndex(3);
-                ImGui::TextColored(style.cyan, "%s", l.fn.begin());
+                ImGui::TextColored(style.cyan, "%s", l.fn.data());
                 ImGui::TableSetColumnIndex(4);
-                ImGui::TextUnformatted(l.expr.begin());
+                ImGui::TextUnformatted(l.expr.data());
 
                 if (selected) {
                     std::stringstream buffer {};
-                    buffer << l.log_level_str.begin() << '\t'
-                           << l.file_line.begin() << '\t' << l.obj.begin()
-                           << "\t" << l.fn.begin() << '\t' << l.expr.begin()
-                           << std::endl;
+                    buffer << l.log_level_str.data() << '\t'
+                           << l.file_line.data() << '\t' << l.obj.data() << "\t"
+                           << l.fn.data() << '\t' << l.expr.data() << std::endl;
                     Toast(ICON_LC_CLIPBOARD_COPY, _("Clipboard"),
                         _("Message is copied to the clipboard."));
                     ImGui::SetClipboardText(buffer.str().c_str());
                 }
             });
-            ImGui::SetScrollHereY(1.0f);
+            if (auto_scroll) {
+                ImGui::SetScrollHereY(1.0f);
+            }
             ImGui::EndTable();
         }
     }

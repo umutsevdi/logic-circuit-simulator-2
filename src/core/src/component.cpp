@@ -1,8 +1,8 @@
-#include "common.h"
-#include "core.h"
 #include <algorithm>
 #include <bitset>
 #include <cstdint>
+#include "common.h"
+#include "core.h"
 
 namespace lcs {
 

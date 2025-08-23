@@ -1,11 +1,10 @@
-#include "IconsLucide.h"
-#include "common.h"
+#include <IconsLucide.h>
+#include <imgui.h>
+#include <imnodes.h>
 #include "components.h"
 #include "configuration.h"
 #include "port.h"
 #include "ui.h"
-#include <imgui.h>
-#include <imnodes.h>
 
 namespace lcs::ui::layout {
 
@@ -145,20 +144,20 @@ void MenuBar(void)
 void tab_window(void)
 {
     ImGui::BeginTabBar(_("Scene Tabs"), ImGuiTabBarFlags_FittingPolicyScroll);
-    tabs::for_each([](std::string_view name, std::string_view path,
+    tabs::for_each([](std::string_view name, const std::filesystem::path& path,
                        bool is_saved, bool is_active) -> bool {
         bool result = false;
         bool keep   = true;
 
-        std::string_view scene_name;
+        std::string scene_name;
         if (!name.empty()) {
-            scene_name = name;
+            scene_name = name.data();
         } else if (!path.empty()) {
-            scene_name = path;
+            scene_name = path.string();
         } else {
             scene_name = _("Untitled Scene");
         }
-        if (ImGui::BeginTabItem(scene_name.begin(), &keep,
+        if (ImGui::BeginTabItem(scene_name.c_str(), &keep,
                 (is_saved ? ImGuiTabItemFlags_None
                           : ImGuiTabItemFlags_UnsavedDocument))) {
             if (!is_active) {

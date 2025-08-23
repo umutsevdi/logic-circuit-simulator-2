@@ -34,3 +34,7 @@
 
 build/
 imgui.ini
+vcpkg/
+vcpkg_installed/
+out/
+.vs/

@@ -1,8 +1,9 @@
-#include "common.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <sstream>
+#include "common.h"
+
 namespace lcs {
 std::chrono::time_point<std::chrono::steady_clock> app_start_time;
 void Message::_set_time(void)
@@ -34,34 +35,40 @@ void Message::_fn_parse(const char* name)
         std::strncpy(fn.data(), p->second.data() + class_end + 1,
             std::min(fn.max_size() - 1, p->second.size() - class_end - 1));
     } else {
-        std::string fn = name;
-        size_t pos     = 0;
-        while ((pos = fn.find("virtual ")) != std::string::npos) {
-            fn.erase(pos, /* virtual */ 8);
+        std::string fnname = name;
+        size_t pos         = 0;
+        while ((pos = fnname.find("virtual ")) != std::string::npos) {
+            fnname.erase(pos, /* virtual */ 8);
+        }
+        while ((pos = fnname.find("__cdecl ")) != std::string::npos) {
+            fnname.erase(pos, /* __cdecl */ 8);
+        }
+        while ((pos = fnname.find("enum ")) != std::string::npos) {
+            fnname.erase(pos, /* enum */ 5);
         }
 
-        while ((pos = fn.find("lcs::")) != std::string::npos) {
-            fn.erase(pos, /* lcs:: */ 5);
+        while ((pos = fnname.find("lcs::")) != std::string::npos) {
+            fnname.erase(pos, /* lcs:: */ 5);
         }
         // Trim return type
-        fn = fn.substr(fn.find_first_of(" ") + 1);
+        fnname = fnname.substr(fnname.find_first_of(" ") + 1);
 
-        size_t fn_end      = fn.find_first_of('(');
+        size_t fn_end      = fnname.find_first_of('(');
         size_t class_begin = 0;
-        fn                 = fn.substr(class_begin, fn_end - class_begin);
+        fnname             = fnname.substr(class_begin, fn_end - class_begin);
 
-        size_t fn_begin  = fn.find_last_of("::") + 1;
-        fn_end           = fn.size() - 1;
-        size_t class_end = fn.find_first_of("::", class_begin);
+        size_t fn_begin  = fnname.find_last_of("::") + 1;
+        fn_end           = fnname.size() - 1;
+        size_t class_end = fnname.find_first_of("::", class_begin);
         if (fn_begin == std::string::npos || class_begin == std::string::npos) {
             // No class found
             class_end = class_begin;
             fn_begin  = class_begin;
         }
 
-        std::string name_fn = fn.substr(fn_begin, fn_end - fn_begin + 1);
+        std::string name_fn = fnname.substr(fn_begin, fn_end - fn_begin + 1);
         std::string name_class
-            = fn.substr(class_begin, class_end - class_begin);
+            = fnname.substr(class_begin, class_end - class_begin);
 
         if (name_class == name_fn) {
             name_class = "lcs";
@@ -82,7 +89,7 @@ namespace fs {
     std::filesystem::path MISC;
     std::filesystem::path LOCALE;
     std::vector<std::string> LOCALE_LANG {};
-    std::string INI;
+    std::filesystem::path INI;
     FILE* __TEST_LOG__ = nullptr;
 
     static constexpr int LINE_SIZE = 200;
@@ -101,11 +108,12 @@ namespace fs {
         app_start_time   = std::chrono::steady_clock::now();
         const char* home = std::getenv("HOME");
 #ifdef _WIN32
-        // TODO
+        ROOT = std::filesystem::path { getenv("LOCALAPPDATA") } / APPNAME_BIN;
+        TMP  = std::filesystem::path { getenv("TEMP") } / APPNAME_BIN;
 #elif defined(__linux__)
-        TMP  = "/tmp/" APPNAME_LONG;
-        ROOT = home ? std::string(home) + "/.local/share/" APPNAME_LONG
-                    : "/tmp/" APPNAME_LONG;
+        TMP  = "/tmp/" APPNAME_BIN;
+        ROOT = home ? std::string(home) + "/.local/share/" APPNAME_BIN
+                    : "/tmp/" APPNAME_BIN;
 
         std::string desktopfile = std::string(home)
             + "/.local/share/applications/" APPNAME_LONG ".desktop";
@@ -119,7 +127,7 @@ namespace fs {
             std::printf("HOME\r\n");
             data = data.replace(data.find("%HOME%"), 6, home);
             std::printf("APPNAME : %s\r\n", data.c_str());
-            data = data.replace(data.find("%APPNAME%"), 9, APPNAME_LONG);
+            data = data.replace(data.find("%APPNAME%"), 9, APPNAME_BIN);
             write(desktopfile, data);
         }
 #elif defined(__unix__)
@@ -143,7 +151,13 @@ namespace fs {
             if (!std::filesystem::exists(ROOT)) {
                 std::filesystem::create_directories(ROOT);
             }
-            __TEST_LOG__ = fopen((ROOT / "log.txt").c_str(), "w");
+            auto logfile = ROOT / "log.txt";
+#ifdef _MSC_VER
+            __TEST_LOG__ = _wfopen(logfile.c_str(), L"w");
+#else
+            __TEST_LOG__ = std::fopen(logfile.c_str(), "w");
+#endif
+
             L_DEBUG("Creating testing environment at %s", ROOT.c_str());
         }
         LIBRARY = ROOT / "pkg";
@@ -184,7 +198,7 @@ namespace fs {
         }
         for (auto& l : std::filesystem::directory_iterator(LOCALE)) {
             if (l.exists() && l.is_directory()) {
-                std::string localname = l.path().filename();
+                std::string localname = l.path().filename().string();
                 L_DEBUG("Locale %s discovered", localname.c_str());
                 LOCALE_LANG.push_back(
                     localname.substr(0, localname.rfind('.')));
@@ -193,18 +207,24 @@ namespace fs {
         L_INFO("Module lcs::fs is ready");
     }
 
+#ifndef _WIN32
 #define F_BOLD "\033[1m"
 #define F_UNDERLINE "\033[4m"
 #define F_RED "\033[31m"
 #define F_GREEN "\033[32m"
 #define F_BLUE "\033[34m"
 #define F_INVERT "\033[7m"
-
 #define F_RESET "\033[0m"
-#ifdef _WIN32
-#define TEAL "\033[34m"
-#else
 #define F_TEAL "\033[96m"
+#else
+#define F_BOLD ""
+#define F_UNDERLINE ""
+#define F_RED ""
+#define F_GREEN ""
+#define F_BLUE ""
+#define F_INVERT ""
+#define F_RESET ""
+#define F_TEAL ""
 #endif
 
     void _log(const Message& l)
@@ -235,15 +255,14 @@ namespace fs {
         printf(F_BLUE "[%s] " F_BOLD "%s%-6s" F_RESET F_GREEN "|" F_RESET
                       "%-20s" F_GREEN " |%-18s|" F_RESET F_TEAL
                       "%-25s" F_RESET F_GREEN "|" F_RESET "%s%s\r\n" F_RESET,
-            l.time_str.begin(), clr, l.log_level_str.begin(),
-            l.file_line.begin(), l.obj.begin(), l.fn.begin(),
+            l.time_str.data(), clr, l.log_level_str.data(), l.file_line.data(),
+            l.obj.data(), l.fn.data(),
             l.severity == Message::FATAL ? F_INVERT F_BOLD F_RED : "",
-            l.expr.begin());
+            l.expr.data());
         if (is_testing) {
             fprintf(__TEST_LOG__, "[%s] %-6s | %-20s | %-18s | %-25s | %s\r\n",
-                l.time_str.begin(), l.log_level_str.begin(),
-                l.file_line.begin(), l.obj.begin(), l.fn.begin(),
-                l.expr.begin());
+                l.time_str.data(), l.log_level_str.data(), l.file_line.data(),
+                l.obj.data(), l.fn.data(), l.expr.data());
         }
     }
 
@@ -278,12 +297,11 @@ namespace fs {
         _size = 0;
     }
 
-    bool write(const std::string& path, const std::string& data)
+    bool write(const std::filesystem::path& path, const std::string& data)
     {
         L_DEBUG("Save %s.", path.c_str());
         try {
-            std::filesystem::create_directories(std::string {
-                path.begin(), path.begin() + path.find_last_of("/") });
+            std::filesystem::create_directories(path.parent_path());
             std::ofstream outfile { path };
             if (outfile) {
                 outfile << data;
@@ -296,10 +314,12 @@ namespace fs {
         return false;
     }
 
-    bool write(const std::string& path, std::vector<unsigned char>& data)
+    bool write(
+        const std::filesystem::path& path, std::vector<unsigned char>& data)
     {
-        L_DEBUG("Save %s", path.c_str());
+        L_DEBUG("Save %s.", path.c_str());
         try {
+            std::filesystem::create_directories(path.parent_path());
             std::ofstream outfile { path, std::ios::binary };
             if (outfile) {
                 outfile.write((char*)data.data(), data.size());
@@ -312,22 +332,21 @@ namespace fs {
         return false;
     }
 
-    bool read(const std::string& path, std::string& data)
+    bool read(const std::filesystem::path& path, std::string& data)
     {
-        L_DEBUG("Opening %s.", path.c_str());
-        std::filesystem::path filepath = std::filesystem::path(path);
-        std::ifstream infile { filepath };
+        L_DEBUG("Opening %s.", (char*)path.c_str());
+        std::ifstream infile { path };
         std::string content((std::istreambuf_iterator<char>(infile)),
             std::istreambuf_iterator<char>());
         data = content;
         return !content.empty();
     }
 
-    bool read(const std::string& path, std::vector<unsigned char>& data)
+    bool read(
+        const std::filesystem::path& path, std::vector<unsigned char>& data)
     {
         L_DEBUG("Opening %s.", path.c_str());
-        std::filesystem::path filepath = std::filesystem::path(path);
-        std::ifstream infile { filepath, std::ios::binary };
+        std::ifstream infile { path, std::ios::binary };
         std::vector<unsigned char> buffer(
             std::istreambuf_iterator<char>(infile), {});
         data = std::move(buffer);

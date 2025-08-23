@@ -1,18 +1,14 @@
+#include <imgui.h>
+#include <imnodes.h>
+#include <nfd.h>
 #include "common.h"
 #include "configuration.h"
-#include "imnodes.h"
 #include "ui.h"
-#include <imgui.h>
-#include <nfd.h>
 
 static bool show_demo_window = true;
 ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 float f;
-
-static ImGuiID key_palette;
-static ImGuiID key_inspector;
-static ImGuiID key_sceneinfo;
-static ImGuiID key_console;
+std::string fsini_str;
 
 namespace lcs::ui {
 void before(void)
@@ -21,7 +17,8 @@ void before(void)
     ui::bind_config(ImGui::CreateContext());
     ImGuiIO& imio = ImGui::GetIO();
     (void)imio;
-    imio.IniFilename = fs::INI.c_str();
+    fsini_str        = fs::INI.string();
+    imio.IniFilename = fsini_str.c_str();
 
     imio.ConfigFlags
         |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
