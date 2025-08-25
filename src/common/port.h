@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <errors.h>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -40,8 +41,8 @@ uint64_t get_request(
  * @param URL target URL.
  * @param authorization header, optional.
  */
-void get_request_then(void (*cb)(HttpResponse& resp), const std::string& URL,
-    const std::string& authorization = "");
+void get_request_then(std::function<void(HttpResponse& resp)> cb,
+    const std::string& URL, const std::string& authorization = "");
 
 /** Send a POST request to targeted URL.
  * @param URL target URL.
@@ -60,8 +61,9 @@ uint64_t post_request(const std::string& URL, const std::vector<uint8_t>& req,
  * @param req request body.
  * @param authorization header, optional.
  */
-void post_request_then(void (*cb)(HttpResponse& resp), const std::string& URL,
-    const std::vector<uint8_t>& req, const std::string& authorization = "");
+void post_request_then(std::function<void(HttpResponse& resp)> cb,
+    const std::string& URL, const std::vector<uint8_t>& req,
+    const std::string& authorization = "");
 
 /**
  * Attempts to obtain a completed request, updating session on success.

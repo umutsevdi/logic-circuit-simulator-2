@@ -53,32 +53,45 @@ void Message::_fn_parse(const char* name)
         // Trim return type
         fnname = fnname.substr(fnname.find_first_of(" ") + 1);
 
-        size_t fn_end      = fnname.find_first_of('(');
-        size_t class_begin = 0;
-        fnname             = fnname.substr(class_begin, fn_end - class_begin);
+        if (fnname.find("lambda") == std::string::npos) {
+            size_t fn_end      = fnname.find_first_of('(');
+            size_t class_begin = 0;
+            fnname = fnname.substr(class_begin, fn_end - class_begin);
 
-        size_t fn_begin  = fnname.find_last_of("::") + 1;
-        fn_end           = fnname.size() - 1;
-        size_t class_end = fnname.find_first_of("::", class_begin);
-        if (fn_begin == std::string::npos || class_begin == std::string::npos) {
-            // No class found
-            class_end = class_begin;
-            fn_begin  = class_begin;
-        }
+            size_t fn_begin  = fnname.find_last_of("::") + 1;
+            fn_end           = fnname.size() - 1;
+            size_t class_end = fnname.find_last_of("::") - 1;
+            if (fn_begin == std::string::npos
+                || class_begin == std::string::npos) {
+                // No class found
+                class_end = class_begin;
+                fn_begin  = class_begin;
+            }
 
-        std::string name_fn = fnname.substr(fn_begin, fn_end - fn_begin + 1);
-        std::string name_class
-            = fnname.substr(class_begin, class_end - class_begin);
+            std::string name_fn
+                = fnname.substr(fn_begin, fn_end - fn_begin + 1);
+            std::string name_class
+                = fnname.substr(class_begin, class_end - class_begin);
 
-        if (name_class == name_fn) {
-            name_class = "lcs";
-        }
+            if (name_class == name_fn) {
+                name_class = "lcs";
+            }
         line_cache[name] = name_class + " " + name_fn;
+        }else {
+        line_cache[name] = " lambda";
+        }
+
+        printf("%s\n", line_cache[name].c_str());
         _fn_parse(name);
     }
 }
 
 namespace fs {
+
+#include "po.h"
+    const char** locales(void) { return __LOCALES__; }
+    const char** localnames(void) { return __NAMES__; }
+    size_t localsize(void) { return __LOCALE_S; }
 
     bool ready = false;
     bool is_testing;
@@ -88,7 +101,7 @@ namespace fs {
     std::filesystem::path CACHE;
     std::filesystem::path MISC;
     std::filesystem::path LOCALE;
-    std::vector<std::string> LOCALE_LANG {};
+
     std::filesystem::path INI;
     FILE* __TEST_LOG__ = nullptr;
 
@@ -196,12 +209,11 @@ namespace fs {
         } catch (const std::exception& e) {
             L_ERROR("Directory creation failed. %s ", e.what());
         }
-        for (auto& l : std::filesystem::directory_iterator(LOCALE)) {
-            if (l.exists() && l.is_directory()) {
-                std::string localname = l.path().filename().string();
-                L_DEBUG("Locale %s discovered", localname.c_str());
-                LOCALE_LANG.push_back(
-                    localname.substr(0, localname.rfind('.')));
+        for (size_t i = 0; i < localsize(); i++) {
+            if (std::filesystem::is_directory(LOCALE / locales()[i])) {
+                L_DEBUG("Discovered %s(%s)", locales()[i], localnames()[i]);
+            } else {
+                L_WARN("Locale %s not found!", locales()[i]);
             }
         }
         L_INFO("Module lcs::fs is ready");

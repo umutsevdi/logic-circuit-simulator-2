@@ -197,33 +197,24 @@ static void _popup_new(void)
         static char description[512] = { 0 };
         static size_t input_size     = 0;
         static size_t output_size    = 0;
-
-        if (ImGui::BeginTable("##NewFlow", 2, ImGuiTableFlags_None)) {
-            ImGui::TableSetupColumn(
-                "##NewFlowKey", ImGuiTableColumnFlags_WidthFixed);
-            ImGui::NextColumn();
-            ImGui::TableSetupColumn(
-                "##Value", ImGuiTableColumnFlags_WidthStretch);
-
+        AnonTable("NewFlow", 0, 
             TablePair(Field(_("Scene Name")),
                 ImGui::InputText("##SceneCreate_Name", name, 128,
                     ImGuiInputTextFlags_CharsNoBlank));
 
             TablePair(Field(_("Author")),
-                ImGui::PushFont(
-                    get_font(FontFlags::ITALIC | FontFlags::NORMAL)),
                 ImGui::InputText("##SceneCreate_Author", author, 60,
-                    ImGuiInputTextFlags_ReadOnly),
-                ImGui::PopFont());
+                    ImGuiInputTextFlags_ReadOnly));
 
             TablePair(Field(_("Description")),
                 ImGui::InputTextMultiline(
                     "##SceneCreate_Desc", description, 512));
 
-            TablePair(Field(_("Type")));
-            if (ImGui::RadioButton("##IsScene", is_scene)) {
-                is_scene = true;
-            }
+            TablePair(
+                Field(_("Type")),
+                if (ImGui::RadioButton("##IsScene", is_scene)) {
+                    is_scene = true;
+                });
             ImGui::SameLine();
             IconText<NORMAL>(ICON_LC_LAND_PLOT, _("Scene"));
             ImGui::SameLine();
@@ -235,10 +226,10 @@ static void _popup_new(void)
 
             if (!is_scene) {
                 ImGui::Separator();
-                TablePair(Field(_("Input Size")));
-                ImGui::InputInt("##CompInputSize", (int*)&input_size);
-                TablePair(Field(_("Output Size")));
-                ImGui::InputInt("##CompOutputSize", (int*)&output_size);
+                TablePair(Field(_("Input Size")),
+                    ImGui::InputInt("##CompInputSize", (int*)&input_size));
+                TablePair(Field(_("Output Size")),
+                    ImGui::InputInt("##CompOutputSize", (int*)&output_size));
             }
             TablePair(
                 if (ImGui::Button("Create")) {
@@ -254,8 +245,7 @@ static void _popup_new(void)
                     ImGui::CloseCurrentPopup();
                     _show_new = false;
                 });
-            ImGui::EndTable();
-        };
+            );
         ImGui::EndPopup();
     }
 }
@@ -390,17 +380,12 @@ void _popup_pref(void)
     static int light_idx = 0;
     static int dark_idx  = 0;
     static int lang_idx  = -1;
-    static std::vector<const char*> lang_data {};
-    if (lang_data.empty()) {
-        lang_data.reserve(fs::LOCALE_LANG.size());
-        for (size_t i = 0; i < fs::LOCALE_LANG.size(); i++) {
-            lang_data.push_back(fs::LOCALE_LANG[i].c_str());
-        }
-    }
-    for (size_t i = 0; i < fs::LOCALE_LANG.size(); i++) {
-        if (fs::LOCALE_LANG[i] == cfg.language) {
-            lang_idx = i;
-            break;
+    if (lang_idx == -1) {
+        for (size_t i = 0; i < fs::localsize(); i++) {
+            if (cfg.language == fs::locales()[i]) {
+                lang_idx = i;
+                break;
+            }
         }
     }
     static const ImVec2 __table_l_size
@@ -439,71 +424,59 @@ void _popup_pref(void)
     ImGui::SetWindowPos(
         ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing);
     Section(_("Appearance"));
-    if (ImGui::BeginTable(
-            "##AppearanceTable", 2, ImGuiTableFlags_BordersInnerV)) {
-        ImGui::TableSetupColumn(
-            "##Key", ImGuiTableColumnFlags_WidthFixed, __table_l_size.x);
-        ImGui::NextColumn();
-        ImGui::TableSetupColumn("##Value", ImGuiTableColumnFlags_WidthStretch);
-
-        TablePair(Field(_("UI Scale")));
-        if (ImGui::SliderInt("%", &cfg.scale, 75, 150)) {
-            cfg.is_applied = false;
-        };
-        TablePair(Field(_("Language")));
-
-        if (ImGui::Combo(
-                "##Language", &lang_idx, lang_data.data(), lang_data.size())) {
-            cfg.is_applied = false;
-            cfg.language   = fs::LOCALE_LANG[lang_idx];
-        }
-        {
-            TablePair(Field(_("Light Theme Style")));
-            auto light_themes = get_available_styles(false);
+    AnonTable(
+        "AppearanceTable", __table_l_size.x,
+        TablePair(
+            Field(_("UI Scale")),
+            if (ImGui::SliderInt("%", &cfg.scale, 75, 150)) {
+                cfg.is_applied = false;
+            });
+        ImGui::BeginDisabled(fs::localsize() == 0); TablePair(
+            Field(_("Language")),
+            if (ImGui::Combo("##Language", &lang_idx, fs::localnames(),
+                    fs::localsize())) {
+                cfg.is_applied = false;
+                cfg.language   = fs::locales()[lang_idx];
+            });
+        ImGui::EndDisabled(); TablePair(
+            Field(_("Light Theme Style")),
             if (ImGui::Combo("##Select Theme", &light_idx, light_themes.data(),
                     light_themes.size())) {
                 cfg.is_applied  = false;
                 cfg.light_theme = light_themes[light_idx];
-            }
-            const LcsTheme& style = ui::get_theme(cfg.light_theme);
-            _color_buttons(style);
-        }
-        {
-            TablePair(Field(_("Dark Theme Style")));
+            });
+        _color_buttons(ui::get_theme(cfg.light_theme)); TablePair(
+            Field(_("Dark Theme Style")),
             if (ImGui::Combo("##Select Theme Dark", &dark_idx,
                     dark_themes.data(), dark_themes.size())) {
                 cfg.is_applied = false;
                 cfg.dark_theme = dark_themes[dark_idx];
-            }
-            const LcsTheme& style = ui::get_theme(cfg.dark_theme);
-            _color_buttons(style);
-        }
-        TablePair(Field(_("Rounded Corners")));
-        if (ImGui::SliderInt(
-                "##Rounded Corners", &cfg.rounded_corners, 0, 20)) {
-            cfg.is_applied = false;
-        }
-        TablePair(Field(_("Theme Preference")));
-        if (ImGui::Combo(
-                "##ThemePreference", (int*)&cfg.preference, pref_table, 3)) {
-            cfg.is_applied = false;
-        }
-        TablePair(Field(_("Start in Fullscreen")));
-        if (ImGui::Checkbox("##Fullscreen", &cfg.start_fullscreen)) {
-            cfg.is_applied = false;
-        };
+            });
+        _color_buttons(ui::get_theme(cfg.dark_theme)); TablePair(
+            Field(_("Rounded Corners")),
+            if (ImGui::SliderInt("##Rounded Corners", &cfg.rounded_corners, 0,
+                    20)) { cfg.is_applied = false; });
+        TablePair(
+            Field(_("Theme Preference")),
+            if (ImGui::Combo("##ThemePreference", (int*)&cfg.preference,
+                    pref_table, 3)) { cfg.is_applied = false; });
+        TablePair(
+            Field(_("Start in Fullscreen")),
+            if (ImGui::Checkbox("##Fullscreen", &cfg.start_fullscreen)) {
+                cfg.is_applied = false;
+            });
         ImGui::BeginDisabled(cfg.start_fullscreen);
-        TablePair(Field(_("Startup Window")));
+        TableKey(Field(_("Startup Window")));
         Point p = { static_cast<int16_t>(cfg.startup_win_x),
             static_cast<int16_t>(cfg.startup_win_y) };
         if (PositionSelector(p, "##StartupWindow")) {
             cfg.startup_win_x = p.x;
             cfg.startup_win_y = p.y;
             cfg.is_applied    = false;
-        }
+        };
         ImGui::EndDisabled();
-        ImGui::EndTable();
-    }
+
+    );
     EndSection();
     ImGuiIO& imio = ImGui::GetIO();
     ImGui::Text(

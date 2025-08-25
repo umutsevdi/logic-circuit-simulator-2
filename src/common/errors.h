@@ -73,6 +73,8 @@ enum Error {
     UNTERMINATED_FLOW,
     /** Native File Dialog related error. */
     NFD,
+    /** Error while updating the locale. */
+    LOCALE_ERROR,
     /** Represents the how many types of error codes exists. Not a valid error
        code.*/
     ERROR_S
@@ -111,6 +113,7 @@ constexpr const char* errmsg(Error e)
     case KEYCHAIN_ACCESS_DENIED: return "[AppleOnly] Authorization failure.";
     case UNTERMINATED_FLOW: return "Already active flowl.";
     case NFD: return "NFD Eror.";
+    case LOCALE_ERROR: return "Error while updating the locale.";
 
     case ERROR_S: return "Unknown Error.";
     }

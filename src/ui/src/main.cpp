@@ -70,7 +70,8 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
-    while (!glfwWindowShouldClose(window)) {
+    bool keep = true;
+    while (!glfwWindowShouldClose(window) && keep) {
         glfwPollEvents();
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) {
             ImGui_ImplGlfw_Sleep(10);
@@ -80,7 +81,7 @@ int main(int, char**)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport();
-        ui::loop(imio);
+        keep = ui::loop(imio);
         ImGui::Render();
         if (!get_config().is_applied) {
             set_style(imio);

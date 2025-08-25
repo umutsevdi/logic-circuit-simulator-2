@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LogicCircuitSimulator 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-22 22:50+0300\n"
+"POT-Creation-Date: 2025-08-25 19:32+0300\n"
 "PO-Revision-Date: 2025-08-22 18:05+0300\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -17,25 +17,30 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: src/ui/src/palette.cpp:18 src/ui/src/menubar.cpp:62
+#: src/ui/components.h:221
+#, c-format
+msgid "Shortcut: %s"
+msgstr ""
+
+#: src/ui/src/palette.cpp:17 src/ui/src/menubar.cpp:61
 msgid "Palette"
 msgstr ""
 
-#: src/ui/src/palette.cpp:22 src/ui/src/dbg_viewer.cpp:64
+#: src/ui/src/palette.cpp:21 src/ui/src/dbg_viewer.cpp:64
 msgid "Gates"
 msgstr ""
 
-#: src/ui/src/palette.cpp:28 src/ui/src/node_editor.cpp:81
-#: src/ui/src/node_editor.cpp:296 src/core/src/engine.cpp:10
+#: src/ui/src/palette.cpp:27 src/ui/src/node_editor.cpp:79
+#: src/ui/src/node_editor.cpp:297 src/core/src/engine.cpp:10
 msgid "Input"
 msgstr ""
 
-#: src/ui/src/palette.cpp:32 src/ui/src/node_editor.cpp:296
+#: src/ui/src/palette.cpp:31 src/ui/src/node_editor.cpp:297
 #: src/core/src/engine.cpp:11
 msgid "Output"
 msgstr ""
 
-#: src/ui/src/palette.cpp:37 src/ui/src/node_editor.cpp:81
+#: src/ui/src/palette.cpp:36 src/ui/src/node_editor.cpp:79
 msgid "Timer"
 msgstr ""
 
@@ -67,100 +72,114 @@ msgstr ""
 msgid "XNOR Gate"
 msgstr ""
 
-#: src/ui/src/console.cpp:27 src/ui/src/menubar.cpp:64
+#: src/ui/src/console.cpp:29 src/ui/src/menubar.cpp:63
 msgid "Console"
 msgstr ""
 
-#: src/ui/src/console.cpp:29
+#: src/ui/src/console.cpp:31 src/ui/src/console.cpp:35
 msgid "Clear"
 msgstr ""
 
-#: src/ui/src/console.cpp:38
+#: src/ui/src/console.cpp:35
+msgid "Clears all log messages."
+msgstr ""
+
+#: src/ui/src/console.cpp:37 src/ui/src/console.cpp:38
+msgid "Auto-scroll"
+msgstr ""
+
+#: src/ui/src/console.cpp:39
+msgid ""
+"When enabled, the scrollbar will be locked to the bottom \n"
+"to display live updates."
+msgstr ""
+
+#: src/ui/src/console.cpp:47
 msgid "Time"
 msgstr ""
 
-#: src/ui/src/console.cpp:40
+#: src/ui/src/console.cpp:49
 msgid "Severity"
 msgstr ""
 
-#: src/ui/src/console.cpp:43
-msgid "Node"
+#: src/ui/src/console.cpp:52
+msgid "Module"
 msgstr ""
 
-#: src/ui/src/console.cpp:46
+#: src/ui/src/console.cpp:55
 msgid "Function"
 msgstr ""
 
-#: src/ui/src/console.cpp:49
+#: src/ui/src/console.cpp:58
 msgid "Message"
 msgstr ""
 
-#: src/ui/src/console.cpp:81 src/ui/src/scene_info.cpp:98
+#: src/ui/src/console.cpp:89 src/ui/src/scene_info.cpp:97
 msgid "Clipboard"
 msgstr ""
 
-#: src/ui/src/console.cpp:82
+#: src/ui/src/console.cpp:90
 msgid "Message is copied to the clipboard."
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:14
+#: src/ui/src/scene_info.cpp:13
 msgid "Scene Information"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:17 src/ui/src/menubar.cpp:229
+#: src/ui/src/scene_info.cpp:16 src/ui/src/menubar.cpp:219
 msgid "Scene"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:18 src/ui/src/menubar.cpp:209
+#: src/ui/src/scene_info.cpp:17 src/ui/src/menubar.cpp:201
 msgid "Scene Name"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:25 src/ui/src/menubar.cpp:220
+#: src/ui/src/scene_info.cpp:24 src/ui/src/menubar.cpp:209
 msgid "Description"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:34 src/ui/src/scene_info.cpp:70
+#: src/ui/src/scene_info.cpp:33 src/ui/src/scene_info.cpp:69
 msgid "Version"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:43
+#: src/ui/src/scene_info.cpp:42
 msgid "Component Attributes"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:44 src/ui/src/menubar.cpp:239
+#: src/ui/src/scene_info.cpp:43 src/ui/src/menubar.cpp:229
 msgid "Input Size"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:48 src/ui/src/menubar.cpp:241
+#: src/ui/src/scene_info.cpp:47 src/ui/src/menubar.cpp:231
 msgid "Output Size"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:59 src/ui/src/scene_info.cpp:60
+#: src/ui/src/scene_info.cpp:58 src/ui/src/scene_info.cpp:59
 #: src/ui/src/dbg_viewer.cpp:35
 msgid "Dependencies"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:64 src/ui/src/menubar.cpp:213
+#: src/ui/src/scene_info.cpp:63 src/ui/src/menubar.cpp:205
 msgid "Author"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:67
+#: src/ui/src/scene_info.cpp:66
 msgid "Name"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:73
+#: src/ui/src/scene_info.cpp:72
 msgid "Number of Nodes"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:99
+#: src/ui/src/scene_info.cpp:98
 msgid "Dependency name is copied to the clipboard."
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:104
+#: src/ui/src/scene_info.cpp:103
 msgid "Add Component"
 msgstr ""
 
-#: src/ui/src/scene_info.cpp:108
+#: src/ui/src/scene_info.cpp:107
 msgid "Upload"
 msgstr ""
 
@@ -196,15 +215,15 @@ msgstr ""
 msgid "Raw"
 msgstr ""
 
-#: src/ui/src/dbg_viewer.cpp:70 src/ui/src/inspector.cpp:180
-#: src/ui/src/inspector.cpp:212 src/ui/src/inspector.cpp:245
-#: src/ui/src/inspector.cpp:301
+#: src/ui/src/dbg_viewer.cpp:70 src/ui/src/inspector.cpp:181
+#: src/ui/src/inspector.cpp:212 src/ui/src/inspector.cpp:243
+#: src/ui/src/inspector.cpp:298
 msgid "Inputs"
 msgstr ""
 
-#: src/ui/src/dbg_viewer.cpp:76 src/ui/src/inspector.cpp:155
-#: src/ui/src/inspector.cpp:215 src/ui/src/inspector.cpp:247
-#: src/ui/src/inspector.cpp:274
+#: src/ui/src/dbg_viewer.cpp:76 src/ui/src/inspector.cpp:156
+#: src/ui/src/inspector.cpp:214 src/ui/src/inspector.cpp:244
+#: src/ui/src/inspector.cpp:271
 msgid "Outputs"
 msgstr ""
 
@@ -212,15 +231,15 @@ msgstr ""
 msgid "Components"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:51 src/core/src/engine.cpp:12
+#: src/ui/src/node_editor.cpp:49 src/core/src/engine.cpp:12
 msgid "Component Input"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:63 src/core/src/engine.cpp:13
+#: src/ui/src/node_editor.cpp:61 src/core/src/engine.cpp:13
 msgid "Component Output"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:115
+#: src/ui/src/node_editor.cpp:114
 #, c-format
 msgid "Output %u"
 msgstr ""
@@ -230,354 +249,359 @@ msgstr ""
 msgid "%s Gate %u"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:159
+#: src/ui/src/node_editor.cpp:160
 #, c-format
 msgid "Component Node %u"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:185
+#: src/ui/src/node_editor.cpp:186
 msgid "Editor"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:236
+#: src/ui/src/node_editor.cpp:237
 #, c-format
 msgid "Relation %d"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:237
+#: src/ui/src/node_editor.cpp:238
 msgid "From"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:240
+#: src/ui/src/node_editor.cpp:241
 msgid "To"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:243 src/ui/src/node_editor.cpp:266
-#: src/ui/src/node_editor.cpp:301 src/ui/src/inspector.cpp:132
-#: src/ui/src/inspector.cpp:150 src/ui/src/inspector.cpp:163
-#: src/ui/src/inspector.cpp:190 src/ui/src/inspector.cpp:223
-#: src/ui/src/inspector.cpp:237 src/ui/src/inspector.cpp:255
-#: src/ui/src/inspector.cpp:284 src/ui/src/inspector.cpp:319
+#: src/ui/src/node_editor.cpp:244 src/ui/src/node_editor.cpp:267
+#: src/ui/src/node_editor.cpp:302 src/ui/src/inspector.cpp:133
+#: src/ui/src/inspector.cpp:151 src/ui/src/inspector.cpp:164
+#: src/ui/src/inspector.cpp:190 src/ui/src/inspector.cpp:222
+#: src/ui/src/inspector.cpp:235 src/ui/src/inspector.cpp:252
+#: src/ui/src/inspector.cpp:281 src/ui/src/inspector.cpp:316
 msgid "Value"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:257
+#: src/ui/src/node_editor.cpp:258
 #, c-format
 msgid "Node %s@%d"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:259 src/ui/src/inspector.cpp:106
+#: src/ui/src/node_editor.cpp:260 src/ui/src/inspector.cpp:109
 msgid "Position"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:262
+#: src/ui/src/node_editor.cpp:263
 msgid "Connected"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:265
+#: src/ui/src/node_editor.cpp:266
 msgid "True"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:265
+#: src/ui/src/node_editor.cpp:266
 msgid "False"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:295
+#: src/ui/src/node_editor.cpp:296
 #, c-format
 msgid "%s Socket %u"
 msgstr ""
 
-#: src/ui/src/node_editor.cpp:297
+#: src/ui/src/node_editor.cpp:298
 msgid "Owner"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:32
+#: src/ui/src/menubar.cpp:31
 msgid "File"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:33
+#: src/ui/src/menubar.cpp:32
 msgid "New"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:36
+#: src/ui/src/menubar.cpp:35
 msgid "Open"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:40 src/ui/src/menubar.cpp:524
+#: src/ui/src/menubar.cpp:39 src/ui/src/menubar.cpp:496
 msgid "Save"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:46
+#: src/ui/src/menubar.cpp:45
 msgid "Save As"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:50 src/ui/src/menubar.cpp:433
-#: src/ui/src/menubar.cpp:518 src/ui/src/menubar.cpp:531
-#: src/ui/src/menubar.cpp:539
+#: src/ui/src/menubar.cpp:49 src/ui/src/menubar.cpp:417
+#: src/ui/src/menubar.cpp:490 src/ui/src/menubar.cpp:503
+#: src/ui/src/menubar.cpp:511
 msgid "Preferences"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:53
+#: src/ui/src/menubar.cpp:52
 msgid "Close"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:58
+#: src/ui/src/menubar.cpp:57
 msgid "Edit"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:61
+#: src/ui/src/menubar.cpp:60
 msgid "View"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:63 src/ui/src/inspector.cpp:28
-#: src/ui/src/inspector.cpp:108
+#: src/ui/src/menubar.cpp:62 src/ui/src/inspector.cpp:28
+#: src/ui/src/inspector.cpp:111
 msgid "Inspector"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:65
+#: src/ui/src/menubar.cpp:64
 msgid "Scene Info"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:68
+#: src/ui/src/menubar.cpp:67
 msgid "Help"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:69 src/ui/src/menubar.cpp:311
+#: src/ui/src/menubar.cpp:68 src/ui/src/menubar.cpp:300
 msgid "About"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:147
+#: src/ui/src/menubar.cpp:146
 msgid "Scene Tabs"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:159
+#: src/ui/src/menubar.cpp:158
 msgid "Untitled Scene"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:191
+#: src/ui/src/menubar.cpp:190
 msgid "New Scene"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:224 src/ui/src/inspector.cpp:102
+#: src/ui/src/menubar.cpp:214 src/ui/src/inspector.cpp:105
 msgid "Type"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:235 src/core/src/engine.cpp:9
+#: src/ui/src/menubar.cpp:225 src/core/src/engine.cpp:9
 msgid "Component"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:254
+#: src/ui/src/menubar.cpp:244
 msgid "Cancel"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:277
+#: src/ui/src/menubar.cpp:266
 msgid "Close Scene"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:281
+#: src/ui/src/menubar.cpp:270
 msgid ""
 "You have unsaved changes. Would you like to save your changes before closing?"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:283
+#: src/ui/src/menubar.cpp:272
 msgid "Save & Close"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:291
+#: src/ui/src/menubar.cpp:280
 msgid "Exit Without Saving"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:316
+#: src/ui/src/menubar.cpp:305
 msgid ""
 "Logic Circuit Simulator is a free and open-source cross-platform desktop\n"
 "application to simulate logic circuits."
 msgstr ""
 
-#: src/ui/src/menubar.cpp:318
+#: src/ui/src/menubar.cpp:307
 msgid "Developer: "
 msgstr ""
 
-#: src/ui/src/menubar.cpp:323
+#: src/ui/src/menubar.cpp:312
 msgid "Source code is available at "
 msgstr ""
 
-#: src/ui/src/menubar.cpp:332
+#: src/ui/src/menubar.cpp:321
 msgid "Contact"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:334
+#: src/ui/src/menubar.cpp:323
 msgid "Email"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:338
+#: src/ui/src/menubar.cpp:327
 msgid "Website"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:352
+#: src/ui/src/menubar.cpp:341
 msgid "Background"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:354
+#: src/ui/src/menubar.cpp:343
 msgid "Foreground"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:356
+#: src/ui/src/menubar.cpp:345
 msgid "Black"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:358
+#: src/ui/src/menubar.cpp:347
 msgid "Red"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:360
+#: src/ui/src/menubar.cpp:349
 msgid "Green"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:362
+#: src/ui/src/menubar.cpp:351
 msgid "Yellow"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:364
+#: src/ui/src/menubar.cpp:353
 msgid "Black Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:366
+#: src/ui/src/menubar.cpp:355
 msgid "Red Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:368
+#: src/ui/src/menubar.cpp:357
 msgid "Green Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:370
+#: src/ui/src/menubar.cpp:359
 msgid "Yellow Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:372
+#: src/ui/src/menubar.cpp:361
 msgid "Blue"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:374
+#: src/ui/src/menubar.cpp:363
 msgid "Magenta"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:376
+#: src/ui/src/menubar.cpp:365
 msgid "Cyan"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:378
+#: src/ui/src/menubar.cpp:367
 msgid "White"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:380
+#: src/ui/src/menubar.cpp:369
 msgid "Blue Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:382
+#: src/ui/src/menubar.cpp:371
 msgid "Magenta Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:384
+#: src/ui/src/menubar.cpp:373
 msgid "Cyan Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:386
+#: src/ui/src/menubar.cpp:375
 msgid "White Bright"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:410
+#: src/ui/src/menubar.cpp:394
 msgid "Follow Device"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:411
+#: src/ui/src/menubar.cpp:395
 msgid "Light Theme"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:412
+#: src/ui/src/menubar.cpp:396
 msgid "Dark Theme"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:442
+#: src/ui/src/menubar.cpp:426
 msgid "Appearance"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:450
+#: src/ui/src/menubar.cpp:430
 msgid "UI Scale"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:454
+#: src/ui/src/menubar.cpp:435
 msgid "Language"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:462
+#: src/ui/src/menubar.cpp:442
 msgid "Light Theme Style"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:473
+#: src/ui/src/menubar.cpp:449
 msgid "Dark Theme Style"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:482
+#: src/ui/src/menubar.cpp:456
 msgid "Rounded Corners"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:487
+#: src/ui/src/menubar.cpp:460
 msgid "Theme Preference"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:492
+#: src/ui/src/menubar.cpp:464
 msgid "Start in Fullscreen"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:497
+#: src/ui/src/menubar.cpp:469
 msgid "Startup Window"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:513
+#: src/ui/src/menubar.cpp:485
 msgid "Apply"
 msgstr ""
 
-#: src/ui/src/menubar.cpp:519
+#: src/ui/src/menubar.cpp:491
 msgid "Configuration changes were applied."
 msgstr ""
 
-#: src/ui/src/menubar.cpp:532
+#: src/ui/src/menubar.cpp:504
 msgid "Configuration changes were saved."
 msgstr ""
 
-#: src/ui/src/menubar.cpp:540
+#: src/ui/src/menubar.cpp:512
 msgid "Configuration changes were reverted."
 msgstr ""
 
-#: src/ui/src/inspector.cpp:47
+#: src/ui/src/inspector.cpp:49
+#, c-format
+msgid "%d items selected."
+msgstr ""
+
+#: src/ui/src/inspector.cpp:52
 msgid "Delete All"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:71
-msgid "Focus"
+#: src/ui/src/inspector.cpp:75
+msgid "Select Node"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:84
+#: src/ui/src/inspector.cpp:88
 msgid "Delete Node"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:100
+#: src/ui/src/inspector.cpp:103
 msgid "Id"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:133
+#: src/ui/src/inspector.cpp:134
 msgid "Frequency"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:158 src/ui/src/inspector.cpp:218
-#: src/ui/src/inspector.cpp:250 src/ui/src/inspector.cpp:278
-#: src/ui/src/inspector.cpp:311
+#: src/ui/src/inspector.cpp:159 src/ui/src/inspector.cpp:217
+#: src/ui/src/inspector.cpp:247 src/ui/src/inspector.cpp:275
+#: src/ui/src/inspector.cpp:308
 msgid "Socket"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:161 src/ui/src/inspector.cpp:221
-#: src/ui/src/inspector.cpp:281 src/ui/src/inspector.cpp:314
-#: src/ui/src/inspector.cpp:357
+#: src/ui/src/inspector.cpp:162 src/ui/src/inspector.cpp:220
+#: src/ui/src/inspector.cpp:278 src/ui/src/inspector.cpp:311
+#: src/ui/src/inspector.cpp:354
 msgid "Connection"
 msgstr ""
 
@@ -589,15 +613,15 @@ msgstr ""
 msgid "Socket Count"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:360
+#: src/ui/src/inspector.cpp:357
 msgid "Disconnect"
 msgstr ""
 
-#: src/ui/src/inspector.cpp:394
+#: src/ui/src/inspector.cpp:391
 msgid "Disconnect relation"
 msgstr ""
 
-#: src/ui/src/notification.cpp:122
+#: src/ui/src/notification.cpp:121
 msgid "Dismiss"
 msgstr ""
 
@@ -607,24 +631,4 @@ msgstr ""
 
 #: src/core/src/engine.cpp:31
 msgid "DISABLED"
-msgstr ""
-
-#: src/common/common.h:116
-msgid "FATAL"
-msgstr ""
-
-#: src/common/common.h:117
-msgid "DEBUG"
-msgstr ""
-
-#: src/common/common.h:118
-msgid "INFO "
-msgstr ""
-
-#: src/common/common.h:119
-msgid "WARN "
-msgstr ""
-
-#: src/common/common.h:120
-msgid "ERROR"
 msgstr ""

@@ -10,6 +10,7 @@ add_library(common ${COMMON_RES})
 target_include_directories(common PUBLIC
     ${CURL_INCLUDE_DIRS}
     ${Intl_INCLUDE_DIRS}
+    ../../i18n/
 )
 
 target_link_libraries(common PUBLIC

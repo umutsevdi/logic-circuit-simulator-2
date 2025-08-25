@@ -16,6 +16,10 @@ void Palette(NRef<Scene> scene)
 
     std::string title = std::string { _("Palette") } + "###Palette";
     if (ImGui::Begin(title.c_str(), &user_data.palette)) {
+        HINT(nullptr, _("Palette"),
+            _("A collection of available nodes that you can add to your\n"
+              "project. Select a node from this panel to instantly place\n"
+              "it into the editor."));
         ImGui::BeginDisabled(scene == nullptr);
         if (ImGui::CollapsingHeader(
                 _("Gates"), ImGuiTreeNodeFlags_DefaultOpen)) {

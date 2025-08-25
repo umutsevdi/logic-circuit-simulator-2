@@ -31,6 +31,9 @@ int main(int argc, char* argv[])
     context.applyCommandLine(argc, argv);
     return context.run();
 #else
+    net::get_request_then(
+        [](net::HttpResponse& resp) { L_INFO("%s", resp.data.data()); },
+        "https://www.umutsevdi.com");
     return ui::main(argc, argv);
 #endif
 }

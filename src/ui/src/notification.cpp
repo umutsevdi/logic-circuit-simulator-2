@@ -1,7 +1,6 @@
 #include <IconsLucide.h>
 #include "components.h"
 #include "ui.h"
-#include <IconsLucide.h>
 
 namespace lcs::ui {
 static size_t last_time            = 0;
@@ -91,16 +90,16 @@ static bool _show_toast(
     pos.x       = pos.x + 200 * (1 - alpha);
     if (n.is_error) {
         ImGui::PushStyleColor(
-            ImGuiCol_Border, V4MUL(get_active_style().red, 1.f, *alpha));
+            ImGuiCol_Border, v4mul(get_active_style().red, 1.f, alpha));
     } else {
         ImGui::PushStyleColor(
-            ImGuiCol_Border, V4MUL(get_active_style().green, 1.f, *alpha));
+            ImGuiCol_Border, v4mul(get_active_style().green, 1.f, alpha));
     }
     ImGui::SetNextWindowBgAlpha(alpha);
     ImGui::PushStyleColor(ImGuiCol_Text,
-        V4MUL(ImGui::GetStyleColorVec4(ImGuiCol_Text), 1.f, *alpha));
+        v4mul(ImGui::GetStyleColorVec4(ImGuiCol_Text), 1.f, alpha));
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
-        V4MUL(ImGui::GetStyleColorVec4(ImGuiCol_Border), 1.f, *alpha));
+        v4mul(ImGui::GetStyleColorVec4(ImGuiCol_Border), 1.f, alpha));
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(1.0f, 1.0f));
     ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0),
         ImVec2(ImGui::GetMainViewport()->Size.x * 0.2,

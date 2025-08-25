@@ -82,6 +82,13 @@ State ToggleButton(State, bool clickable = false);
 void NodeTypeTitle(Node n);
 void NodeTypeTitle(Node n, sockid sock);
 
+inline void ShowIcon(FontFlags size, const char* icon)
+{
+    ImGui::PushFont(get_font(FontFlags::ICON | size));
+    ImGui::Text("%s", icon);
+    ImGui::PopFont();
+}
+
 template <int SIZE, typename... Args>
 bool IconButton(const char* icon, Args... args)
 {
@@ -161,9 +168,7 @@ inline void EndSection()
     ImGui::EndGroup();
 }
 
-void ShowIcon(FontFlags size, const char* icon);
-
-template <typename... Args> void Field(Args... args)
+template <typename... Args> inline void Field(Args... args)
 {
     ImGui::BeginGroup();
     ImGui::PushFont(get_font(FontFlags::BOLD | FontFlags::NORMAL));
@@ -174,10 +179,59 @@ template <typename... Args> void Field(Args... args)
     ImGui::EndGroup();
 }
 
-#define TablePair(KEY, ...)                                                    \
+#define AnonTable(ID, _KEYWIDTH, ...)                                          \
+    if (ImGui::BeginTable("##" ID, 2, ImGuiTableFlags_BordersInnerV)) {        \
+        ImGui::TableSetupColumn(                                               \
+            "##Key", ImGuiTableColumnFlags_WidthFixed, _KEYWIDTH);             \
+        ImGui::NextColumn();                                                   \
+        ImGui::TableSetupColumn(                                               \
+            "##Value", ImGuiTableColumnFlags_WidthStretch);                    \
+        __VA_ARGS__                                                            \
+        ImGui::EndTable();                                                     \
+    }
+
+#define TableKey(KEY)                                                          \
     ImGui::TableNextRow();                                                     \
     ImGui::TableSetColumnIndex(0);                                             \
     KEY;                                                                       \
-    ImGui::TableSetColumnIndex(1);                                             \
-    __VA_ARGS__
+    ImGui::TableSetColumnIndex(1);
+
+#define TablePair(KEY, VALUE)                                                  \
+    TableKey(KEY);                                                             \
+    VALUE
+
+template <typename... Args>
+inline bool BeginTooltip(const char* icon, Args... args)
+{
+    bool bgn = ImGui::BeginTooltip();
+    if (bgn) {
+        ImGui::PushFont(get_font(NORMAL | BOLD));
+        if (icon != nullptr) {
+            ShowIcon(FontFlags::LARGE, icon);
+        }
+        ImGui::SameLine();
+        ImGui::Text(args...);
+        ImGui::PopFont();
+        ImGui::Separator();
+    }
+    return bgn;
+}
+
+inline void EndTooltip(const char* shortcut = nullptr)
+{
+    ImGui::Spacing();
+    if (shortcut != nullptr) {
+        ImGui::TextColored(
+            get_active_style().yellow, _("Shortcut: %s"), shortcut);
+    }
+    ImGui::EndTooltip();
+}
+
+#define HINT(SHORTCUT, TITLE, ...)                                             \
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_None)) {                        \
+        BeginTooltip(nullptr, TITLE);                                          \
+        ImGui::Text(__VA_ARGS__);                                              \
+        EndTooltip(SHORTCUT);                                                  \
+    }
+
 } // namespace lcs::ui

@@ -12,6 +12,10 @@ void SceneInfo(NRef<Scene> scene)
     std::string title
         = std::string { _("Scene Information") } + "###SceneInformation";
     if (ImGui::Begin(title.c_str(), &user_data.scene_info)) {
+        HINT("CTRL+N", _("Scene Information"),
+            "A management panel for updating and configuring the active\n"
+            "scene's details. Use this menu to handle dependencies and share\n"
+            "your scene with others.");
         ImGui::BeginDisabled(scene == nullptr);
         Section(_("Scene"));
         Field(_("Scene Name"));

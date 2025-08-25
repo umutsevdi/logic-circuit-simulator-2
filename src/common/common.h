@@ -121,11 +121,11 @@ private:
     static constexpr const char* _severity_to_str(Severity l)
     {
         switch (l) {
-        case FATAL: return _("FATAL");
-        case DEBUG: return _("DEBUG");
-        case INFO: return _("INFO ");
-        case WARN: return _("WARN ");
-        default: return _("ERROR");
+        case FATAL: return "FATAL";
+        case DEBUG: return "DEBUG";
+        case INFO: return "INFO ";
+        case WARN: return "WARN ";
+        default: return "ERROR";
         }
     }
 };
@@ -205,12 +205,17 @@ namespace fs {
     extern std::filesystem::path ROOT;
     extern std::filesystem::path TMP;
     extern std::filesystem::path LIBRARY;
+    /** Contains caches of images, package downloads. */
     extern std::filesystem::path CACHE;
     extern std::filesystem::path MISC;
+    /** Contains caches of images, package downloads. */
     extern std::filesystem::path LOCALE;
-    extern std::vector<std::string> LOCALE_LANG;
     extern std::filesystem::path INI;
     extern FILE* __TEST_LOG__;
+
+    const char** locales(void);
+    const char** localnames(void);
+    size_t localsize(void);
 
     /** Runs an assertion, displays an error message on failure. Intended
      * for macros. */
@@ -253,7 +258,8 @@ namespace fs {
      * @param data to save
      * @returns Whether the operation is successful or not
      */
-    bool write(const std::filesystem::path& path, std::vector<unsigned char>& data);
+    bool write(
+        const std::filesystem::path& path, std::vector<unsigned char>& data);
 
 } // namespace fs
 

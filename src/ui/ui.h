@@ -19,9 +19,15 @@ void after(ImGuiIO& io);
 bool loop(ImGuiIO& io);
 void RenderNotifications(void);
 
-#define V4MUL(vec, pct, ...)                                                   \
-    ImVec4((vec).x*(pct), (vec).y*(pct), (vec).z*(pct), (vec).w __VA_ARGS__)
-#define DL(_a, _b) (t.is_dark ? (_a) : (_b))
+inline ImVec4 v4mul(ImVec4 vec, float pct)
+{
+    return ImVec4(vec.x * pct, vec.y * pct, vec.z * pct, vec.w);
+}
+
+inline ImVec4 v4mul(ImVec4 vec, float pct, float alpha)
+{
+    return ImVec4(vec.x * pct, vec.y * pct, vec.z * pct, vec.w * alpha);
+}
 
 void set_style(ImGuiIO& io, bool init = false);
 

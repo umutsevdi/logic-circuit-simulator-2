@@ -28,3 +28,5 @@ src/port/
 src/ui/
 -I
 src/ui/include/
+-I
+i18n/

@@ -98,7 +98,7 @@ public:
 };
 
 Configuration& get_config(void);
-void set_config(const Configuration&);
+void set_config(Configuration&);
 void save_config(void);
 Configuration& load_config(void);
 } // namespace lcs::ui

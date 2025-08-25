@@ -29,18 +29,21 @@ class HttpHandle {
 public:
     HttpHandle() = default;
     // Get request constructor
-    void get(const std::string& url, const std::string& auth = "");
+    void get(const std::string& url, const std::string& auth = "",
+        std::function<void(HttpResponse& resp)> _callback = nullptr);
     // Post request constructor
     void post(const std::string& url, const std::vector<uint8_t>& _req,
-        const std::string& auth = "");
+        const std::string& auth                           = "",
+        std::function<void(HttpResponse& resp)> _callback = nullptr);
     void term(void);
 
     void handle(void);
     bool is_done() const;
 
     HttpResponse resp;
-    void (*cb)(HttpResponse& resp) = nullptr;
-    uint8_t flags                  = 0U;
+    std::function<void(HttpResponse& resp)> cb = nullptr;
+    uint8_t flags                              = 0U;
+    const char* url() const { return _url.c_str(); }
 
 private:
     // Request Data
@@ -50,24 +53,32 @@ private:
     // Response Data
 };
 
-void HttpHandle::get(const std::string& url, const std::string& auth)
+void HttpHandle::get(const std::string& url, const std::string& auth,
+    std::function<void(HttpResponse& resp)> callback)
 {
     _url  = url;
     _auth = auth;
-    flags &= ~IS_POST;
+    cb    = callback;
+    L_DEBUG("Sending GET request.");
 }
 
 // Post request constructor
 void HttpHandle::post(const std::string& url, const std::vector<uint8_t>& req,
-    const std::string& auth)
+    const std::string& auth, std::function<void(HttpResponse& resp)> callback)
 {
     _url  = url;
     _auth = auth;
     _req  = req;
     flags |= IS_POST;
+    cb = callback;
+    L_DEBUG("Sending POST request.");
 }
 
-void HttpHandle::term() { flags |= IS_TERM; }
+void HttpHandle::term()
+{
+    flags |= IS_TERM;
+    L_DEBUG("Sending TERM request.");
+}
 
 void HttpHandle::handle(void)
 {
@@ -150,20 +161,22 @@ void init(bool)
         bool term = false;
         while (true) {
             std::vector<size_t> erase_list;
-            std::unique_lock<std::mutex> lock(data_mutex);
-            cv.wait(lock, [] { return !data.empty(); });
-            for (auto& [k, v] : data) {
-                if (v.flags & IS_TERM) {
-                    term = true;
-                    continue;
+            {
+                std::unique_lock<std::mutex> lock(data_mutex);
+                cv.wait(lock, [&] { return !data.empty(); });
+                for (auto& [k, v] : data) {
+                    if (v.flags & IS_TERM) {
+                        term = true;
+                        continue;
+                    }
+                    v.handle();
+                    if (v.cb != nullptr) {
+                        erase_list.push_back(k);
+                    }
                 }
-                v.handle();
-                if (v.cb != nullptr) {
-                    erase_list.push_back(k);
+                for (auto& it : erase_list) {
+                    data.erase(it);
                 }
-            }
-            for (auto& it : erase_list) {
-                data.erase(it);
             }
             if (term) {
                 break;
@@ -193,17 +206,18 @@ uint64_t get_request(const std::string& URL, const std::string& authorization)
     last++;
     data.emplace(last, HttpHandle {});
     data[last].get(URL, authorization);
+    cv.notify_one();
     return last;
 }
 
-void get_request_then(void (*cb)(HttpResponse& resp), const std::string& URL,
-    const std::string& authorization)
+void get_request_then(std::function<void(HttpResponse& resp)> cb,
+    const std::string& URL, const std::string& authorization)
 {
     std::lock_guard<std::mutex> lock(data_mutex);
     last++;
     data.emplace(last, HttpHandle {});
-    data[last].get(URL, authorization);
-    data[last].cb = cb;
+    data[last].get(URL, authorization, cb);
+    cv.notify_one();
 }
 
 uint64_t post_request(const std::string& URL, const std::vector<uint8_t>& req,
@@ -213,17 +227,19 @@ uint64_t post_request(const std::string& URL, const std::vector<uint8_t>& req,
     last++;
     data.emplace(last, HttpHandle {});
     data[last].post(URL, req, authorization);
+    cv.notify_one();
     return last;
 }
 
-void post_request_then(void (*cb)(HttpResponse& resp), const std::string& URL,
-    const std::vector<uint8_t>& req, const std::string& authorization)
+void post_request_then(std::function<void(HttpResponse& resp)> cb,
+    const std::string& URL, const std::vector<uint8_t>& req,
+    const std::string& authorization)
 {
     std::lock_guard<std::mutex> lock(data_mutex);
     last++;
     data.emplace(last, HttpHandle {});
-    data[last].post(URL, req, authorization);
-    data[last].cb = cb;
+    data[last].post(URL, req, authorization, cb);
+    cv.notify_one();
 }
 
 bool pull_response(uint64_t id, HttpResponse& resp)

@@ -1,7 +1,10 @@
+#include <IconsLucide.h>
 #include <cmath>
 #include <imnodes.h>
 #include "components.h"
+#include "configuration.h"
 #include "core.h"
+#include "imgui.h"
 #include "ui.h"
 
 namespace lcs::ui::layout {
@@ -182,11 +185,12 @@ void _show_node(NRef<Component> node, uint16_t id, bool has_changes)
 
 void NodeEditor(NRef<Scene> scene)
 {
-
     std::string title = std::string { _("Editor") } + "###Editor";
     if (ImGui::Begin(title.c_str(), nullptr,
             ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing
                 | ImGuiWindowFlags_NoNavFocus)) {
+        HINT("CTRL+E", _("Editor"),
+            _("A Panel to edit nodes in the selected scene."));
         ImNodes::BeginNodeEditor();
         if (scene != nullptr) {
             const LcsTheme& style = get_active_style();
@@ -232,20 +236,15 @@ void NodeEditor(NRef<Scene> scene)
 
             int linkid = 0;
             if (ImNodes::IsLinkHovered(&linkid)) {
-                if (auto r = scene->get_rel(linkid);
-                    r != nullptr && ImGui::BeginTooltip()) {
-                    SubSection(_("Relation %d"), linkid);
-                    Field(_("From"));
-                    ImGui::SameLine();
-                    NodeTypeTitle(r->from_node, r->from_sock);
-                    Field(_("To"));
-                    ImGui::SameLine();
-                    NodeTypeTitle(r->to_node, r->to_sock);
-                    Field(_("Value"));
-                    ImGui::SameLine();
-                    ToggleButton(r->value);
-                    EndSection();
-                    ImGui::EndTooltip();
+                if (auto r = scene->get_rel(linkid); r != nullptr
+                    && BeginTooltip(ICON_LC_CABLE, _("Relation %d"), linkid)) {
+                    AnonTable("Link", 0,
+                        TablePair(Field(_("From")),
+                            NodeTypeTitle(r->from_node, r->from_sock));
+                        TablePair(Field(_("To")),
+                            NodeTypeTitle(r->to_node, r->to_sock));
+                        TablePair(Field(_("Value")), ToggleButton(r->value)););
+                    EndTooltip();
                 }
             }
 
@@ -253,33 +252,32 @@ void NodeEditor(NRef<Scene> scene)
             if (ImNodes::IsNodeHovered(&nodeid_encoded)) {
                 Node nodeid { static_cast<uint16_t>(0xFFFF & nodeid_encoded),
                     (Node::Type)(nodeid_encoded >> 16) };
-                if (NRef<BaseNode> n = scene->get_base(nodeid);
-                    n != nullptr && ImGui::BeginTooltip()) {
-                    SubSection(_("Node %s@%d"), to_str<Node::Type>(nodeid.type),
-                        nodeid.index);
-                    Field(_("Position"));
-                    ImGui::SameLine();
-                    ImGui::Text("(%d, %d)", n->point.x, n->point.y);
-                    Field(_("Connected"));
-                    ImGui::SameLine();
-                    ImGui::Text(
-                        "%s", n->is_connected() ? _("True") : _("False"));
-                    Field(_("Value"));
-                    ImGui::SameLine();
-                    if (nodeid.type != Node::Type::COMPONENT) {
-                        ToggleButton(n->get());
-                    } else {
-                        auto comp = scene->get_node<Component>(nodeid);
-                        ImGui::Text("(");
-                        ImGui::SameLine();
-                        for (size_t i = 0; i < comp->outputs.size(); i++) {
-                            ToggleButton(comp->get(i));
+                if (NRef<BaseNode> n = scene->get_base(nodeid); n != nullptr
+                    && BeginTooltip(ICON_LC_CODESANDBOX, _("Node %s@%d"),
+                        to_str<Node::Type>(nodeid.type), nodeid.index)) {
+                    AnonTable(
+                        "Node", 0,
+                        TablePair(Field(_("Position")),
+                            ImGui::Text("(%d, %d)", n->point.x, n->point.y));
+                        TableKey(Field(_("Value")));
+                        if (nodeid.type != Node::Type::COMPONENT) {
+                            ToggleButton(n->get());
+                        } else {
+                            auto comp = scene->get_node<Component>(nodeid);
+                            ImGui::Text("(");
                             ImGui::SameLine();
-                        }
-                        ImGui::Text(")");
-                    }
-                    EndSection();
-                    ImGui::EndTooltip();
+                            for (size_t i = 0; i < comp->outputs.size(); i++) {
+                                ToggleButton(comp->get(i));
+                                ImGui::SameLine();
+                            }
+                            ImGui::Text(")");
+                        } if (!n->is_connected()) {
+                            ImGui::PushFont(get_font(SMALL));
+                            ImGui::TextColored(get_active_style().red,
+                                _("Please connect all pins."));
+                            ImGui::PopFont();
+                        });
+                    EndTooltip();
                 }
             }
 
@@ -288,29 +286,30 @@ void NodeEditor(NRef<Scene> scene)
                 bool is_out = false;
                 sockid sock = 0;
                 Node nodeid = decode_pair(pin_id, &sock, &is_out);
-                if (ImGui::BeginTooltip()) {
-                    sock = nodeid.type == Node::Type::COMPONENT_INPUT
-                            || nodeid.type == Node::Type::COMPONENT_OUTPUT
-                        ? nodeid.index
-                        : sock;
-                    SubSection(_("%s Socket %u"),
-                        is_out ? _("Output") : _("Input"), sock);
-                    Field(_("Owner"));
-                    ImGui::SameLine();
-                    NodeTypeTitle(nodeid);
-                    if (is_out) {
-                        Field(_("Value"));
-                        ImGui::SameLine();
-                        if (nodeid.type == Node::Type::COMPONENT_INPUT
-                            || nodeid.type == Node::Type::COMPONENT_OUTPUT) {
-                            ToggleButton(
-                                scene->component_context->get_value(nodeid));
-                        } else {
-                            ToggleButton(scene->get_base(nodeid)->get(sock));
-                        }
-                    }
-                    EndSection();
-                    ImGui::EndTooltip();
+
+                sock = nodeid.type == Node::Type::COMPONENT_INPUT
+                        || nodeid.type == Node::Type::COMPONENT_OUTPUT
+                    ? nodeid.index
+                    : sock;
+                if (BeginTooltip(ICON_LC_HEXAGON, _("%s Socket %u"),
+                        is_out ? _("Output") : _("Input"), sock)) {
+                    AnonTable(
+                        "Node", 0,
+                        TablePair(Field(_("Owner")), NodeTypeTitle(nodeid));
+                        if (is_out) {
+                            TableKey(Field(_("Value")));
+                            if (nodeid.type == Node::Type::COMPONENT_INPUT
+                                || nodeid.type
+                                    == Node::Type::COMPONENT_OUTPUT) {
+                                ToggleButton(
+                                    scene->component_context->get_value(
+                                        nodeid));
+                            } else {
+                                ToggleButton(
+                                    scene->get_base(nodeid)->get(sock));
+                            }
+                        });
+                    EndTooltip();
                 }
             }
             int start_pin_id = 0;

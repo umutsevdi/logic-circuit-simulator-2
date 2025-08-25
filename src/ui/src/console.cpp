@@ -15,6 +15,7 @@ static ImVec4 _log_color(const LcsTheme& style, Message::Severity level)
     case Message::WARN: return style.magenta;
     case Message::FATAL:;
     case Message::ERROR: return style.red;
+    default: return style.fg;
     }
 };
 
@@ -27,11 +28,16 @@ void Console(void)
     const LcsTheme& style = get_active_style();
     std::string title     = std::string { _("Console") } + "###Console";
     if (ImGui::Begin(title.c_str(), &user_data.console)) {
+        HINT(nullptr, _("Console"), _("Displays warning messages."));
         if (IconButton<NORMAL>(ICON_LC_TRASH, _("Clear"))) {
             lcs::fs::clear_log();
         }
+        HINT(nullptr, _("Clear"), _("Clears all log messages."));
         ImGui::SameLine();
-        ImGui::Checkbox(_("Auto Scroll"), &auto_scroll);
+        ImGui::Checkbox(_("Auto-scroll"), &auto_scroll);
+        HINT(nullptr, _("Auto-scroll"),
+            _("When enabled, the scrollbar will be locked to the bottom \n"
+              "to display live updates."));
         if (ImGui::BeginTable("##ConsoleTable", 5,
                 ImGuiTableFlags_Reorderable | ImGuiTableFlags_BordersInner
                     | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY
@@ -43,7 +49,7 @@ void Console(void)
                 _("Severity"), ImGuiTableColumnFlags_WidthFixed);
             ImGui::NextColumn();
             ImGui::TableSetupColumn(
-                _("Node"), ImGuiTableColumnFlags_WidthFixed);
+                _("Module"), ImGuiTableColumnFlags_WidthFixed);
             ImGui::NextColumn();
             ImGui::TableSetupColumn(
                 _("Function"), ImGuiTableColumnFlags_WidthFixed);

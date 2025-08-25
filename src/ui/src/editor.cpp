@@ -5,20 +5,17 @@
 #include "configuration.h"
 #include "ui.h"
 
-static bool show_demo_window = true;
-ImVec4 clear_color           = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-float f;
-std::string fsini_str;
-
 namespace lcs::ui {
+
+static std::string _inistr;
 void before(void)
 {
     IMGUI_CHECKVERSION();
     ui::bind_config(ImGui::CreateContext());
     ImGuiIO& imio = ImGui::GetIO();
     (void)imio;
-    fsini_str        = fs::INI.string();
-    imio.IniFilename = fsini_str.c_str();
+    _inistr          = fs::INI.string();
+    imio.IniFilename = _inistr.c_str();
 
     imio.ConfigFlags
         |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
@@ -27,8 +24,8 @@ void before(void)
     set_style(imio, true);
 }
 
+static bool keep_loop = true;
 bool loop(ImGuiIO& imio)
-
 {
     layout::MenuBar();
     NRef<Scene> scene = tabs::active();
@@ -45,7 +42,7 @@ bool loop(ImGuiIO& imio)
     ImGui::ShowDemoWindow(nullptr);
 #endif
     RenderNotifications();
-    return show_demo_window;
+    return keep_loop;
 }
 
 void after(ImGuiIO&)
