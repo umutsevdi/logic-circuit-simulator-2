@@ -1,4 +1,3 @@
-file(GLOB ENGINE_RES ./*.cpp)
-include_directories(../include/)
+file(GLOB ENGINE_RES src/*.cpp)
 add_library(core ${ENGINE_RES})
-target_link_libraries(core common io)
+target_link_libraries(core common)

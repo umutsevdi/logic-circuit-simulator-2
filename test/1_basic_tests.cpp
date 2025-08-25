@@ -7,53 +7,56 @@ using namespace lcs;
 TEST_CASE("Connect IN to OUT, Update")
 {
     Scene s;
-    auto v = s.add_node<InputNode>();
-    auto o = s.add_node<OutputNode>();
+    auto v = s.add_node<Input>();
+    auto o = s.add_node<Output>();
     REQUIRE(s.connect(o, 0, v));
+    lcs_assert(s.get_node<Output>(o) != nullptr);
+    lcs_assert(s.get_node<Input>(v) != nullptr);
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::FALSE);
-    s.get_node<InputNode>(v)->set(true);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::FALSE);
+    s.get_node<Input>(v)->set(true);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::TRUE);
 }
 
 TEST_CASE("Connect IN to OUT, update and disconnect")
 {
     Scene s;
-    auto v = s.add_node<InputNode>();
-    auto o = s.add_node<OutputNode>();
+    auto v = s.add_node<Input>();
+    auto o = s.add_node<Output>();
     auto r = s.connect(o, 0, v);
     REQUIRE(r != 0);
-    s.get_node<InputNode>(v)->set(true);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
+    s.get_node<Input>(v)->set(true);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::TRUE);
     s.disconnect(r);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::DISABLED);
+    L_INFO("%s", to_str<State>(s.get_node<Output>(o)->get()));
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::DISABLED);
 }
 
 TEST_CASE("Connect same input to Gate")
 {
     Scene s;
-    auto v     = s.add_node<InputNode>();
-    auto o     = s.add_node<OutputNode>();
-    auto g_and = s.add_node<GateNode>(GateType::AND);
+    auto v     = s.add_node<Input>();
+    auto o     = s.add_node<Output>();
+    auto g_and = s.add_node<Gate>(Gate::Type::AND);
 
     REQUIRE(s.connect(g_and, 0, v));
     REQUIRE(s.connect(g_and, 1, v));
     REQUIRE(s.connect(o, 0, g_and));
 
-    s.get_node<InputNode>(v)->set(true);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
-    s.get_node<InputNode>(v)->set(false);
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::FALSE);
+    s.get_node<Input>(v)->set(true);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::TRUE);
+    s.get_node<Input>(v)->set(false);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::FALSE);
 }
 
 TEST_CASE("[[v1,v2]->and, v2]->or->o")
 {
     Scene s;
-    auto g_and = s.add_node<GateNode>(GateType::AND);
-    auto g_or  = s.add_node<GateNode>(GateType::OR);
-    auto v     = s.add_node<InputNode>();
-    auto v2    = s.add_node<InputNode>();
-    auto o     = s.add_node<OutputNode>();
+    auto g_and = s.add_node<Gate>(Gate::Type::AND);
+    auto g_or  = s.add_node<Gate>(Gate::Type::OR);
+    auto v     = s.add_node<Input>();
+    auto v2    = s.add_node<Input>();
+    auto o     = s.add_node<Output>();
 
     REQUIRE(s.connect(g_and, 0, v));
     REQUIRE(s.connect(g_and, 1, v2));
@@ -61,26 +64,26 @@ TEST_CASE("[[v1,v2]->and, v2]->or->o")
     REQUIRE(s.connect(g_or, 1, v));
     REQUIRE(s.connect(o, 0, g_or));
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::FALSE);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::FALSE);
 
-    s.get_node<InputNode>(v)->set(true);
+    s.get_node<Input>(v)->set(true);
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
-    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), State::FALSE);
-    REQUIRE_EQ(s.get_node<GateNode>(g_or)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<Gate>(g_and)->get(), State::FALSE);
+    REQUIRE_EQ(s.get_node<Gate>(g_or)->get(), State::TRUE);
 }
 
 TEST_CASE("Multiple Inputs with AND/OR Gates")
 {
     Scene s;
-    auto g_and  = s.add_node<GateNode>(GateType::AND);
-    auto g_or   = s.add_node<GateNode>(GateType::OR);
-    auto g_nand = s.add_node<GateNode>(GateType::NAND);
-    auto g_nor  = s.add_node<GateNode>(GateType::NOR);
-    auto v1     = s.add_node<InputNode>();
-    auto v2     = s.add_node<InputNode>();
-    auto v3     = s.add_node<InputNode>();
-    auto o      = s.add_node<OutputNode>();
+    auto g_and  = s.add_node<Gate>(Gate::Type::AND);
+    auto g_or   = s.add_node<Gate>(Gate::Type::OR);
+    auto g_nand = s.add_node<Gate>(Gate::Type::NAND);
+    auto g_nor  = s.add_node<Gate>(Gate::Type::NOR);
+    auto v1     = s.add_node<Input>();
+    auto v2     = s.add_node<Input>();
+    auto v3     = s.add_node<Input>();
+    auto o      = s.add_node<Output>();
 
     REQUIRE(s.connect(g_and, 0, v1));
     REQUIRE(s.connect(g_and, 1, v2));
@@ -92,24 +95,24 @@ TEST_CASE("Multiple Inputs with AND/OR Gates")
     REQUIRE(s.connect(g_nor, 1, v1));
     REQUIRE(s.connect(o, 0, g_or));
 
-    s.get_node<InputNode>(v1)->set(true);
-    s.get_node<InputNode>(v2)->set(true);
-    s.get_node<InputNode>(v3)->set(false);
+    s.get_node<Input>(v1)->set(true);
+    s.get_node<Input>(v2)->set(true);
+    s.get_node<Input>(v3)->set(false);
 
-    REQUIRE_EQ(s.get_node<OutputNode>(o)->get(), State::TRUE);
-    REQUIRE_EQ(s.get_node<GateNode>(g_and)->get(), State::TRUE);
-    REQUIRE_EQ(s.get_node<GateNode>(g_or)->get(), State::TRUE);
-    REQUIRE_EQ(s.get_node<GateNode>(g_nand)->get(), State::TRUE);
-    REQUIRE_EQ(s.get_node<GateNode>(g_nor)->get(), State::FALSE);
+    REQUIRE_EQ(s.get_node<Output>(o)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<Gate>(g_and)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<Gate>(g_or)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<Gate>(g_nand)->get(), State::TRUE);
+    REQUIRE_EQ(s.get_node<Gate>(g_nor)->get(), State::FALSE);
 }
 
 TEST_CASE("1-Bit Adder Circuit")
 {
     Scene s;
-    auto v1   = s.add_node<InputNode>();
-    auto v2   = s.add_node<InputNode>();
-    auto gate = s.add_node<GateNode>(GateType::OR);
-    auto sum  = s.add_node<OutputNode>();
+    auto v1   = s.add_node<Input>();
+    auto v2   = s.add_node<Input>();
+    auto gate = s.add_node<Gate>(Gate::Type::OR);
+    auto sum  = s.add_node<Output>();
 
     REQUIRE(s.connect(gate, 0, v1));
     REQUIRE(s.connect(gate, 1, v2));
@@ -117,21 +120,21 @@ TEST_CASE("1-Bit Adder Circuit")
 
     SUBCASE("1 + 0 = 1")
     {
-        s.get_node<InputNode>(v1)->set(true);
-        s.get_node<InputNode>(v2)->set(false);
-        REQUIRE_EQ(s.get_node<OutputNode>(sum)->get(), State::TRUE);
+        s.get_node<Input>(v1)->set(true);
+        s.get_node<Input>(v2)->set(false);
+        REQUIRE_EQ(s.get_node<Output>(sum)->get(), State::TRUE);
     }
     SUBCASE("0 + 1 = 1")
     {
-        s.get_node<InputNode>(v1)->set(false);
-        s.get_node<InputNode>(v2)->set(true);
-        REQUIRE_EQ(s.get_node<OutputNode>(sum)->get(), State::TRUE);
+        s.get_node<Input>(v1)->set(false);
+        s.get_node<Input>(v2)->set(true);
+        REQUIRE_EQ(s.get_node<Output>(sum)->get(), State::TRUE);
     }
     SUBCASE("0 + 0 = 0")
     {
-        s.get_node<InputNode>(v1)->set(false);
-        s.get_node<InputNode>(v2)->set(false);
-        REQUIRE_EQ(s.get_node<OutputNode>(sum)->get(), State::FALSE);
+        s.get_node<Input>(v1)->set(false);
+        s.get_node<Input>(v2)->set(false);
+        REQUIRE_EQ(s.get_node<Output>(sum)->get(), State::FALSE);
     }
 }
 
@@ -140,11 +143,11 @@ TEST_CASE("Full Adder")
     Scene s;
     _create_full_adder_io(s);
 
-    auto g_xor       = s.add_node<GateNode>(GateType::XOR);
-    auto g_xor_sum   = s.add_node<GateNode>(GateType::XOR);
-    auto g_and_carry = s.add_node<GateNode>(GateType::AND);
-    auto g_and       = s.add_node<GateNode>(GateType::AND);
-    auto g_or        = s.add_node<GateNode>(GateType::OR);
+    auto g_xor       = s.add_node<Gate>(Gate::Type::XOR);
+    auto g_xor_sum   = s.add_node<Gate>(Gate::Type::XOR);
+    auto g_and_carry = s.add_node<Gate>(Gate::Type::AND);
+    auto g_and       = s.add_node<Gate>(Gate::Type::AND);
+    auto g_or        = s.add_node<Gate>(Gate::Type::OR);
 
     REQUIRE(s.connect(g_xor, 0, a));
     REQUIRE(s.connect(g_xor, 1, b));
@@ -165,28 +168,28 @@ TEST_CASE("Full Adder")
 
     SUBCASE("01 + 00 = 01")
     {
-        s.get_node<InputNode>(a)->set(true);
-        s.get_node<InputNode>(b)->set(false);
-        s.get_node<InputNode>(c_in)->set(false);
-        REQUIRE_EQ(s.get_node<OutputNode>(sum)->get(), State::TRUE);
-        REQUIRE_EQ(s.get_node<OutputNode>(c_out)->get(), State::FALSE);
+        s.get_node<Input>(a)->set(true);
+        s.get_node<Input>(b)->set(false);
+        s.get_node<Input>(c_in)->set(false);
+        REQUIRE_EQ(s.get_node<Output>(sum)->get(), State::TRUE);
+        REQUIRE_EQ(s.get_node<Output>(c_out)->get(), State::FALSE);
     }
 
     SUBCASE("01 + 01 = 10")
     {
-        s.get_node<InputNode>(a)->set(true);
-        s.get_node<InputNode>(b)->set(true);
-        s.get_node<InputNode>(c_in)->set(false);
-        REQUIRE_EQ(s.get_node<OutputNode>(sum)->get(), State::FALSE);
-        REQUIRE_EQ(s.get_node<OutputNode>(c_out)->get(), State::TRUE);
+        s.get_node<Input>(a)->set(true);
+        s.get_node<Input>(b)->set(true);
+        s.get_node<Input>(c_in)->set(false);
+        REQUIRE_EQ(s.get_node<Output>(sum)->get(), State::FALSE);
+        REQUIRE_EQ(s.get_node<Output>(c_out)->get(), State::TRUE);
     }
 
     SUBCASE("10 + 01 = 11")
     {
-        s.get_node<InputNode>(a)->set(true);
-        s.get_node<InputNode>(b)->set(true);
-        s.get_node<InputNode>(c_in)->set(true);
-        REQUIRE_EQ(s.get_node<OutputNode>(sum)->get(), State::TRUE);
-        REQUIRE_EQ(s.get_node<OutputNode>(c_out)->get(), State::TRUE);
+        s.get_node<Input>(a)->set(true);
+        s.get_node<Input>(b)->set(true);
+        s.get_node<Input>(c_in)->set(true);
+        REQUIRE_EQ(s.get_node<Output>(sum)->get(), State::TRUE);
+        REQUIRE_EQ(s.get_node<Output>(c_out)->get(), State::TRUE);
     }
 }

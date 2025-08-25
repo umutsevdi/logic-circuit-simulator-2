@@ -1,5 +1,0 @@
-file(GLOB IO_RES ./*.cpp)
-include_directories(../include/)
-include_directories(external/jsoncpp/include)
-add_library(io ${IO_RES})
-target_link_libraries(io core common base64 jsoncpp_static keychain)

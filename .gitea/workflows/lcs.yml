@@ -29,5 +29,6 @@ jobs:
       - name: Upload artifact
         run: |
           cd build
-          zip -r "lcs2.zip" docs
-          curl -X POST -F "file=@lcs2.zip" "http://home.internal:9696/docs?file=lcs2.zip"
+          mv docs lcs2
+          zip -r "docs.zip" lcs2
+          curl -X POST -F "file=@docs.zip" "http://home.internal:9696/docs/lcs2"
